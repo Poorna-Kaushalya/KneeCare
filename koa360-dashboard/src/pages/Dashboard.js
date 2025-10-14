@@ -14,6 +14,7 @@ import Navbar2 from "../components/SignInNavbar";
 function Dashboard({ logout }) {
   const [data, setData] = useState([]);
   const [steps, setSteps] = useState(0);
+  const [envTemp, setEnvTemp] = useState(0); // Environment temperature
 
   const MAX_KNEE_ANGLE = 120;
 
@@ -80,6 +81,11 @@ function Dashboard({ logout }) {
         }
       }
       setSteps(stepCount);
+
+      // Set latest environment temperature
+      if (lastPoints.length > 0 && lastPoints[0].avg_temperature?.ambient != null) {
+        setEnvTemp(lastPoints[0].avg_temperature.ambient);
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         alert("Session expired. Please login again.");
@@ -100,15 +106,15 @@ function Dashboard({ logout }) {
     <div>
       <Navbar2 logout={logout} />
       <div className="p-8">
-        <div className="mt-16 mb-4">
+        <div className="mt-16 mb-4"><br/>
           <h2 className="text-xl font-bold">
-            <br />
-            Step Count: <span className="text-blue-500">{steps}</span>
+            Step Count: <span className="text-blue-500">{steps}</span>&nbsp;&nbsp;&nbsp; |{" "}&nbsp;&nbsp;&nbsp;
+            Env Temp: <span className="text-red-500">{envTemp.toFixed(2)} °C</span>
           </h2>
         </div>
         <hr className="w-full border-t-2 border-blue-400 my-4" />
 
-        {/*  Upper & Lower Leg Charts */}
+        {/* Upper & Lower Leg Charts */}
         <div className="flex flex-wrap">
           {/* Upper Acceleration */}
           <div className="flex-1 min-w-[350px]">
@@ -119,24 +125,9 @@ function Dashboard({ logout }) {
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
                 <YAxis domain={["auto", "auto"]} tickFormatter={formatAccel} />
                 <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
-                <Line
-                  type="monotone"
-                  dataKey="avg_upper.ax"
-                  stroke="red"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_upper.ay"
-                  stroke="blue"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_upper.az"
-                  stroke="green"
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="avg_upper.ax" stroke="red" dot={false} />
+                <Line type="monotone" dataKey="avg_upper.ay" stroke="blue" dot={false} />
+                <Line type="monotone" dataKey="avg_upper.az" stroke="green" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -150,24 +141,9 @@ function Dashboard({ logout }) {
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
                 <YAxis domain={["auto", "auto"]} tickFormatter={formatGyro} />
                 <Tooltip labelFormatter={formatTime} formatter={formatGyro} />
-                <Line
-                  type="monotone"
-                  dataKey="avg_upper.gx"
-                  stroke="orange"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_upper.gy"
-                  stroke="purple"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_upper.gz"
-                  stroke="brown"
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="avg_upper.gx" stroke="orange" dot={false} />
+                <Line type="monotone" dataKey="avg_upper.gy" stroke="purple" dot={false} />
+                <Line type="monotone" dataKey="avg_upper.gz" stroke="brown" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -181,24 +157,9 @@ function Dashboard({ logout }) {
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
                 <YAxis domain={["auto", "auto"]} tickFormatter={formatAccel} />
                 <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
-                <Line
-                  type="monotone"
-                  dataKey="avg_lower.ax"
-                  stroke="red"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_lower.ay"
-                  stroke="blue"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_lower.az"
-                  stroke="green"
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="avg_lower.ax" stroke="red" dot={false} />
+                <Line type="monotone" dataKey="avg_lower.ay" stroke="blue" dot={false} />
+                <Line type="monotone" dataKey="avg_lower.az" stroke="green" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -212,24 +173,9 @@ function Dashboard({ logout }) {
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
                 <YAxis domain={["auto", "auto"]} tickFormatter={formatGyro} />
                 <Tooltip labelFormatter={formatTime} formatter={formatGyro} />
-                <Line
-                  type="monotone"
-                  dataKey="avg_lower.gx"
-                  stroke="orange"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_lower.gy"
-                  stroke="purple"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_lower.gz"
-                  stroke="brown"
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="avg_lower.gx" stroke="orange" dot={false} />
+                <Line type="monotone" dataKey="avg_lower.gy" stroke="purple" dot={false} />
+                <Line type="monotone" dataKey="avg_lower.gz" stroke="brown" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -245,37 +191,22 @@ function Dashboard({ logout }) {
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
-                <YAxis
-                  domain={["auto", "auto"]}
-                  tickFormatter={formatDegrees}
-                />
-                <Tooltip
-                  labelFormatter={formatTime}
-                  formatter={(v) => formatDegrees(v)}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avg_knee_angle"
-                  stroke="orange"
-                  dot={false}
-                  name="Knee Angle"
-                />
+                <YAxis domain={["auto", "auto"]} tickFormatter={formatDegrees} />
+                <Tooltip labelFormatter={formatTime} formatter={(v) => formatDegrees(v)} />
+                <Line type="monotone" dataKey="avg_knee_angle" stroke="orange" dot={false} name="Knee Angle" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* Object Temperature Chart */}
           <div>
-            <h3 className="mb-2 font-semibold">Temperature (°C)</h3>
+            <h3 className="mb-2 font-semibold">Object Temperature (°C)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
                 <YAxis domain={["auto", "auto"]} tickFormatter={formatTemp} />
-                <Tooltip
-                  labelFormatter={formatTime}
-                  formatter={(v) => formatTemp(v)}
-                />
+                <Tooltip labelFormatter={formatTime} formatter={(v) => formatTemp(v)} />
                 <Line
                   type="monotone"
                   dataKey="avg_temperature.object"
