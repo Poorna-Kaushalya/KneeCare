@@ -1,10 +1,11 @@
+// routes/sensor.js
 const express = require("express");
 const RawSensorData = require("../models/RawSensorData");
 const AvgSensorData = require("../models/AvgSensorData");
 
 const router = express.Router();
 
-// Save raw sensor data
+// ✅ Save raw sensor data
 router.post("/api/sensor-data", async (req, res) => {
   try {
     const newData = new RawSensorData(req.body);
@@ -15,26 +16,24 @@ router.post("/api/sensor-data", async (req, res) => {
   }
 });
 
-// routes/sensor.js
+// ✅ Check device connection status
 router.get("/api/device-status", async (req, res) => {
   try {
-    // Check if there’s recent raw data from your device in last 10 sec
     const recentData = await RawSensorData.findOne({}, {}, { sort: { createdAt: -1 } });
-    const connected = recentData && (new Date() - recentData.createdAt) < 10000;
+    const connected = recentData && new Date() - recentData.createdAt < 10000;
     res.json({ connected });
   } catch (err) {
     res.json({ connected: false });
   }
 });
 
-
-// Get latest 10 averages
+// ✅ Get latest 10 average records
 router.get("/api/sensor-data", async (req, res) => {
   const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
   res.json(data);
 });
 
-// Calculate 5-min averages every 5 minutes
+// ✅ Calculate 5-min averages every 5 minutes
 setInterval(async () => {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
   const rawData = await RawSensorData.find({
@@ -44,11 +43,13 @@ setInterval(async () => {
   if (rawData.length > 0) {
     const device_id = rawData[0].device_id;
 
-    let sum_upper = { ax:0, ay:0, az:0, gx:0, gy:0, gz:0, temp:0 };
-    let sum_lower = { ax:0, ay:0, az:0, gx:0, gy:0, gz:0, temp:0 };
+    let sum_upper = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
+    let sum_lower = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
     let sum_angle = 0;
+    let sum_temp = { ambient: 0, object: 0 };
 
     rawData.forEach((d) => {
+      // Upper sensor sums
       sum_upper.ax += d.upper.ax;
       sum_upper.ay += d.upper.ay;
       sum_upper.az += d.upper.az;
@@ -57,6 +58,7 @@ setInterval(async () => {
       sum_upper.gz += d.upper.gz || 0;
       sum_upper.temp += d.upper.temp || 0;
 
+      // Lower sensor sums
       sum_lower.ax += d.lower.ax;
       sum_lower.ay += d.lower.ay;
       sum_lower.az += d.lower.az;
@@ -65,36 +67,48 @@ setInterval(async () => {
       sum_lower.gz += d.lower.gz || 0;
       sum_lower.temp += d.lower.temp || 0;
 
-      sum_angle += d.knee_angle;
+      // Knee angle
+      sum_angle += d.knee_angle || 0;
+
+      // Temperature sensor (MLX90614)
+      if (d.temperature) {
+        sum_temp.ambient += d.temperature.ambient || 0;
+        sum_temp.object += d.temperature.object || 0;
+      }
     });
 
+    const count = rawData.length;
     const avgData = new AvgSensorData({
       device_id,
       avg_upper: {
-        ax: sum_upper.ax / rawData.length,
-        ay: sum_upper.ay / rawData.length,
-        az: sum_upper.az / rawData.length,
-        gx: sum_upper.gx / rawData.length,
-        gy: sum_upper.gy / rawData.length,
-        gz: sum_upper.gz / rawData.length,
-        temp: sum_upper.temp / rawData.length,
+        ax: sum_upper.ax / count,
+        ay: sum_upper.ay / count,
+        az: sum_upper.az / count,
+        gx: sum_upper.gx / count,
+        gy: sum_upper.gy / count,
+        gz: sum_upper.gz / count,
+        temp: sum_upper.temp / count,
       },
       avg_lower: {
-        ax: sum_lower.ax / rawData.length,
-        ay: sum_lower.ay / rawData.length,
-        az: sum_lower.az / rawData.length,
-        gx: sum_lower.gx / rawData.length,
-        gy: sum_lower.gy / rawData.length,
-        gz: sum_lower.gz / rawData.length,
-        temp: sum_lower.temp / rawData.length,
+        ax: sum_lower.ax / count,
+        ay: sum_lower.ay / count,
+        az: sum_lower.az / count,
+        gx: sum_lower.gx / count,
+        gy: sum_lower.gy / count,
+        gz: sum_lower.gz / count,
+        temp: sum_lower.temp / count,
       },
-      avg_knee_angle: sum_angle / rawData.length,
+      avg_knee_angle: sum_angle / count,
+      avg_temperature: {
+        ambient: sum_temp.ambient / count,
+        object: sum_temp.object / count,
+      },
     });
 
     await avgData.save();
     await RawSensorData.deleteMany({ _id: { $in: rawData.map((d) => d._id) } });
-    console.log(`Saved 5-min average & deleted ${rawData.length} raw entries`);
+    console.log(`✅ Saved 5-min average & deleted ${rawData.length} raw entries`);
   }
-}, 5*60*1000);
+}, 5 * 60 * 1000);
 
 module.exports = router;
