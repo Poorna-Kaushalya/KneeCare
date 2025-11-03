@@ -5,6 +5,7 @@ const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
 const sensorRoutes = require("./routes/sensor");
+const formRoutes = require("./routes/form");
 
 const app = express();
 
@@ -24,6 +25,7 @@ mongoose.connect(MONGO_URI)
 // Routes
 app.use("/", authRoutes);
 app.use("/", sensorRoutes);
+app.use("/", formRoutes); 
 
 // Start server
 const PORT = process.env.PORT || 5000;

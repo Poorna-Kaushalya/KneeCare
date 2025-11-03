@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import FormEntry from "./pages/FormEntry";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
@@ -39,18 +40,34 @@ function App() {
       />
 
       {/* Root redirect */}
-      <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+      <Route
+        path="/"
+        element={<Navigate to={token ? "/dashboard" : "/login"} />}
+      />
 
       {/* Login */}
       <Route
         path="/login"
-        element={token ? <Navigate to="/dashboard" /> : <Login setToken={setToken} setRole={setRole} />}
+        element={
+          token ? (
+            <Navigate to="/dashboard" />
+          ) : (
+            <Login setToken={setToken} setRole={setRole} />
+          )
+        }
       />
 
       {/* Register */}
       <Route
         path="/register"
         element={token ? <Navigate to="/dashboard" /> : <Register />}
+      />
+
+      <Route
+        path="/form"
+        element={
+          token ? <FormEntry logout={handleLogout} /> : <Navigate to="/login" />
+        }
       />
     </Routes>
   );

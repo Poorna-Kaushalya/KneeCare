@@ -14,7 +14,7 @@ import Navbar2 from "../components/SignInNavbar";
 function Dashboard({ logout }) {
   const [data, setData] = useState([]);
   const [steps, setSteps] = useState(0);
-  const [envTemp, setEnvTemp] = useState(0); // Environment temperature
+  const [envTemp, setEnvTemp] = useState(0); 
 
   const MAX_KNEE_ANGLE = 120;
 
