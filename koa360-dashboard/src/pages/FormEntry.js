@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import api from "../api/api";                // ✅ your axios instance
-import SignInNavbar from "../components/SignInNavbar"; // optional, remove if not needed
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Play, Clock, Cpu, ActivitySquare, Wifi, Save } from "lucide-react";
+import api from "../api/api";
+import SignInNavbar from "../components/SignInNavbar";
 
 function FormEntry({ logout }) {
   const DEFAULT_DEVICE = "KOA360-001";
+  const WINDOW_SECONDS = 300; // 5 minutes
 
   // device + session state
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE);
@@ -31,22 +33,12 @@ function FormEntry({ logout }) {
     notes: "",
   });
 
-  // countdown effect
-  useEffect(() => {
-    if (!isCollecting) return;
-
-    if (secondsLeft <= 0) {
-      clearInterval(timerRef.current);
-      setIsCollecting(false);
-      fetchFeatures(); // after 5 mins, pull features
-      return;
-    }
-
-    timerRef.current = setInterval(() => {
-      setSecondsLeft((s) => s - 1);
-    }, 1000);
-
-    return () => clearInterval(timerRef.current);
+  const progressPct = useMemo(() => {
+    if (!isCollecting) return 0;
+    return Math.max(
+      0,
+      Math.min(100, ((WINDOW_SECONDS - secondsLeft) / WINDOW_SECONDS) * 100)
+    );
   }, [isCollecting, secondsLeft]);
 
   const formatTime = (s) => {
@@ -55,10 +47,7 @@ function FormEntry({ logout }) {
     return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
   };
 
-  // start 5-min session
-  const startCollection = () => {
-    if (isCollecting) return;
-    // clear visible features while collecting
+  const resetFeatures = () =>
     setFeatures({
       windowStart: "",
       windowEnd: "",
@@ -69,18 +58,9 @@ function FormEntry({ logout }) {
       spectral_entropy: "",
       zero_crossing_rate: "",
     });
-    setSecondsLeft(300); // 5 minutes
-    setIsCollecting(true);
-  };
 
-  const cancelCollection = () => {
-    clearInterval(timerRef.current);
-    setIsCollecting(false);
-    setSecondsLeft(0);
-    // keep form inputs; features remain blank
-  };
-
-  const fetchFeatures = async () => {
+  // stable fetch to satisfy eslint deps
+  const fetchFeatures = useCallback(async () => {
     try {
       const res = await api.get(`/api/features`, {
         params: { device_id: deviceId },
@@ -104,6 +84,35 @@ function FormEntry({ logout }) {
       console.error("Failed to fetch features:", err);
       alert("Failed to fetch features. Please try again.");
     }
+  }, [deviceId]);
+
+  // countdown effect
+  useEffect(() => {
+    if (!isCollecting) return;
+
+    if (secondsLeft <= 0) {
+      clearInterval(timerRef.current);
+      setIsCollecting(false);
+      fetchFeatures(); // pull features after the window
+      return;
+    }
+
+    timerRef.current = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearInterval(timerRef.current);
+  }, [isCollecting, secondsLeft, fetchFeatures]);
+
+  // controls
+  const startCollection = () => {
+    if (isCollecting) return;
+    resetFeatures();
+    setSecondsLeft(WINDOW_SECONDS);
+    setIsCollecting(true);
+  };
+
+  const cancelCollection = () => {
+    clearInterval(timerRef.current);
+    setIsCollecting(false);
+    setSecondsLeft(0);
   };
 
   const saveFormData = async () => {
@@ -115,14 +124,17 @@ function FormEntry({ logout }) {
       alert("No computed features available. Run a 5-minute collection first.");
       return;
     }
-    if (!form.knee_condition || !form.severity_level || !form.treatment_advised) {
+    if (
+      !form.knee_condition ||
+      !form.severity_level ||
+      !form.treatment_advised
+    ) {
       alert("Please fill the clinical selections.");
       return;
     }
     try {
       const payload = {
         device_id: deviceId,
-        // backend expects exact keys: windowStart/windowEnd/sampleRateHz + features
         windowStart: features.windowStart,
         windowEnd: features.windowEnd,
         sampleRateHz: features.sampleRateHz,
@@ -131,7 +143,6 @@ function FormEntry({ logout }) {
         spectral_entropy: features.spectral_entropy,
         zero_crossing_rate: features.zero_crossing_rate,
         mean_frequency: features.mean_frequency,
-        // clinical
         knee_condition: form.knee_condition,
         severity_level: form.severity_level,
         treatment_advised: form.treatment_advised,
@@ -139,11 +150,8 @@ function FormEntry({ logout }) {
       };
 
       const res = await api.post("/api/formdata", payload);
-      if (res.data?.ok) {
-        alert("✅ Form data saved successfully!");
-      } else {
-        alert("❌ Failed to save form data.");
-      }
+      if (res.data?.ok) alert("✅ Form data saved successfully!");
+      else alert("❌ Failed to save form data.");
     } catch (err) {
       console.error(err);
       alert("❌ Failed to save form data.");
@@ -151,158 +159,228 @@ function FormEntry({ logout }) {
   };
 
   return (
-    <div>
-      {/* Optional top navbar */}
-      <SignInNavbar logout={logout} /><br/><br/><br/><br/><br/><br/>
+    <div className="min-h-screen bg-gray-50">
+      <SignInNavbar logout={logout} /><br/><br/><br/>
 
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-2xl shadow">
-        <h2 className="text-2xl font-bold text-blue-700 mb-6">
-          Sensor Form (5-Minute Data)
-        </h2>
+      <main className="w-full max-w-none px-4 sm:px-6 lg:px-20 pt-24 pb-8 mt-0">
+        <div className="grid grid-cols-1 md:[grid-template-columns:25%_74%] gap-4">
+          {/* LEFT: Data Collection Panel */}
+          <section className="bg-white rounded-2xl shadow p-6">
+            <header className="flex items-center gap-3 mb-4">
+              <ActivitySquare className="w-6 h-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-blue-700">
+                Data Collection
+              </h2>
+            </header>
 
-        {/* Device + Start controls */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Device ID
-            </label>
-            <input
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-              disabled={isCollecting}
-            />
-          </div>
+            {/* Device + network */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <Stat
+                label="Device"
+                value={deviceId}
+                icon={<Cpu className="w-6 h-6" />}
+              />
+              <Stat
+                label="Status"
+                value={isCollecting ? "Collecting…" : "Idle"}
+                icon={
+                  <Wifi
+                    className={`w-6 h-6 ${
+                      isCollecting ? "text-green-600" : "text-gray-900"
+                    }`}
+                    strokeWidth={2.5}
+                  />
+                }
+              />
+            </div>
 
-          <div className="flex items-end">
-            <button
-              onClick={startCollection}
-              disabled={isCollecting}
-              className={`w-full px-4 py-3 rounded-lg font-semibold text-white ${
-                isCollecting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-              }`}
-            >
-              ▶ Start 5-Minute Collection
-            </button>
-          </div>
-        </div>
-
-        {/* Computed (auto-filled) */}
-        <fieldset className="border p-4 rounded-lg mb-6" disabled={isCollecting}>
-          <legend className="text-lg font-semibold text-gray-800">
-           Computed Sensor Features
-          </legend>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-            <InfoRow label="Window Start" value={features.windowStart} />
-            <InfoRow label="Window End" value={features.windowEnd} />
-            <InfoRow label="Sample Rate (Hz)" value={features.sampleRateHz} />
-            <InfoRow label="RMS Amplitude" value={features.rms_amplitude} />
-            <InfoRow label="Peak Frequency (Hz)" value={features.peak_frequency} />
-            <InfoRow label="Mean Frequency (Hz)" value={features.mean_frequency} />
-            <InfoRow label="Spectral Entropy (0–1)" value={features.spectral_entropy} />
-            <InfoRow label="Zero Crossing Rate (/s)" value={features.zero_crossing_rate} />
-          </div>
-        </fieldset>
-
-        {/* Clinical selections */}
-        <h3 className="text-xl font-semibold text-gray-700 mb-2">Clinical Inputs</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Knee Condition
-            </label>
-            <select
-              value={form.knee_condition}
-              onChange={(e) => setForm({ ...form, knee_condition: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2"
-              disabled={isCollecting}
-            >
-              <option value="">Select</option>
-              <option value="normal">Normal</option>
-              <option value="osteoarthritis">Osteoarthritis</option>
-              <option value="ligament_injury">Ligament Injury</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Severity Level
-            </label>
-            <select
-              value={form.severity_level}
-              onChange={(e) => setForm({ ...form, severity_level: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2"
-              disabled={isCollecting}
-            >
-              <option value="">Select</option>
-              <option value="None">None</option>
-              <option value="Mild">Mild</option>
-              <option value="Moderate">Moderate</option>
-              <option value="Severe">Severe</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Treatment Advised
-            </label>
-            <select
-              value={form.treatment_advised}
-              onChange={(e) => setForm({ ...form, treatment_advised: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2"
-              disabled={isCollecting}
-            >
-              <option value="">Select</option>
-              <option value="No Treatment">No Treatment</option>
-              <option value="Physiotherapy">Physiotherapy</option>
-              <option value="Surgery">Surgery</option>
-            </select>
-          </div>
-        </div>
-
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Notes (optional)
-        </label>
-        <textarea
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          className="w-full border rounded-lg p-3 mb-6"
-          rows={3}
-          placeholder="Any observations..."
-          disabled={isCollecting}
-        />
-
-        <button
-          onClick={saveFormData}
-          disabled={isCollecting}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg disabled:opacity-60"
-        >
-          💾 Save Form Data
-        </button>
-      </div>
-
-      {/* Overlay during collection */}
-      {isCollecting && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[1px] z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-xl p-8 w-[90%] max-w-md text-center">
-            <h4 className="text-xl font-bold mb-2 text-blue-700">Collecting 5-Minute Window</h4>
-            <p className="text-gray-600 mb-6">Please wait while the device streams raw data.</p>
-            <div className="text-5xl font-mono font-bold mb-6">{formatTime(secondsLeft)}</div>
-            <div className="flex gap-3 justify-center">
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <button
-                className="px-5 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 font-semibold"
+                onClick={startCollection}
+                disabled={isCollecting}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white ${
+                  isCollecting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                <Play className="w-4 h-4" />
+                Start 5-Minute Window
+              </button>
+              <button
                 onClick={cancelCollection}
+                disabled={!isCollecting}
+                className="inline-flex items-center justify-center gap-2 px-16 py-2 rounded-lg font-bold bg-gray-200 hover:bg-gray-300 text-red-500"
               >
                 Cancel
               </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-6">
-              Tip: Keep the device steady or perform the instructed movement during the window.
+            </div><br/>
+
+            {/* Timer + circular progress */}
+            <div className="flex items-center justify-center mb-2">
+              <CircleProgress
+                value={progressPct}
+                size={200}
+                stroke={20}
+                color={isCollecting ? "text-blue-600" : "text-gray-400"}
+                bg="text-gray-300"
+                label={
+                  <div className="text-center">
+                    <div className="font-mono text-xl font-bold">
+                      {isCollecting ? formatTime(secondsLeft) : "00:00"}
+                    </div>
+                    <div className="text-[15px] text-gray-500 mt-1 flex items-center justify-center gap-1 text-bold">
+                      <Clock className="w-4 h-4" /> {Math.round(progressPct)}%
+                    </div>
+                  </div>
+                }
+              />
+            </div><br/>
+
+            {/* Tip */}
+            <p className="text-xs text-gray-500 mt-4">
+              Tip: Keep the device steady or perform the instructed movement
+              during the window. Make sure the device clock is synced to avoid
+              timing drift.
             </p>
-          </div>
+          </section>
+
+          {/* RIGHT: Clinical Form */}
+          <section className="bg-white rounded-2xl shadow p-6">
+            <h2 className="text-2xl font-bold text-blue-700 mb-6">
+              Clinical Form
+            </h2>
+
+            {/* Device entry (mirrors left) */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Device ID
+              </label>
+              <input
+                value={deviceId}
+                onChange={(e) => setDeviceId(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2"
+                disabled={isCollecting}
+              />
+            </div>
+
+            {/* Computed (read-only) */}
+            <fieldset
+              className="border p-4 rounded-lg mb-6"
+              disabled={isCollecting}
+            >
+              <legend className="text-lg font-semibold text-gray-800">
+                Computed Sensor Features
+              </legend>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                <InfoRow label="Window Start" value={features.windowStart} />
+                <InfoRow label="Window End" value={features.windowEnd} />
+                <InfoRow
+                  label="Sample Rate (Hz)"
+                  value={features.sampleRateHz}
+                />
+                <InfoRow label="RMS Amplitude" value={features.rms_amplitude} />
+                <InfoRow
+                  label="Peak Frequency (Hz)"
+                  value={features.peak_frequency}
+                />
+                <InfoRow
+                  label="Mean Frequency (Hz)"
+                  value={features.mean_frequency}
+                />
+                <InfoRow
+                  label="Spectral Entropy (0–1)"
+                  value={features.spectral_entropy}
+                />
+                <InfoRow
+                  label="Zero Crossing Rate (/s)"
+                  value={features.zero_crossing_rate}
+                />
+              </div>
+            </fieldset>
+
+            {/* Clinical selections */}
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              Clinical Inputs
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <Select
+                label="Knee Condition"
+                value={form.knee_condition}
+                onChange={(v) => setForm({ ...form, knee_condition: v })}
+                options={[
+                  ["", "Select"],
+                  ["normal", "Normal"],
+                  ["osteoarthritis", "Osteoarthritis"],
+                  ["ligament_injury", "Ligament Injury"],
+                ]}
+                disabled={isCollecting}
+              />
+              <Select
+                label="Severity Level"
+                value={form.severity_level}
+                onChange={(v) => setForm({ ...form, severity_level: v })}
+                options={[
+                  ["", "Select"],
+                  ["None", "None"],
+                  ["Mild", "Mild"],
+                  ["Moderate", "Moderate"],
+                  ["Severe", "Severe"],
+                ]}
+                disabled={isCollecting}
+              />
+              <Select
+                label="Treatment Advised"
+                value={form.treatment_advised}
+                onChange={(v) => setForm({ ...form, treatment_advised: v })}
+                options={[
+                  ["", "Select"],
+                  ["No Treatment", "No Treatment"],
+                  ["Physiotherapy", "Physiotherapy"],
+                  ["Surgery", "Surgery"],
+                ]}
+                disabled={isCollecting}
+              />
+            </div>
+
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Notes (optional)
+            </label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="w-full border rounded-lg p-3 mb-6"
+              rows={3}
+              placeholder="Any observations..."
+              disabled={isCollecting}
+            />
+
+            <button
+              onClick={saveFormData}
+              disabled={isCollecting}
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg disabled:opacity-60"
+            >
+              <Save className="w-4 h-4" />
+              Save Form Data
+            </button>
+          </section>
         </div>
-      )}
+      </main>
+    </div>
+  );
+}
+
+/* --- Reusable bits --- */
+
+function Stat({ label, value, icon }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-gray-50">
+      <div className="text-gray-600">{icon}</div>
+      <div>
+        <div className="text-[11px] uppercase tracking-wide text-gray-500">
+          {label}
+        </div>
+        <div className="text-sm font-semibold">{String(value || "-")}</div>
+      </div>
     </div>
   );
 }
@@ -312,6 +390,81 @@ function InfoRow({ label, value }) {
     <div className="flex justify-between items-center py-1 border-b border-gray-100">
       <span className="text-sm text-gray-600">{label}</span>
       <span className="text-sm font-mono">{String(value || "")}</span>
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options, disabled }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-1">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border rounded-lg px-3 py-2"
+        disabled={disabled}
+      >
+        {options.map(([val, text]) => (
+          <option key={val} value={val}>
+            {text}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** Circular progress ring */
+function CircleProgress({
+  value = 0,    // 0..100
+  size = 112,  // px
+  stroke = 10, // px
+  color = "text-blue-600",
+  bg = "text-gray-200",
+  label,
+}) {
+  const r = (size - stroke) / 2; // radius
+  const c = 2 * Math.PI * r;     // circumference
+  const dash = Math.max(0, Math.min(100, value)) / 100 * c;
+
+  return (
+    <div
+      className="relative inline-block"
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={`Collection progress ${Math.round(value)} percent`}
+    >
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+        {/* track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          className={bg}
+          strokeWidth={stroke}
+          stroke="currentColor"
+          opacity="0.3"
+        />
+        {/* progress */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          className={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c - dash}
+          stroke="currentColor"
+          style={{ transition: "stroke-dashoffset 300ms ease" }}
+        />
+      </svg>
+      {/* center content */}
+      <div className="absolute inset-0 grid place-items-center">{label}</div>
     </div>
   );
 }
