@@ -1,0 +1,10 @@
+--------------------------------Frontend--------------------------------
+$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;$env:Path"
+cd "C:\Users\msi\Documents\GitHub\KneeCare\koa360-dashboard"
+& "$Env:ProgramFiles\nodejs\npm.cmd" start
+
+
+--------------------------------Backend--------------------------------
+$env:Path = "C:\Program Files\nodejs;$env:APPDATA\npm;$env:Path"
+cd "C:\Users\msi\Documents\GitHub\KneeCare\koa360-backend"
+& "$Env:ProgramFiles\nodejs\npm.cmd" start
