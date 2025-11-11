@@ -33,17 +33,17 @@ function SignOutNavbar({ isLoggedIn }) {
           {/* Left-side items: Logo + Links + New User */}
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <div className="text-4xl font-extrabold tracking-wide text-blue-700 mx-5">
+            <div className="text-2xl font-extrabold tracking-wide text-blue-700 mx-5">
               KneeCare
             </div>
 
             {/* Links */}
-            <div className="hidden md:flex gap-8 mx-10">
+            <div className="hidden md:flex gap-5 mx-2">
               {publicLinks.map((link) => (
                 <button
                   key={link}
                   onClick={() => setActive(link)}
-                  className={`font-semibold px-4 py-2 rounded-lg transition-all duration-300 ${
+                  className={`font-semibold px-2 py-1 rounded-lg transition-all duration-300 text-sm ${
                     active === link
                       ? "bg-blue-600 text-white shadow-lg"
                       : "text-blue-700 hover:bg-blue-100 hover:text-blue-900"
@@ -57,7 +57,7 @@ function SignOutNavbar({ isLoggedIn }) {
             {/* New User */}
             <div className="hidden md:block">
               <button
-                className="bg-green-600 px-4 py-2 text-white rounded-lg hover:bg-green-600 transition shadow-md"
+                className="bg-green-600 px-4 py-1 text-white rounded-lg hover:bg-green-600 transition shadow-md text-sm"
                 onClick={() => (window.location.href = "/Register")}
               >
                 <b>New User</b>
@@ -66,7 +66,7 @@ function SignOutNavbar({ isLoggedIn }) {
           </div>
 
           {/* Right-side item: Date & Time */}
-          <div className="text-white font-bold text-xl">
+          <div className="text-white font-bold text-l">
             {formattedDateTime}
           </div>
 

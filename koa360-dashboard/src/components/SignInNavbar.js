@@ -49,14 +49,14 @@ function SignInNavbar({ logout }) {
   });
 
   const linkBase =
-    "font-semibold px-6 py-2 rounded-lg transition-all duration-300";
+    "font-semibold px-2 py-1 rounded-lg transition-all duration-300";
   const activeCls = "bg-blue-600 text-white shadow-lg";
   const idleCls = "text-blue-700 hover:bg-blue-100 hover:text-blue-900";
 
   return (
     <div className="fixed w-full z-50">
       {/* status bar */}
-      <div className="w-full bg-blue-600 text-white text-lg px-6 py-1 flex justify-end items-center gap-6 shadow-md">
+      <div className="w-full bg-blue-600 text-white text-sm px-6 py-1 flex justify-end items-center gap-6 shadow-md">
         <div className="flex items-center gap-2">
           <span
             className={`w-3 h-3 rounded-full ${
@@ -78,13 +78,13 @@ function SignInNavbar({ logout }) {
 
       {/* main nav */}
       <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl shadow-md rounded-b-2xl">
-        <div className="max-w-9xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="text-4xl font-extrabold tracking-wide text-blue-700">
+        <div className="max-w-9xl mx-auto px-6 py-2 flex justify-between items-center">
+          <div className="text-2xl font-extrabold tracking-wide text-blue-700">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;KneeCare
           </div>
 
           {/* Desktop links */}
-          <div className="hidden md:flex gap-8">
+          <div className="hidden md:flex gap-8 text-sm">
             {links.map((l) => (
               <NavLink
                 key={l.label}
@@ -103,7 +103,7 @@ function SignInNavbar({ logout }) {
           <div className="hidden md:block">
             <button
               onClick={logout}
-              className="bg-red-500 px-4 py-2 rounded-lg hover:bg-red-600 text-white transition shadow-md"
+              className="bg-red-500 px-2 py-1 rounded-lg hover:bg-red-600 text-white transition shadow-md text-sm"
             >
               <b>Logout</b>
             </button>

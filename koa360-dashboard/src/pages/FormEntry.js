@@ -160,15 +160,15 @@ function FormEntry({ logout }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SignInNavbar logout={logout} /><br/><br/><br/>
+      <SignInNavbar logout={logout} /><br /><br /><br />
 
-      <main className="w-full max-w-none px-4 sm:px-6 lg:px-20 pt-24 pb-8 mt-0">
+      <main className="w-full max-w-none px-4 sm:px-6 lg:px-20 pt-10 pb-8 mt-0">
         <div className="grid grid-cols-1 md:[grid-template-columns:25%_74%] gap-4">
           {/* LEFT: Data Collection Panel */}
-          <section className="bg-white rounded-2xl shadow p-6">
+          <section className="bg-white rounded-2xl shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
             <header className="flex items-center gap-3 mb-4">
-              <ActivitySquare className="w-6 h-6 text-blue-600" />
-              <h2 className="text-2xl font-bold text-blue-700">
+              <ActivitySquare className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-blue-700">
                 Data Collection
               </h2>
             </header>
@@ -178,16 +178,15 @@ function FormEntry({ logout }) {
               <Stat
                 label="Device"
                 value={deviceId}
-                icon={<Cpu className="w-6 h-6" />}
+                icon={<Cpu className="w-4 h-4 text-sm" />}
               />
               <Stat
                 label="Status"
                 value={isCollecting ? "Collecting…" : "Idle"}
                 icon={
                   <Wifi
-                    className={`w-6 h-6 ${
-                      isCollecting ? "text-green-600" : "text-gray-900"
-                    }`}
+                    className={`w-6 h-6 ${isCollecting ? "text-green-600" : "text-gray-900"
+                      }`}
                     strokeWidth={2.5}
                   />
                 }
@@ -199,28 +198,27 @@ function FormEntry({ logout }) {
               <button
                 onClick={startCollection}
                 disabled={isCollecting}
-                className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white ${
-                  isCollecting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-                }`}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-1 rounded-lg font-semibold text-white text-sm ${isCollecting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
               >
                 <Play className="w-4 h-4" />
-                Start 5-Minute Window
+                Start
               </button>
               <button
                 onClick={cancelCollection}
                 disabled={!isCollecting}
-                className="inline-flex items-center justify-center gap-2 px-16 py-2 rounded-lg font-bold bg-gray-200 hover:bg-gray-300 text-red-500"
+                className="inline-flex items-center justify-center gap-4 px-16 py-1 rounded-lg font-bold bg-gray-200 hover:bg-gray-300 text-red-500"
               >
                 Cancel
               </button>
-            </div><br/>
+            </div><br />
 
             {/* Timer + circular progress */}
             <div className="flex items-center justify-center mb-2">
               <CircleProgress
                 value={progressPct}
-                size={200}
-                stroke={20}
+                size={150}
+                stroke={15}
                 color={isCollecting ? "text-blue-600" : "text-gray-400"}
                 bg="text-gray-300"
                 label={
@@ -228,13 +226,13 @@ function FormEntry({ logout }) {
                     <div className="font-mono text-xl font-bold">
                       {isCollecting ? formatTime(secondsLeft) : "00:00"}
                     </div>
-                    <div className="text-[15px] text-gray-500 mt-1 flex items-center justify-center gap-1 text-bold">
+                    <div className="text-[15px] text-gray-500 mt-0 flex items-center justify-center gap-1 text-bold">
                       <Clock className="w-4 h-4" /> {Math.round(progressPct)}%
                     </div>
                   </div>
                 }
               />
-            </div><br/>
+            </div><br />
 
             {/* Tip */}
             <p className="text-xs text-gray-500 mt-4">
@@ -245,8 +243,8 @@ function FormEntry({ logout }) {
           </section>
 
           {/* RIGHT: Clinical Form */}
-          <section className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-2xl font-bold text-blue-700 mb-6">
+          <section className="bg-white  shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
+            <h2 className="text-xl font-bold text-blue-700 mb-4">
               Clinical Form
             </h2>
 
@@ -258,17 +256,17 @@ function FormEntry({ logout }) {
               <input
                 value={deviceId}
                 onChange={(e) => setDeviceId(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
                 disabled={isCollecting}
               />
             </div>
 
             {/* Computed (read-only) */}
             <fieldset
-              className="border p-4 rounded-lg mb-6"
+              className="border p-4 rounded-lg mb-6 text-sm"
               disabled={isCollecting}
             >
-              <legend className="text-lg font-semibold text-gray-800">
+              <legend className="text-sm font-semibold text-gray-800">
                 Computed Sensor Features
               </legend>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
@@ -299,10 +297,10 @@ function FormEntry({ logout }) {
             </fieldset>
 
             {/* Clinical selections */}
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">
               Clinical Inputs
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
               <Select
                 label="Knee Condition"
                 value={form.knee_condition}
@@ -348,8 +346,8 @@ function FormEntry({ logout }) {
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              className="w-full border rounded-lg p-3 mb-6"
-              rows={3}
+              className="w-full border rounded-lg p-3 mb-2 text-sm"
+              rows={2}
               placeholder="Any observations..."
               disabled={isCollecting}
             />
@@ -357,7 +355,7 @@ function FormEntry({ logout }) {
             <button
               onClick={saveFormData}
               disabled={isCollecting}
-              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg disabled:opacity-60"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-60"
             >
               <Save className="w-4 h-4" />
               Save Form Data

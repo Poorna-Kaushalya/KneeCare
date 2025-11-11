@@ -21,8 +21,7 @@ function Dashboard({ logout }) {
   const formatTime = (timestamp) =>
     new Date(timestamp).toLocaleTimeString([], {
       hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      minute: "2-digit"
     });
 
   const formatAccel = (value) => `${value.toFixed(2)} m/s²`;
@@ -106,8 +105,8 @@ function Dashboard({ logout }) {
     <div>
       <Navbar2 logout={logout} />
       <div className="p-8">
-        <div className="mt-16 mb-4"><br/>
-          <h2 className="text-xl font-bold">
+        <div className="mt-10 mb-4"><br/>
+          <h2 className="text-sm font-bold">
             Step Count: <span className="text-blue-500">{steps}</span>&nbsp;&nbsp;&nbsp; |{" "}&nbsp;&nbsp;&nbsp;
             Env Temp: <span className="text-red-500">{envTemp.toFixed(2)} °C</span>
           </h2>
@@ -118,12 +117,12 @@ function Dashboard({ logout }) {
         <div className="flex flex-wrap">
           {/* Upper Acceleration */}
           <div className="flex-1 min-w-[350px]">
-            <h3 className="mb-2 font-semibold">Upper Leg Motion (m/s²)</h3>
+            <h3 className="mb-2 font-semibold text-sm">Upper Leg Motion (m/s²)</h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
-                <YAxis domain={["auto", "auto"]} tickFormatter={formatAccel} />
+                <YAxis domain={["auto", "auto"]}/>
                 <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
                 <Line type="monotone" dataKey="avg_upper.ax" stroke="red" dot={false} />
                 <Line type="monotone" dataKey="avg_upper.ay" stroke="blue" dot={false} />
@@ -134,12 +133,12 @@ function Dashboard({ logout }) {
 
           {/* Upper Gyroscope */}
           <div className="flex-1 min-w-[350px]">
-            <h3 className="mb-2 font-semibold">Upper Leg Rotation (°/s)</h3>
+            <h3 className="mb-2 font-semibold text-sm">Upper Leg Rotation (°/s)</h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
-                <YAxis domain={["auto", "auto"]} tickFormatter={formatGyro} />
+                <YAxis domain={["auto", "auto"]} />
                 <Tooltip labelFormatter={formatTime} formatter={formatGyro} />
                 <Line type="monotone" dataKey="avg_upper.gx" stroke="orange" dot={false} />
                 <Line type="monotone" dataKey="avg_upper.gy" stroke="purple" dot={false} />
@@ -150,12 +149,12 @@ function Dashboard({ logout }) {
 
           {/* Lower Acceleration */}
           <div className="flex-1 min-w-[350px]">
-            <h3 className="mb-2 font-semibold">Lower Leg Motion (m/s²)</h3>
+            <h3 className="mb-2 font-semibold text-sm">Lower Leg Motion (m/s²)</h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
-                <YAxis domain={["auto", "auto"]} tickFormatter={formatAccel} />
+                <YAxis domain={["auto", "auto"]} />
                 <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
                 <Line type="monotone" dataKey="avg_lower.ax" stroke="red" dot={false} />
                 <Line type="monotone" dataKey="avg_lower.ay" stroke="blue" dot={false} />
@@ -166,12 +165,12 @@ function Dashboard({ logout }) {
 
           {/* Lower Gyroscope */}
           <div className="flex-1 min-w-[350px]">
-            <h3 className="mb-2 font-semibold">Lower Leg Rotation (°/s)</h3>
+            <h3 className="mb-2 font-semibold text-sm">Lower Leg Rotation (°/s)</h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
-                <YAxis domain={["auto", "auto"]} tickFormatter={formatGyro} />
+                <YAxis domain={["auto", "auto"]} />
                 <Tooltip labelFormatter={formatTime} formatter={formatGyro} />
                 <Line type="monotone" dataKey="avg_lower.gx" stroke="orange" dot={false} />
                 <Line type="monotone" dataKey="avg_lower.gy" stroke="purple" dot={false} />
@@ -186,8 +185,8 @@ function Dashboard({ logout }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Knee Angle Chart */}
           <div>
-            <h3 className="mb-2 font-semibold">Knee Angle (°)</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <h3 className="mb-2 font-semibold text-sm">Knee Angle (°)</h3>
+            <ResponsiveContainer width="100%" height={250}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />
@@ -200,8 +199,8 @@ function Dashboard({ logout }) {
 
           {/* Object Temperature Chart */}
           <div>
-            <h3 className="mb-2 font-semibold">Object Temperature (°C)</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <h3 className="mb-2 font-semibold text-sm">Object Temperature (°C)</h3>
+            <ResponsiveContainer width="100%" height={250}>
               <LineChart data={data}>
                 <CartesianGrid stroke="#ccc" horizontal={false} />
                 <XAxis dataKey="createdAt" tickFormatter={formatTime} />

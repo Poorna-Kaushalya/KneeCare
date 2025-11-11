@@ -43,11 +43,11 @@ function Login({ setToken, setRole }) {
       <img
         src={logo}
         alt="Project Logo"
-        className="w-84 h-36 mx-72 my-36 shadow-xl rounded-3xl"
+        className="w-72 h-24 mx-56 my-32 shadow-xl rounded-3xl"
       />
 
-      <div className="absolute top-[34rem] left-[33rem] w-[450px] rounded-2xl p-8 transform -translate-x-1/2">
-        <h2 className="text-3xl font-bold text-left text-gray-900 mb-6">
+      <div className="absolute top-[27rem] left-[25rem] w-[450px] rounded-2xl p-8 transform -translate-x-1/2">
+        <h2 className="text-xl font-bold text-left text-gray-900 mb-6">
           🔑 Login as
         </h2>
 
@@ -56,9 +56,9 @@ function Login({ setToken, setRole }) {
         )}
 
         <form onSubmit={handleLogin} className="space-y-5">
-          <div className="flex items-center space-x-6 absolute top-[29px] left-[170px]">
+          <div className="flex items-center space-x-6 absolute top-[35px] left-[170px]">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <label className="flex items-center space-x-2 text-lg">
+            <label className="flex items-center space-x-2 text-sm">
               <input
                 type="radio"
                 name="userType"
@@ -72,7 +72,7 @@ function Login({ setToken, setRole }) {
               </span>
             </label>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <label className="flex items-center space-x-2 text-lg ">
+            <label className="flex items-center space-x-2 text-sm">
               <input
                 type="radio"
                 name="userType"
@@ -100,7 +100,7 @@ function Login({ setToken, setRole }) {
               placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+              className="w-full px-2 py-1 border rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
               required
             />
           </div>
@@ -118,14 +118,14 @@ function Login({ setToken, setRole }) {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+              className="w-full px-2 py-1 border rounded-lg border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
               required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300"
+            className="w-1/2 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300"
           >
             Login
           </button>
