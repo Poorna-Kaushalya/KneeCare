@@ -1,4 +1,3 @@
-// models/RawSensorData.js
 const mongoose = require("mongoose");
 
 const RawSensorSchema = new mongoose.Schema(
@@ -28,8 +27,8 @@ const RawSensorSchema = new mongoose.Schema(
     knee_angle: Number,
 
     temperature: {
-      ambient: Number, 
-      object: Number,  
+      ambient: Number,
+      object: Number,
     },
   },
   { timestamps: true }
