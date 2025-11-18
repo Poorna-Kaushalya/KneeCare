@@ -5,7 +5,7 @@ import SignInNavbar from "../components/SignInNavbar";
 
 function FormEntry({ logout }) {
   const DEFAULT_DEVICE = "KOA360-001";
-  const WINDOW_SECONDS = 300; // 5 minutes
+  const WINDOW_SECONDS = 300; 
 
   // device + session state
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE);
