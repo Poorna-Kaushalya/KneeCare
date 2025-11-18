@@ -30,6 +30,13 @@ const RawSensorSchema = new mongoose.Schema(
       ambient: Number,
       object: Number,
     },
+
+    piezo: {
+      raw: Number,
+      voltage: Number,
+      trigger: Number,
+    }
+
   },
   { timestamps: true }
 );

@@ -5,13 +5,14 @@ const AvgSensorData = require("../models/AvgSensorData");
 
 const router = express.Router();
 
-// ✅ Save raw sensor data
+// ✅ Save raw sensor data (includes piezo)
 router.post("/api/sensor-data", async (req, res) => {
   try {
     const newData = new RawSensorData(req.body);
     await newData.save();
     res.json({ success: true });
   } catch (err) {
+    console.error("sensor-data save error:", err.message);
     res.status(400).json({ error: err.message });
   }
 });
@@ -23,24 +24,32 @@ router.get("/api/device-status", async (req, res) => {
     const connected = recentData && new Date() - recentData.createdAt < 10000;
     res.json({ connected });
   } catch (err) {
+    console.error("device-status error:", err.message);
     res.json({ connected: false });
   }
 });
 
 // ✅ Get latest 10 average records
 router.get("/api/sensor-data", async (req, res) => {
-  const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
-  res.json(data);
+  try {
+    const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
+    res.json(data);
+  } catch (err) {
+    console.error("get avg sensor-data error:", err.message);
+    res.status(500).json({ error: "Failed to fetch average sensor data" });
+  }
 });
 
 // ✅ Calculate 5-min averages every 5 minutes
 setInterval(async () => {
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  const rawData = await RawSensorData.find({
-    createdAt: { $gte: fiveMinutesAgo },
-  });
+  try {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const rawData = await RawSensorData.find({
+      createdAt: { $gte: fiveMinutesAgo },
+    });
 
-  if (rawData.length > 0) {
+    if (!rawData.length) return;
+
     const device_id = rawData[0].device_id;
 
     let sum_upper = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
@@ -48,36 +57,53 @@ setInterval(async () => {
     let sum_angle = 0;
     let sum_temp = { ambient: 0, object: 0 };
 
+    // 🔥 NEW: piezo sums
+    let sum_piezo = { raw: 0, voltage: 0, trigger: 0 };
+    let piezoCount = 0;
+
     rawData.forEach((d) => {
-      // Upper sensor sums
-      sum_upper.ax += d.upper.ax;
-      sum_upper.ay += d.upper.ay;
-      sum_upper.az += d.upper.az;
-      sum_upper.gx += d.upper.gx || 0;
-      sum_upper.gy += d.upper.gy || 0;
-      sum_upper.gz += d.upper.gz || 0;
-      sum_upper.temp += d.upper.temp || 0;
+      // Upper sensor sums (add null-safety)
+      if (d.upper) {
+        sum_upper.ax += d.upper.ax || 0;
+        sum_upper.ay += d.upper.ay || 0;
+        sum_upper.az += d.upper.az || 0;
+        sum_upper.gx += d.upper.gx || 0;
+        sum_upper.gy += d.upper.gy || 0;
+        sum_upper.gz += d.upper.gz || 0;
+        sum_upper.temp += d.upper.temp || 0;
+      }
 
       // Lower sensor sums
-      sum_lower.ax += d.lower.ax;
-      sum_lower.ay += d.lower.ay;
-      sum_lower.az += d.lower.az;
-      sum_lower.gx += d.lower.gx || 0;
-      sum_lower.gy += d.lower.gy || 0;
-      sum_lower.gz += d.lower.gz || 0;
-      sum_lower.temp += d.lower.temp || 0;
+      if (d.lower) {
+        sum_lower.ax += d.lower.ax || 0;
+        sum_lower.ay += d.lower.ay || 0;
+        sum_lower.az += d.lower.az || 0;
+        sum_lower.gx += d.lower.gx || 0;
+        sum_lower.gy += d.lower.gy || 0;
+        sum_lower.gz += d.lower.gz || 0;
+        sum_lower.temp += d.lower.temp || 0;
+      }
 
       // Knee angle
       sum_angle += d.knee_angle || 0;
 
-      // Temperature sensor (MLX90614)
+      // Temperature sensor 
       if (d.temperature) {
         sum_temp.ambient += d.temperature.ambient || 0;
         sum_temp.object += d.temperature.object || 0;
       }
+
+      // 🔥 Piezo (VAG) sensor
+      if (d.piezo) {
+        sum_piezo.raw     += d.piezo.raw || 0;
+        sum_piezo.voltage += d.piezo.voltage || 0;
+        sum_piezo.trigger += d.piezo.trigger || 0; // usually 0/1
+        piezoCount++;
+      }
     });
 
     const count = rawData.length;
+
     const avgData = new AvgSensorData({
       device_id,
       avg_upper: {
@@ -103,11 +129,23 @@ setInterval(async () => {
         ambient: sum_temp.ambient / count,
         object: sum_temp.object / count,
       },
+
+      // 🔥 store averaged piezo if any samples had piezo data
+      avg_piezo: piezoCount > 0
+        ? {
+            raw:     sum_piezo.raw / piezoCount,        // mean ADC
+            voltage: sum_piezo.voltage / piezoCount,    // mean voltage
+            // fraction of samples where trigger == 1 (0–1)
+            trigger_rate: sum_piezo.trigger / piezoCount,
+          }
+        : undefined,
     });
 
     await avgData.save();
     await RawSensorData.deleteMany({ _id: { $in: rawData.map((d) => d._id) } });
     console.log(`✅ Saved 5-min average & deleted ${rawData.length} raw entries`);
+  } catch (err) {
+    console.error("5-min average error:", err.message);
   }
 }, 5 * 60 * 1000);
 
