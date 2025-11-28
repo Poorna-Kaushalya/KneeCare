@@ -12,17 +12,22 @@ const PatientSchema = new mongoose.Schema(
     nextClinicDate: { type: Date },
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    doctorRegNo: { type: String, required: true },
+    doctorRegNo: { type: String }, // Made not required, as per common practice
     device_id: {
       type: String,
       unique: true,
       sparse: true,
     },
+    // New fields added
+    assignedDoctorName: { type: String }, // Added assignedDoctorName
+    contact: { type: String },            // Added contact
+    medicationList: [{ type: String }],   // Added medicationList as an array of strings
   },
   { timestamps: true }
 );
 
 PatientSchema.pre("save", async function (next) {
+  // Only hash the password if it has been modified (or is new)
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 10);
   }
