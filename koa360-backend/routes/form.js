@@ -8,7 +8,7 @@ const FormData = require("../models/FormData");
 const router = express.Router();
 
 /* =========================
- * Helper Functions
+ Functions
  * ========================= */
 function hannWindow(n) {
   const w = new Array(n);
@@ -38,10 +38,6 @@ function zeroCrossingsPerSecond(x, sampleRate) {
   return crossings * (sampleRate / Math.max(1, x.length - 1));
 }
 
-/**
- * Compute frequency-domain features using FFT with windowing and power-of-2 length.
- * entropyMode: 'normalized' (0..1) or 'kaggle_raw' (big negative values, sum of log power)
- */
 function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
   const n = sig.length;
   if (n < 8 || sampleRate <= 0 || !isFinite(sampleRate)) {
@@ -51,6 +47,7 @@ function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
       spectral_entropy: 0,
       zero_crossing_rate: 0,
       mean_frequency: 0,
+      temperature: 0,
     };
   }
 
@@ -80,6 +77,7 @@ function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
       spectral_entropy: 0,
       zero_crossing_rate: zcr,
       mean_frequency: 0,
+      temperature: 0,
     };
   }
 
@@ -101,6 +99,7 @@ function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
       spectral_entropy: 0,
       zero_crossing_rate: zcr,
       mean_frequency: 0,
+      temperature: 0,
     };
   }
 
@@ -158,14 +157,6 @@ function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
  * API ROUTES
  * ========================= */
 
-/**
- * GET /api/features
- * Query params:
- *  - device_id=KOA360-001  (required)
- *  - signal=accel|knee     (default: accel)
- *  - entropy=normalized|kaggle (default: normalized)
- *  - g2ms2=9.80665         (optional, only used when signal=accel)
- */
 router.get("/api/features", async (req, res) => {
   try {
     const {
@@ -205,8 +196,8 @@ router.get("/api/features", async (req, res) => {
       series = rows.map((r) => Number(r.knee_angle || 0));
     } else {
       // Acceleration magnitude (upper + lower)
-      // If your IMU raw accel is in g, set g2ms2 to 9.80665 to convert to m/s^2
-      const g2ms2 = g2ms2Raw ? Number(g2ms2Raw) : 1; // default no scaling
+      // If  IMU raw accel is in g, set g2ms2 to 9.80665 to convert to m/s^2
+      const g2ms2 = g2ms2Raw ? Number(g2ms2Raw) : 1; 
       series = rows.map((r) => {
         const ux = Number(r?.upper?.ax || 0),
           uy = Number(r?.upper?.ay || 0),
@@ -221,7 +212,19 @@ router.get("/api/features", async (req, res) => {
       });
     }
 
-    // Estimate sample rate (samples per second)
+    // Calculate average knee_temperature from rows 
+    const temps = rows
+      .map((r) => {
+        if (r.temperature?.object) return Number(r.temperature.object);
+        return null;
+      })
+      .filter((x) => x !== null && !isNaN(x));
+
+    const avgTemperature =
+      temps.length > 0
+        ? temps.reduce((sum, t) => sum + t, 0) / temps.length
+        : null;
+
     const seconds =
       (new Date(rows[rows.length - 1].createdAt) - new Date(rows[0].createdAt)) /
         1000 || 1;
@@ -233,6 +236,11 @@ router.get("/api/features", async (req, res) => {
       entropy === "kaggle" ? "kaggle_raw" : "normalized"
     );
 
+    const featsWithTemp = {
+      ...feats,
+      temperature: avgTemperature !== null ? Number(avgTemperature.toFixed(2)) : null,
+    };
+
     return res.json({
       ok: true,
       hasData: true,
@@ -240,7 +248,7 @@ router.get("/api/features", async (req, res) => {
       windowStart,
       windowEnd,
       sampleRateHz: sampleRate,
-      ...feats,
+      ...featsWithTemp,
     });
   } catch (e) {
     console.error("features error:", e);
@@ -248,15 +256,7 @@ router.get("/api/features", async (req, res) => {
   }
 });
 
-/**
- * POST /api/formdata
- * Body:
- *  {
- *    device_id, windowStart, windowEnd, sampleRateHz,
- *    rms_amplitude, peak_frequency, spectral_entropy, zero_crossing_rate, mean_frequency,
- *    knee_condition, severity_level, treatment_advised, notes
- *  }
- */
+
 router.post("/api/formdata", async (req, res) => {
   try {
     const {
@@ -269,6 +269,7 @@ router.post("/api/formdata", async (req, res) => {
       spectral_entropy,
       zero_crossing_rate,
       mean_frequency,
+      temperature,
       knee_condition,
       severity_level,
       treatment_advised,
@@ -297,6 +298,7 @@ router.post("/api/formdata", async (req, res) => {
         spectral_entropy,
         zero_crossing_rate,
         mean_frequency,
+        temperature,
       },
       knee_condition,
       severity_level,
@@ -311,10 +313,7 @@ router.post("/api/formdata", async (req, res) => {
   }
 });
 
-/**
- * GET /api/formdata
- * Query: device_id (optional), limit (default 10)
- */
+
 router.get("/api/formdata", async (req, res) => {
   try {
     const { device_id, limit = 10 } = req.query;
