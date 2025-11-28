@@ -1,38 +1,32 @@
-// models/AvgSensorData.js
+// backend/models/AvgSensorData.js
+
 const mongoose = require("mongoose");
 
-const AvgSensorSchema = new mongoose.Schema(
+const AvgSensorDataSchema = new mongoose.Schema(
   {
-    device_id: { type: String, required: true },
-
+    device_id: { type: String, required: true, index: true }, // Crucial for linking
     avg_upper: {
-      ax: { type: Number, required: true },
-      ay: { type: Number, required: true },
-      az: { type: Number, required: true },
-      gx: { type: Number },
-      gy: { type: Number },
-      gz: { type: Number },
-      temp: { type: Number },
+      ax: Number, ay: Number, az: Number,
+      gx: Number, gy: Number, gz: Number,
+      temp: Number, // Sum/count of raw upper.temp
     },
-
     avg_lower: {
-      ax: { type: Number, required: true },
-      ay: { type: Number, required: true },
-      az: { type: Number, required: true },
-      gx: { type: Number },
-      gy: { type: Number },
-      gz: { type: Number },
-      temp: { type: Number },
+      ax: Number, ay: Number, az: Number,
+      gx: Number, gy: Number, gz: Number,
+      temp: Number, 
     },
-
-    avg_knee_angle: { type: Number, required: true },
-
+    avg_knee_angle: Number,
     avg_temperature: {
-      ambient: { type: Number }, 
-      object: { type: Number },  
+      ambient: Number,
+      object: Number,
+    },
+    avg_piezo: {
+      raw: Number,
+      voltage: Number,
+      trigger_rate: Number, 
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("AvgSensorData", AvgSensorSchema);
+module.exports = mongoose.model("AvgSensorData", AvgSensorDataSchema);
