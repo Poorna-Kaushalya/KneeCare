@@ -5,7 +5,7 @@ import SignInNavbar from "../components/SignInNavbar";
 
 function FormEntry({ logout }) {
   const DEFAULT_DEVICE = "KOA360-001";
-  const WINDOW_SECONDS = 300; 
+  const WINDOW_SECONDS = 300;
 
   // device + session state
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE);
@@ -23,6 +23,7 @@ function FormEntry({ logout }) {
     mean_frequency: "",
     spectral_entropy: "",
     zero_crossing_rate: "",
+    temperature: "",
   });
 
   // clinical form
@@ -57,6 +58,7 @@ function FormEntry({ logout }) {
       mean_frequency: "",
       spectral_entropy: "",
       zero_crossing_rate: "",
+      temperature: "",
     });
 
   // stable fetch to satisfy eslint deps
@@ -79,6 +81,7 @@ function FormEntry({ logout }) {
         mean_frequency: d.mean_frequency ?? "",
         spectral_entropy: d.spectral_entropy ?? "",
         zero_crossing_rate: d.zero_crossing_rate ?? "",
+        temperature: d.temperature ?? "",
       });
     } catch (err) {
       console.error("Failed to fetch features:", err);
@@ -143,6 +146,7 @@ function FormEntry({ logout }) {
         spectral_entropy: features.spectral_entropy,
         zero_crossing_rate: features.zero_crossing_rate,
         mean_frequency: features.mean_frequency,
+        temperature: features.temperature,
         knee_condition: form.knee_condition,
         severity_level: form.severity_level,
         treatment_advised: form.treatment_advised,
@@ -245,7 +249,10 @@ function FormEntry({ logout }) {
           {/* RIGHT: Clinical Form */}
           <section className="bg-white  shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
             <h2 className="text-xl font-bold text-blue-700 mb-4">
-              Clinical Form
+              Clinical Form  &nbsp;&nbsp; <span className="text-xs text-gray-500">
+                ( * Required )
+              </span>
+
             </h2>
 
             {/* Device entry (mirrors left) */}
@@ -273,7 +280,7 @@ function FormEntry({ logout }) {
                 <InfoRow label="Window Start" value={features.windowStart} />
                 <InfoRow label="Window End" value={features.windowEnd} />
                 <InfoRow
-                  label="Sample Rate (Hz)"
+                  label="Sample Rate (Hz) *"
                   value={features.sampleRateHz}
                 />
                 <InfoRow label="RMS Amplitude" value={features.rms_amplitude} />
@@ -293,6 +300,10 @@ function FormEntry({ logout }) {
                   label="Zero Crossing Rate (/s)"
                   value={features.zero_crossing_rate}
                 />
+                <InfoRow
+                  label="Temperature (°C)"
+                  value={features.temperature ?? "N/A"} />
+
               </div>
             </fieldset>
 
@@ -302,7 +313,7 @@ function FormEntry({ logout }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
               <Select
-                label="Knee Condition"
+                label="Knee Condition *"
                 value={form.knee_condition}
                 onChange={(v) => setForm({ ...form, knee_condition: v })}
                 options={[
@@ -314,7 +325,7 @@ function FormEntry({ logout }) {
                 disabled={isCollecting}
               />
               <Select
-                label="Severity Level"
+                label="Severity Level *"
                 value={form.severity_level}
                 onChange={(v) => setForm({ ...form, severity_level: v })}
                 options={[
@@ -327,7 +338,7 @@ function FormEntry({ logout }) {
                 disabled={isCollecting}
               />
               <Select
-                label="Treatment Advised"
+                label="Treatment Advised *"
                 value={form.treatment_advised}
                 onChange={(v) => setForm({ ...form, treatment_advised: v })}
                 options={[
@@ -341,13 +352,13 @@ function FormEntry({ logout }) {
             </div>
 
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Notes (optional)
+              Notes
             </label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full border rounded-lg p-3 mb-2 text-sm"
-              rows={2}
+              rows={1}
               placeholder="Any observations..."
               disabled={isCollecting}
             />
