@@ -1,5 +1,3 @@
-// src/pages/Dashboard.js (UPDATED to use DeletePatientFlow for combined modal+notification and new patient details)
-
 import { useState, useEffect, useCallback } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -18,6 +16,8 @@ import {
 
 import AddPatientModal from '../components/AddPatientModal';
 import EditPatientModal from '../components/EditPatientModal';
+// 1. IMPORT THE NEW MEDICATION MODAL
+import EditMedicationModal from '../components/EditMedicationModal'; 
 import DeletePatientFlow from '../components/DeletePatientFlow';
 
 
@@ -36,10 +36,15 @@ function Dashboard({ logout }) {
   const [showEditPatientModal, setShowEditPatientModal] = useState(false);
   const [patientToEdit, setPatientToEdit] = useState(null);
 
+  // NEW STATE: to control the context of the edit modal (full or medication only)
+  const [editMode, setEditMode] = useState(null);
+
   // --- State for the combined DeletePatientFlow component ---
   const [showDeleteFlow, setShowDeleteFlow] = useState(false);
-  const [patientForDeleteFlow, setPatientForDeleteFlow] = useState(null); 
+  const [patientForDeleteFlow, setPatientForDeleteFlow] = useState(null);
 
+  // State for data range selection 
+  const [dataRange, setDataRange] = useState(7);
 
   const MAX_KNEE_ANGLE = 120;
 
@@ -49,8 +54,14 @@ function Dashboard({ logout }) {
       minute: "2-digit",
     });
 
+  // Format month and day
+  const formatMonthDay = (timestamp) =>
+    new Date(timestamp).toLocaleDateString([], {
+      month: "short",
+      day: "2-digit",
+    });
+
   const formatAccel = (value) => `${value.toFixed(2)} m/s²`;
-  const formatGyro = (value) => `${value.toFixed(1)}°/s`;
   const formatDegrees = (value) => {
     let degrees = value;
     if (value >= 0 && value <= 1) {
@@ -58,7 +69,7 @@ function Dashboard({ logout }) {
     }
     return degrees % 1 === 0 ? `${degrees}°` : `${degrees.toFixed(1)}°`;
   };
-  const formatTemp = (value) => `${value.toFixed(2)} °C`;
+  const formatTemp = (value) => `${value.toFixed(1)}`;
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -72,6 +83,7 @@ function Dashboard({ logout }) {
     }
   }, [logout]);
 
+  // Refactored fetchData to pre-calculate acceleration
   const fetchData = useCallback(async (patientId) => {
     if (!patientId) {
       setData([]);
@@ -79,19 +91,22 @@ function Dashboard({ logout }) {
       setEnvTemp(0);
       return;
     }
+    const patient = patients.find(p => p.id === patientId);
+    const deviceId = patient?.device_id;
     try {
-      const res = await api.get(`/api/sensor-data?patientId=${patientId}`);
+      const res = await api.get(`/api/sensor-datas?deviceId=${deviceId}&range=${dataRange}`);
       const allData = res.data;
       const lastPoints = allData.slice(-600).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      setData(lastPoints);
 
-      const magnitudes = lastPoints.map((d) => {
-        const upperMag = Math.sqrt(
+      const enrichedData = lastPoints.map(d => {
+        const upperAccelMag = Math.sqrt(
           (d.avg_upper?.ax || 0) ** 2 + (d.avg_upper?.ay || 0) ** 2 + (d.avg_upper?.az || 0) ** 2
         );
-        const lowerMag = Math.sqrt(
+        const lowerAccelMag = Math.sqrt(
           (d.avg_lower?.ax || 0) ** 2 + (d.avg_lower?.ay || 0) ** 2 + (d.avg_lower?.az || 0) ** 2
         );
+
+        // Calculate a combined magnitude
         const gyroMag =
           Math.sqrt(
             (d.avg_upper?.gx || 0) ** 2 + (d.avg_upper?.gy || 0) ** 2 + (d.avg_upper?.gz || 0) ** 2
@@ -99,12 +114,24 @@ function Dashboard({ logout }) {
           Math.sqrt(
             (d.avg_lower?.gx || 0) ** 2 + (d.avg_lower?.gy || 0) ** 2 + (d.avg_lower?.gz || 0) ** 2
           );
-        return upperMag + lowerMag + 0.5 * gyroMag;
+        const totalAccelGyroMag = upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
+
+
+        return {
+          ...d,
+          upperAccelMag: upperAccelMag,
+          lowerAccelMag: lowerAccelMag,
+          totalAccelGyroMag: totalAccelGyroMag
+        };
       });
 
+      setData(enrichedData);
+
+      const stepMagnitudes = enrichedData.map(d => d.totalAccelGyroMag);
+
       let stepCount = 0;
-      if (magnitudes.length > 0) {
-        const smoothMagnitudes = magnitudes.map((val, i, arr) => {
+      if (stepMagnitudes.length > 0) {
+        const smoothMagnitudes = stepMagnitudes.map((val, i, arr) => {
           const windowSize = 5;
           const start = Math.max(0, i - windowSize + 1);
           const window = arr.slice(start, i + 1);
@@ -124,8 +151,8 @@ function Dashboard({ logout }) {
       }
       setSteps(stepCount);
 
-      if (lastPoints.length > 0 && lastPoints[lastPoints.length - 1].avg_temperature?.ambient != null) {
-        setEnvTemp(lastPoints[lastPoints.length - 1].avg_temperature.ambient);
+      if (enrichedData.length > 0 && enrichedData[enrichedData.length - 1].avg_temperature?.ambient != null) {
+        setEnvTemp(enrichedData[enrichedData.length - 1].avg_temperature.ambient);
       } else {
         setEnvTemp(0);
       }
@@ -144,7 +171,13 @@ function Dashboard({ logout }) {
         setEnvTemp(0);
       }
     }
-  }, [logout]);
+  }, [logout, patients, dataRange]);
+
+  // Data range 
+  const rangeOptions = [
+    { label: "Last 3 Days", value: 3 },
+    { label: "Last Week", value: 7 },
+  ];
 
   const fetchPatientDetails = useCallback(async (patientId) => {
     if (!patientId) {
@@ -221,21 +254,24 @@ function Dashboard({ logout }) {
     setSelectedPatientId(patientId);
   };
 
-  // --- CRUD Handlers ---
 
+  // --- CRUD Handlers ---
   const handleAddPatientSuccess = () => {
     setShowAddPatientModal(false);
     fetchPatients();
   };
 
-  const handleEditPatient = (patient) => {
+  // MODIFIED: Added optional 'mode' parameter, defaulting to 'full'
+  const handleEditPatient = (patient, mode = 'full') => {
     setPatientToEdit(patient);
+    setEditMode(mode); // Set the mode
     setShowEditPatientModal(true);
   };
 
   const handleEditPatientSuccess = () => {
     setShowEditPatientModal(false);
     setPatientToEdit(null);
+    setEditMode(null); // Reset mode on success
     fetchPatients();
     if (selectedPatientId) {
       fetchPatientDetails(selectedPatientId);
@@ -262,19 +298,25 @@ function Dashboard({ logout }) {
     setShowDeleteFlow(false);
     setPatientForDeleteFlow(null);
   };
+  
+  // 2. DEFINE A COMMON CLOSE HANDLER FOR EDIT MODALS
+  const handleCloseEditModal = () => {
+    setShowEditPatientModal(false);
+    setPatientToEdit(null);
+    setEditMode(null);
+  };
 
 
   // --- Tailwind CSS Classes for consistency ---
   const pageBg = "min-h-screen bg-gradient-to-br from-blue-50 to-white font-sans text-gray-800";
   const containerPadding = "p-4 md:p-6 lg:p-20";
   const dashboardTitleClasses = "text-xl lg:text-2xl font-bold text-gray-800 mb-0 relative mt-[-5]";
-  const summaryMetricCardClasses = "flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-blue-100";
-  const chartCardClasses = "bg-white rounded-lg shadow-md p-4 lg:p-6 flex-1 m-1 min-w-[360px] lg:min-w-[calc(33.333%-8px)] h-[250px] transition-all";
+  const summaryMetricCardClasses = "flex items-center bg-white rounded-full px-2 py-1.5 shadow-xs border border-blue-100 md-0";
+  const chartCardClasses = "bg-white rounded-lg shadow-md p-4 lg:p-6 h-[250px] transition-all";
   const chartTitleClasses = "text-lg md:text-base font-semibold text-gray-700 mb-3";
   const chartAxisLabelStyle = { fontSize: '0.6rem', fill: '#6b7280' };
-
   const patientSidebarClasses = "bg-white rounded-xl shadow-md p-6 lg:p-6 col-span-1 relative top-[-100px]";
-  const patientDetailItemClasses = "flex items-center text-gray-700 text-sm mb-2";
+  const patientDetailItemClasses = "flex items-center text-gray-700 text-xs mb-2";
 
 
   return (
@@ -286,29 +328,44 @@ function Dashboard({ logout }) {
           Knee Monitor Dashboard
         </h1>
 
-        <div className="flex flex-wrap items-center gap-4 mb-2 relative top-4">
+        <div className="flex flex-wrap items-center gap-2 mb-1 relative top-4">
           <div className={summaryMetricCardClasses}>
-            <FontAwesomeIcon icon={faShoePrints} className="text-blue-400 mr-3 text-lg" />
-            <span className="text-base font-medium">
+            <span className="text-base text-sm mr-2">Period :</span>
+            {rangeOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setDataRange(option.value)}
+                className={`px-2 py-1 rounded-full text-xs mr-1 font-semibold transition-colors ${dataRange === option.value
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className={summaryMetricCardClasses}>
+            <FontAwesomeIcon icon={faShoePrints} className="text-blue-400 mr-1 text-sm" />
+            <span className="text-base text-sm">
               Step Count: &nbsp;<span className="text-black-600 font-bold">{steps}</span>
             </span>
           </div>
           <div className={summaryMetricCardClasses}>
-            <FontAwesomeIcon icon={faCloudSun} className="text-yellow-500 mr-3 text-lg" />
-            <span className="text-base font-medium">
+            <FontAwesomeIcon icon={faCloudSun} className="text-yellow-500 mr-1 text-sm" />
+            <span className="text-base text-sm">
               Temperature: &nbsp;<span className="text-black-600 font-bold">{envTemp.toFixed(2)} °C</span>
             </span>
           </div>
           <div className={summaryMetricCardClasses}>
-            <FontAwesomeIcon icon={faHeartbeat} className="text-red-500 mr-3 text-lg" />
-            <span className="text-base font-medium">
-              Current Severity Level: &nbsp;<span className="text-red-700 font-bold">{selectedPatientDetails?.severityLevel || "N/A"} </span>
+            <FontAwesomeIcon icon={faHeartbeat} className="text-red-500 mr-1 text-sm" />
+            <span className="text-base text-sm">
+              Current Severity Level: &nbsp;<span className="text-red-700 font-bold text-sm">{selectedPatientDetails?.severityLevel || "N/A"} </span>
             </span>
           </div>
           <div className={summaryMetricCardClasses}>
-            <FontAwesomeIcon icon={faMicrochip} className="text-gray-500 mr-3 text-lg" />
-            <span className="text-base font-medium">
-              Device ID: &nbsp;<span className="text-blue-600 font-bold">{selectedPatientDetails?.device_id || "N/A"} </span>
+            <FontAwesomeIcon icon={faMicrochip} className="text-gray-500 mr-1 text-sm" />
+            <span className="text-base text-sm">
+              Device ID: &nbsp;<span className="text-blue-600 font-bold text-sm">{selectedPatientDetails?.device_id || "N/A"} </span>
             </span>
           </div>
         </div>
@@ -316,7 +373,6 @@ function Dashboard({ logout }) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-8">
           <div className="lg:col-span-3">
             {!selectedPatientId ? (
-              // Placeholder when no patient is selected
               <div className="bg-white p-6 rounded-lg shadow-md h-full flex flex-col items-center justify-center text-center col-span-full min-h-[500px]">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -327,134 +383,108 @@ function Dashboard({ logout }) {
                 </p>
               </div>
             ) : (
-              // Sensor data charts when a patient is selected
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Upper Leg Motion */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Upper Leg Motion (m/s²)</h3>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis tickFormatter={formatAccel} style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '0px' }} />
-                      <Line type="monotone" dataKey="avg_upper.ax" stroke="#ef4444" dot={false} name="Upper Ax" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_upper.ay" stroke="#3b82f6" dot={false} name="Upper Ay" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_upper.az" stroke="#22c55e" dot={false} name="Upper Az" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
+
+              <>
+                {/* Sensor data charts using a simplified 2x2 grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={chartCardClasses}>
+                    <h3 className={chartTitleClasses}>Knee Motion ( m/s² )</h3>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                        <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} style={chartAxisLabelStyle} />
+                        <YAxis tickFormatter={formatAccel} style={chartAxisLabelStyle} />
+                        <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '0px' }} />
+                        <Line type="monotone" dataKey="upperAccelMag" stroke="#ef4444" dot={false} name="Upper Leg Accel. Mag" strokeWidth={2} />
+                        <Line type="monotone" dataKey="lowerAccelMag" stroke="#3b82f6" dot={false} name="Lower Leg Accel. Mag" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className={chartCardClasses}>
+                    <h3 className={chartTitleClasses}>Knee Angle (degrees)</h3>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                        <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} style={chartAxisLabelStyle} />
+                        <YAxis tickFormatter={formatDegrees} style={chartAxisLabelStyle} />
+                        <Tooltip labelFormatter={formatTime} formatter={(v) => formatDegrees(v)} />
+                        <Area type="monotone" dataKey="avg_knee_angle" stroke="#f97316" fill="#f9731640" dot={false} name="Knee Angle" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className={chartCardClasses}>
+                    <h3 className={chartTitleClasses}>Knee Temperature (°C)</h3>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                        <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} style={chartAxisLabelStyle} />
+                        <YAxis tickFormatter={formatTemp} style={chartAxisLabelStyle} />
+                        <Tooltip labelFormatter={formatTime} formatter={(v) => formatTemp(v)} />
+                        <Area
+                          type="monotone"
+                          dataKey="avg_temperature.object"
+                          stroke="#3b82f6"
+                          fill="#3b82f640"
+                          dot={false}
+                          name="Object Temp"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className={chartCardClasses}>
+                    <h3 className={chartTitleClasses}>Vibroarthrography (VAG)</h3>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+                        <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} style={chartAxisLabelStyle} />
+                        <YAxis style={chartAxisLabelStyle} />
+                        <Tooltip labelFormatter={formatTime} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '10px' }} />
+                        <Line type="monotone" dataKey="avg_piezo.raw" stroke="#ff7300" dot={false} name="Piezo Raw Avg" strokeWidth={2} />
+                        <Line type="monotone" dataKey="avg_piezo.voltage" stroke="#8884d8" dot={false} name="Piezo Voltage Avg" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                {/* Upper Leg Rotation */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Upper Leg Rotation (°/s)</h3>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis tickFormatter={formatGyro} style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} formatter={formatGyro} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '10px' }} />
-                      <Line type="monotone" dataKey="avg_upper.gx" stroke="#f97316" dot={false} name="Upper Gx" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_upper.gy" stroke="#8b5cf6" dot={false} name="Upper Gy" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_upper.gz" stroke="#a16207" dot={false} name="Upper Gz" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Lower Leg Motion */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Lower Leg Motion (m/s²)</h3>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis tickFormatter={formatAccel} style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} formatter={formatAccel} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '10px' }} />
-                      <Line type="monotone" dataKey="avg_lower.ax" stroke="#ef4444" dot={false} name="Lower Ax" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_lower.ay" stroke="#3b82f6" dot={false} name="Lower Ay" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_lower.az" stroke="#22c55e" dot={false} name="Lower Az" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Lower Leg Rotation */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Lower Leg Rotation (°/s)</h3>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis tickFormatter={formatGyro} style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} formatter={formatGyro} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '10px' }} />
-                      <Line type="monotone" dataKey="avg_lower.gx" stroke="#f97316" dot={false} name="Lower Gx" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_lower.gy" stroke="#8b5cf6" dot={false} name="Lower Gy" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_lower.gz" stroke="#a16207" dot={false} name="Lower Gz" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Knee Angle Chart */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Knee Angle (°)</h3>
-                  <ResponsiveContainer width="100%" height={150}>
-                    <AreaChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis tickFormatter={formatDegrees} style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} formatter={(v) => formatDegrees(v)} />
-                      <Area type="monotone" dataKey="avg_knee_angle" stroke="#f97316" fill="#f9731640" dot={false} name="Knee Angle" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Knee Temperature Chart */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Knee Temperature (°C)</h3>
-                  <ResponsiveContainer width="100%" height={150}>
-                    <AreaChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis tickFormatter={formatTemp} style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} formatter={(v) => formatTemp(v)} />
-                      <Area
-                        type="monotone"
-                        dataKey="avg_temperature.object"
-                        stroke="#3b82f6"
-                        fill="#3b82f640"
-                        dot={false}
-                        name="Object Temp"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Piezo Data Chart - NEW */}
-                <div className={chartCardClasses}>
-                  <h3 className={chartTitleClasses}>Piezo/VAG Data</h3>
-                  <ResponsiveContainer width="100%" height={150}>
-                    <LineChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                      <XAxis dataKey="createdAt" tickFormatter={formatTime} style={chartAxisLabelStyle} />
-                      <YAxis style={chartAxisLabelStyle} />
-                      <Tooltip labelFormatter={formatTime} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '0.7rem', paddingTop: '10px' }} />
-                      <Line type="monotone" dataKey="avg_piezo.raw" stroke="#ff7300" dot={false} name="Piezo Raw Avg" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_piezo.voltage" stroke="#8884d8" dot={false} name="Piezo Voltage Avg" strokeWidth={2} />
-                      <Line type="monotone" dataKey="avg_piezo.trigger_rate" stroke="#82ca9d" dot={false} name="Trigger Rate Avg" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-              </div>
-            )}
+                {/* --- Current Medication Card (Moved & Updated with Edit Button) --- */}
+                {selectedPatientDetails && (
+                  <div className="bg-white rounded-lg shadow-md p-4 lg:p-6 mt-4">
+                    <h3 className="text-lg md:text-base font-semibold text-gray-700 mb-3 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon={faPills} className="text-orange-500 mr-2" />
+                        Current Medication
+                      </div>
+                      <button
+                        // UPDATED: Pass 'medication' mode to handler
+                        onClick={() => handleEditPatient(selectedPatientDetails, 'medication')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full transition-colors flex items-center shadow-md"
+                        title="Update Medication"
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="mr-1" /> Update
+                      </button>
+                    </h3>
+                    {selectedPatientDetails.medicationList && selectedPatientDetails.medicationList.length > 0 ? (
+                      <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                        {selectedPatientDetails.medicationList.map((med, index) => (
+                          <li key={index}>{med}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-500">No active medication listed. Click 'Update' to add medication.</p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}<br/><br/><br/><br/>
           </div>
 
-          <div className="lg:col-span-1  mt-[-16px]">
+          <div className="lg:col-span-1  mt-[-16px] relative top-0">
             <div className={patientSidebarClasses}>
               <h2 className="text-xl font-bold text-gray-800 mb-2">Search Patients</h2>
 
@@ -479,24 +509,23 @@ function Dashboard({ logout }) {
               </button>
 
               {/* Patient List */}
-              <div className="max-h-20 overflow-y-auto mb-2 border rounded-lg border-gray-200">
+              <div className="max-h-30 overflow-y-auto mb-2 border rounded-lg border-gray-200 text-sm">
                 {filteredPatients.length > 0 ? (
                   filteredPatients.map((patient) => (
                     patient.id && (
                       <div
                         key={patient.id}
-                        className={`cursor-pointer p-3 border-b border-gray-100 hover:bg-blue-50 flex justify-between items-center ${
-                          selectedPatientId === patient.id ? "bg-blue-100 font-semibold" : ""
-                        }`}
+                        className={`cursor-pointer p-3 border-b border-gray-100 hover:bg-blue-50 flex justify-between items-center ${selectedPatientId === patient.id ? "bg-blue-100 font-semibold" : ""
+                          }`}
                         onClick={() => handlePatientSelect(patient.id)}
                       >
                         <div>
                           {patient.name || "Unknown Name"} ({patient.id})
                         </div>
                         <div className="flex items-center space-x-2">
-                          {/* Edit Button */}
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleEditPatient(patient); }}
+                            // UPDATED: Pass 'full' mode explicitly
+                            onClick={(e) => { e.stopPropagation(); handleEditPatient(patient, 'full'); }}
                             className="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-200 transition-colors"
                             title="Edit Patient"
                           >
@@ -521,19 +550,15 @@ function Dashboard({ logout }) {
               </div>
 
               {/* Selected Patient Details Card */}
-              <div className="bg-blue-50 rounded-lg p-4 shadow-inner border border-blue-200">
-                <h3 className="text-lg font-bold text-blue-800 mb-3">
-                  {selectedPatientDetails ? selectedPatientDetails.name : "No Patient Selected"}
-                </h3>
+              <div className="bg-blue-50 rounded-lg p-4 shadow-inner border border-blue-200 text-sm">
+                <p className="text-lg font-bold text-blue-800 mb-3 "><center>
+                  {selectedPatientDetails ? selectedPatientDetails.name : "No Patient Selected"}</center>
+                </p>
                 {selectedPatientDetails ? (
                   <>
                     <div className={patientDetailItemClasses}>
                       <FontAwesomeIcon icon={faUser} className="text-blue-500 mr-2" />
                       ID: {selectedPatientDetails.id || "N/A"}
-                    </div>
-                    <div className={patientDetailItemClasses}>
-                      <FontAwesomeIcon icon={faMicrochip} className="text-gray-500 mr-2" />
-                      Device ID: {selectedPatientDetails.device_id || "None"}
                     </div>
                     <div className={patientDetailItemClasses}>
                       <FontAwesomeIcon icon={faUser} className="text-blue-500 mr-2" />
@@ -543,10 +568,12 @@ function Dashboard({ logout }) {
                       <FontAwesomeIcon icon={faUser} className="text-blue-500 mr-2" />
                       Gender: {selectedPatientDetails.gender || "N/A"}
                     </div>
-                    <div className={patientDetailItemClasses}>
-                      <FontAwesomeIcon icon={faHeartbeat} className="text-red-500 mr-2" />
-                      Severity: {selectedPatientDetails.severityLevel || "N/A"}
-                    </div>
+                    {selectedPatientDetails.contact && (
+                      <div className={patientDetailItemClasses}>
+                        <FontAwesomeIcon icon={faPhone} className="text-green-500 mr-2" />
+                        Contact: {selectedPatientDetails.contact}
+                      </div>
+                    )}
                     <div className={patientDetailItemClasses}>
                       <FontAwesomeIcon icon={faCalendarAlt} className="text-green-500 mr-2" />
                       Last Clinic: {selectedPatientDetails.lastClinicDate ? new Date(selectedPatientDetails.lastClinicDate).toLocaleDateString() : "N/A"}
@@ -559,45 +586,16 @@ function Dashboard({ logout }) {
                       <FontAwesomeIcon icon={faUser} className="text-purple-500 mr-2" />
                       Doctor Reg No: {selectedPatientDetails.doctorRegNo || "N/A"}
                     </div>
-
-                    {/* --- NEW DETAILS --- */}
-
-                    {/* Assigned Doctor/Therapist Name */}
                     {selectedPatientDetails.assignedDoctorName && (
                       <div className={patientDetailItemClasses}>
-                        <FontAwesomeIcon icon={faUser} className="text-blue-500 mr-2" /> {/* Reusing user icon, or find a specific 'doctor' icon */}
+                        <FontAwesomeIcon icon={faUser} className="text-blue-500 mr-2" />
                         Assigned Doctor: {selectedPatientDetails.assignedDoctorName}
-                      </div>
-                    )}
-
-                    {/* Patient Contact Information */}
-                    {selectedPatientDetails.contact && (
-                      <div className={patientDetailItemClasses}>
-                        <FontAwesomeIcon icon={faPhone} className="text-green-500 mr-2" />
-                        Contact: {selectedPatientDetails.contact}
-                      </div>
-                    )}
-
-                    {/* Medication List */}
-                    {selectedPatientDetails.medicationList && selectedPatientDetails.medicationList.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-blue-100">
-                        <div className="flex items-start text-gray-700 text-sm">
-                          <FontAwesomeIcon icon={faPills} className="text-orange-500 mr-2 mt-1" />
-                          <div>
-                            <span className="font-medium">Medication:</span>
-                            <ul className="list-disc pl-5 text-xs text-gray-600">
-                              {selectedPatientDetails.medicationList.map((med, index) => (
-                                <li key={index}>{med}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
                       </div>
                     )}
 
                     {/* --- Print/Export Patient Report Button --- */}
                     <button
-                      onClick={() => alert("Print/Export functionality coming soon!")} // Placeholder alert
+                      onClick={() => alert("Print/Export functionality coming soon!")}
                       className="mt-4 w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-full flex items-center justify-center transition-colors"
                     >
                       <FontAwesomeIcon icon={faPrint} className="mr-2" />
@@ -613,23 +611,38 @@ function Dashboard({ logout }) {
         </div>
       </div>
 
-      {/* --- Modals for Add/Edit Patient --- */}
+      {/* --- Add/Edit Patient --- */}
       <AddPatientModal
         show={showAddPatientModal}
         onClose={() => setShowAddPatientModal(false)}
         onSuccess={handleAddPatientSuccess}
       />
 
-      {patientToEdit && (
+      {/* 3. CONDITIONAL RENDERING FOR EDIT MODALS */}
+
+      {/* Renders the full patient edit modal only when editMode is 'full' */}
+      {patientToEdit && editMode === 'full' && (
         <EditPatientModal
           show={showEditPatientModal}
-          onClose={() => { setShowEditPatientModal(false); setPatientToEdit(null); }}
+          onClose={handleCloseEditModal}
+          patient={patientToEdit}
+          onSuccess={handleEditPatientSuccess}
+          // The 'editMode' prop is no longer strictly necessary here if EditPatientModal is now ONLY for full edits,
+          // but leaving it in or removing it depends on how EditPatientModal is structured. 
+          // For a clean split, you can remove it if EditPatientModal no longer handles the 'medication' case.
+        />
+      )}
+
+      {/* Renders the new medication-only edit modal when editMode is 'medication' */}
+      {patientToEdit && editMode === 'medication' && (
+        <EditMedicationModal
+          show={showEditPatientModal}
+          onClose={handleCloseEditModal}
           patient={patientToEdit}
           onSuccess={handleEditPatientSuccess}
         />
       )}
 
-      {/* --- Render the combined DeletePatientFlow component --- */}
       {showDeleteFlow && patientForDeleteFlow && (
         <DeletePatientFlow
           show={showDeleteFlow}

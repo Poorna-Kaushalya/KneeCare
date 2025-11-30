@@ -1,22 +1,11 @@
-// backend/routes/patient.js (UPDATED)
-
 const express = require("express");
-const Patient = require("../models/Patient"); // Make sure this path is correct
-// const authMiddleware = require("../middleware/authMiddleware"); // Uncomment if you have this set up and want to secure patient routes
-
+const Patient = require("../models/Patient"); 
 const router = express.Router();
 
-// --- Middleware for authentication (uncomment and use if you have it set up) ---
-// router.use(authMiddleware);
-
-// =======================================================
-// ✅ GET all patients
-// =======================================================
+// GET all patients
 router.get("/api/patients", async (req, res) => {
   try {
     const patients = await Patient.find({});
-    // For security, you might want to strip sensitive fields like 'password'
-    // from the response, even though they are hashed.
     const patientsWithoutPasswords = patients.map(patient => {
         const p = patient.toObject();
         delete p.password;
@@ -29,17 +18,13 @@ router.get("/api/patients", async (req, res) => {
   }
 });
 
-// =======================================================
-// ✅ GET a single patient by ID
-// =======================================================
+// GET a single patient by ID
 router.get("/api/patients/:id", async (req, res) => {
   try {
-    // Find by the custom 'id' field, not the MongoDB default _id
     const patient = await Patient.findOne({ id: req.params.id });
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
-    // Exclude password from the response
     const patientResponse = patient.toObject();
     delete patientResponse.password;
     res.status(200).json(patientResponse);
@@ -49,19 +34,17 @@ router.get("/api/patients/:id", async (req, res) => {
   }
 });
 
-// =======================================================
-// ✅ POST (Create) a new patient
-// =======================================================
+
+// New patient
 router.post("/api/patients", async (req, res) => {
   try {
-    const { id, name, age, gender, severityLevel, lastClinicDate, nextClinicDate, username, password, doctorRegNo, device_id } = req.body;
+    const { id, name, age, gender, severityLevel, lastClinicDate, nextClinicDate, username, password, doctorRegNo, device_id, assignedDoctorName, contact,medicationList} = req.body;
 
     // --- Basic Validation ---
     if (!id || !name || !username || !password) {
         return res.status(400).json({ error: "Patient ID, Name, Username, and Password are required." });
     }
 
-    // --- Check for Uniqueness ---
     const existingPatientId = await Patient.findOne({ id });
     if (existingPatientId) {
       return res.status(400).json({ error: `Patient with ID '${id}' already exists. Please use a unique ID.` });
@@ -70,7 +53,7 @@ router.post("/api/patients", async (req, res) => {
     if (existingUsername) {
       return res.status(400).json({ error: `Username '${username}' is already taken. Please choose a different username.` });
     }
-    if (device_id) { // device_id is optional but if provided, must be unique
+    if (device_id) { 
         const existingDevice = await Patient.findOne({ device_id });
         if (existingDevice) {
             return res.status(400).json({ error: `Device ID '${device_id}' is already assigned to another patient. Please use a unique device ID.` });
@@ -81,26 +64,27 @@ router.post("/api/patients", async (req, res) => {
     const newPatient = new Patient({
       id,
       name,
-      age: age ? parseInt(age) : undefined, // Ensure age is stored as a number
+      age: age ? parseInt(age) : undefined, 
       gender,
       severityLevel,
       lastClinicDate,
       nextClinicDate,
       username,
-      password, // Mongoose pre-save hook in Patient model will hash this
+      password, 
       doctorRegNo,
       device_id,
+      assignedDoctorName,
+      contact,
+      medicationList,
     });
 
     await newPatient.save();
 
-    // Exclude password from the response for security
     const patientResponse = newPatient.toObject();
     delete patientResponse.password;
-    res.status(201).json(patientResponse); // 201 Created status
+    res.status(201).json(patientResponse); 
   } catch (err) {
     console.error("Error adding new patient:", err.message);
-    // Mongoose validation errors
     if (err.name === 'ValidationError') {
         let errors = {};
         Object.keys(err.errors).forEach((key) => {
@@ -112,27 +96,23 @@ router.post("/api/patients", async (req, res) => {
   }
 });
 
-// =======================================================
-// ✅ PUT (Update) a patient by ID
-// =======================================================
+
+// Update a patient by ID
 router.put("/api/patients/:id", async (req, res) => {
   try {
-    const { id } = req.params; // The patient 'id' from the URL parameter
+    const { id } = req.params; 
     const updateData = req.body;
 
-    // Prevent changing the unique patient ID from the body to avoid conflicts
-    // The 'id' in the URL is the one being updated.
     if (updateData.id && updateData.id !== id) {
         return res.status(400).json({ error: "Cannot change patient ID via update. The ID in the URL is the target for update." });
     }
 
-    // If password is being updated, handle it via save() to trigger pre-save hashing hook
     if (updateData.password) {
         const patientToUpdate = await Patient.findOne({ id });
         if (patientToUpdate) {
-            patientToUpdate.password = updateData.password; // Mongoose pre-save hook will hash it
-            await patientToUpdate.save(); // Save to trigger hashing
-            delete updateData.password; // Remove from general update to avoid double processing or error
+            patientToUpdate.password = updateData.password; 
+            await patientToUpdate.save(); 
+            delete updateData.password; 
         } else {
             return res.status(404).json({ error: "Patient not found for password update." });
         }
@@ -154,18 +134,17 @@ router.put("/api/patients/:id", async (req, res) => {
         }
     }
 
-    // Find the patient by the custom 'id' field and update
+    // Find the patient by the custom 'id' 
     const patient = await Patient.findOneAndUpdate(
       { id: id },
-      { $set: updateData }, // $set ensures only provided fields are updated
-      { new: true, runValidators: true } // Return the updated document; run schema validators on update
+      { $set: updateData }, 
+      { new: true, runValidators: true }
     );
 
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
 
-    // Exclude password from the response
     const patientResponse = patient.toObject();
     delete patientResponse.password;
     res.status(200).json(patientResponse);
@@ -182,12 +161,9 @@ router.put("/api/patients/:id", async (req, res) => {
   }
 });
 
-// =======================================================
-// ✅ DELETE a patient by ID
-// =======================================================
+// DELETE a patient by ID
 router.delete("/api/patients/:id", async (req, res) => {
   try {
-    // Find and delete by the custom 'id' field
     const patient = await Patient.findOneAndDelete({ id: req.params.id });
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });

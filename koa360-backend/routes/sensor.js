@@ -95,7 +95,7 @@ setInterval(async () => {
 
       // 🔥 Piezo (VAG) sensor
       if (d.piezo) {
-        sum_piezo.raw     += d.piezo.raw || 0;
+        sum_piezo.raw += d.piezo.raw || 0;
         sum_piezo.voltage += d.piezo.voltage || 0;
         sum_piezo.trigger += d.piezo.trigger || 0; // usually 0/1
         piezoCount++;
@@ -133,11 +133,11 @@ setInterval(async () => {
       // 🔥 store averaged piezo if any samples had piezo data
       avg_piezo: piezoCount > 0
         ? {
-            raw:     sum_piezo.raw / piezoCount,        // mean ADC
-            voltage: sum_piezo.voltage / piezoCount,    // mean voltage
-            // fraction of samples where trigger == 1 (0–1)
-            trigger_rate: sum_piezo.trigger / piezoCount,
-          }
+          raw: sum_piezo.raw / piezoCount,      // mean ADC
+          voltage: sum_piezo.voltage / piezoCount,    // mean voltage
+          // fraction of samples where trigger == 1 (0–1)
+          trigger_rate: sum_piezo.trigger / piezoCount,
+        }
         : undefined,
     });
 
@@ -148,5 +148,39 @@ setInterval(async () => {
     console.error("5-min average error:", err.message);
   }
 }, 5 * 60 * 1000);
+
+// 📈 Get average records filtered by device ID and configurable time range
+router.get("/api/sensor-datas", async (req, res) => {
+  try {
+    const { deviceId, range } = req.query;
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing deviceId query parameter." });
+    }
+
+    // Default to 7 days if no valid range is provided
+    const days = parseInt(range, 10) || 7;
+    
+    // Calculate the start date (number of days ago)
+    // days * 24 (hours) * 60 (minutes) * 60 (seconds) * 1000 (milliseconds)
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000); 
+
+    // Query for data greater than or equal to startDate
+    const data = await AvgSensorData.find({
+      device_id: deviceId,
+      createdAt: { $gte: startDate } // Filter by date
+    })
+      .sort({ createdAt: 1 }); // Sort oldest to newest (ascending) for charts
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: `No sensor data found for device ID: ${deviceId} in the last ${days} day(s).` });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error("get filtered avg sensor-data error:", err.message);
+    res.status(500).json({ error: "Failed to fetch filtered sensor data" });
+  }
+});
 
 module.exports = router;

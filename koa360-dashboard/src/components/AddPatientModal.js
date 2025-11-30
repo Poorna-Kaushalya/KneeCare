@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // Import useEffect
+import { useState, useEffect } from 'react'; 
 import api from '../api/api';
 
 const AddPatientModal = ({ show, onClose, onSuccess }) => {
@@ -14,14 +14,14 @@ const AddPatientModal = ({ show, onClose, onSuccess }) => {
     password: '',
     doctorRegNo: '',
     device_id: '',
-    assignedDoctorName: '', // New field
-    contact: '',           // New field
-    medicationList: '',    // New field (as a string for textarea)
+    assignedDoctorName: '', 
+    contact: '',           
+    medicationList: '',   
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('general'); // State for active tab
+  const [activeTab, setActiveTab] = useState('general');
 
   // Updated severity level options
   const severityOptions = [
@@ -84,17 +84,16 @@ const AddPatientModal = ({ show, onClose, onSuccess }) => {
         dataToSubmit.medicationList = dataToSubmit.medicationList
           .split('\n')
           .map(item => item.trim())
-          .filter(item => item !== ''); // Remove empty strings
+          .filter(item => item !== ''); 
       } else {
-        dataToSubmit.medicationList = []; // Ensure it's an array if not provided
+        dataToSubmit.medicationList = []; 
       }
 
-      await api.post('/api/patients', dataToSubmit); // Use dataToSubmit
+      await api.post('/api/patients', dataToSubmit); 
       setSuccess('Patient added successfully!');
       setTimeout(() => {
-        onSuccess(); // Call the parent's success handler
-        // resetForm is now handled by useEffect when show becomes false
-      }, 1500); // Give time for success message to be seen
+        onSuccess(); 
+      }, 1500); 
     } catch (err) {
       console.error('Error adding patient:', err);
       setError(err.response?.data?.error || err.message || 'Failed to add patient.');
@@ -110,11 +109,11 @@ const AddPatientModal = ({ show, onClose, onSuccess }) => {
       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
     }`;
 
-  const tabContentStyle = "grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"; // A consistent grid for tab content
+  const tabContentStyle = "grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"; 
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl overflow-y-auto"> {/* Increased width */}
+      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl overflow-y-auto"> 
         <h2 className="text-2xl font-bold mb-4 text-gray-800">Add New Patient</h2>
 
         {/* Tab Navigation */}
