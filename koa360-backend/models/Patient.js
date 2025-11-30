@@ -12,16 +12,15 @@ const PatientSchema = new mongoose.Schema(
     nextClinicDate: { type: Date },
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    doctorRegNo: { type: String }, // Made not required, as per common practice
+    doctorRegNo: { type: String },
     device_id: {
       type: String,
       unique: true,
       sparse: true,
     },
-    // New fields added
-    assignedDoctorName: { type: String }, // Added assignedDoctorName
-    contact: { type: String },            // Added contact
-    medicationList: [{ type: String }],   // Added medicationList as an array of strings
+    assignedDoctorName: { type: String }, 
+    contact: { type: String },  
+    medicationList: [{ type: String }],   
   },
   { timestamps: true }
 );
