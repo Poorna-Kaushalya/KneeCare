@@ -3,10 +3,9 @@ import { NavLink } from "react-router-dom";
 import { FiMenu, FiX, FiWifi } from "react-icons/fi";
 
 function SignInNavbar({ logout }) {
-  // Map labels → paths
   const links = [
-    { label: "Home", path: "/Home" },  
-    { label: "Dashboard", path: "/userdashboard" },
+    { label: "Home", path: "/" },  
+    { label: "Dashboard", path: "/dashboard" },
     { label: "Radiology", path: "/radiology" },
     { label: "BioData", path: "/biodata" },
     { label: "KOA Grade", path: "/koa-grade" },
@@ -45,7 +44,6 @@ function SignInNavbar({ logout }) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
   });
 
   const linkBase =
@@ -55,7 +53,6 @@ function SignInNavbar({ logout }) {
 
   return (
     <div className="fixed w-full z-50">
-      {/* status bar */}
       <div className="w-full bg-blue-600 text-white text-sm px-6 py-1 flex justify-end items-center gap-6 shadow-md">
         <div className="flex items-center gap-2">
           <span
@@ -83,7 +80,6 @@ function SignInNavbar({ logout }) {
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;KneeCare
           </div>
 
-          {/* Desktop links */}
           <div className="hidden md:flex gap-8 text-sm">
             {links.map((l) => (
               <NavLink
@@ -99,7 +95,6 @@ function SignInNavbar({ logout }) {
             ))}
           </div>
 
-          {/* Logout */}
           <div className="hidden md:block">
             <button
               onClick={logout}
@@ -109,7 +104,6 @@ function SignInNavbar({ logout }) {
             </button>
           </div>
 
-          {/* Mobile toggle */}
           <div className="md:hidden">
             <button onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
@@ -117,7 +111,7 @@ function SignInNavbar({ logout }) {
           </div>
         </div>
 
-        {/* Mobile menu */}
+
         {menuOpen && (
           <div className="md:hidden px-6 pb-4 space-y-2 bg-white/90 backdrop-blur-sm shadow-lg">
             {links.map((l) => (

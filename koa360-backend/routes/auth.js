@@ -9,9 +9,9 @@ const JWT_SECRET = "your_secret_key";
 
 // Doctor Registration
 router.post("/register/doctor", async (req, res) => {
-  const { username, password, regNo } = req.body;
+  const {fullName,phone,specialization, username, password, regNo  } = req.body;
   try {
-    const doctor = new Doctor({ username, password, regNo });
+    const doctor = new Doctor({ fullName,phone,specialization, username, password, regNo });
     await doctor.save();
     res.json({ success: true, message: "Doctor registered successfully" });
   } catch (err) {
@@ -19,19 +19,6 @@ router.post("/register/doctor", async (req, res) => {
   }
 });
 
-// Patient Registration
-router.post("/register/patient", async (req, res) => {
-  const { username, password, doctorRegNo, patientNo } = req.body; // ✅ include patientNo
-  try {
-    if (!patientNo) return res.status(400).json({ error: "patientNo is required" });
-
-    const patient = new Patient({ username, password, doctorRegNo, patientNo });
-    await patient.save();
-    res.json({ success: true, message: "Patient registered successfully" });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
 // Doctor login
 router.post("/login/doctor", async (req, res) => {
