@@ -4,8 +4,6 @@ import { FiMenu, FiX, FiWifi } from "react-icons/fi";
 
 function SignInNavbar({ logout }) {
   const links = [
-    { label: "Home", path: "/" },  
-    { label: "Dashboard", path: "/dashboard" },
     { label: "Radiology", path: "/radiology" },
     { label: "BioData", path: "/biodata" },
     { label: "KOA Grade", path: "/koa-grade" },

@@ -46,7 +46,7 @@ function App() {
           token ? (
             <Dashboard token={token} role={role} logout={handleLogout} />
           ) : (
-            <Navigate to="/Home" />
+            <Navigate to="/" />
           )
         }
       />
@@ -73,7 +73,7 @@ function App() {
       <Route
         path="/form"
         element={
-          token ? <FormEntry logout={handleLogout} /> : <Navigate to="/login" />
+          token ? <FormEntry logout={handleLogout} /> : <Navigate to="/" />
         }
       />
     </Routes>
