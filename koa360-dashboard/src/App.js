@@ -33,7 +33,7 @@ function App() {
         path="/"
         element={
           token ? (
-            <Navigate to="/Home" />
+            <Navigate to="/" />
           ) : (
             <Home />
           )
@@ -46,7 +46,7 @@ function App() {
           token ? (
             <Dashboard token={token} role={role} logout={handleLogout} />
           ) : (
-            <Navigate to="/" />
+            <Navigate to="/Home" />
           )
         }
       />
