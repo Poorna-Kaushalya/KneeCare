@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Home from "./pages/Home"; 
+import Login from "./components/Login";
+import Register from "./components/Register";
 import Dashboard from "./pages/Dashboard";
 import FormEntry from "./pages/FormEntry";
 
@@ -27,25 +28,30 @@ function App() {
 
   return (
     <Routes>
-      {/* Dashboard route */}
+      
+      <Route
+        path="/"
+        element={
+          token ? (
+            <Navigate to="/Home" />
+          ) : (
+            <Home />
+          )
+        }
+      />
+
       <Route
         path="/dashboard"
         element={
           token ? (
             <Dashboard token={token} role={role} logout={handleLogout} />
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/" />
           )
         }
       />
 
-      {/* Root redirect */}
-      <Route
-        path="/"
-        element={<Navigate to={token ? "/dashboard" : "/login"} />}
-      />
-
-      {/* Login */}
+      {/* 3. Login Route (Redirects if logged in) */}
       <Route
         path="/login"
         element={
@@ -57,12 +63,13 @@ function App() {
         }
       />
 
-      {/* Register */}
+      {/* 4. Register Route (Redirects if logged in) */}
       <Route
         path="/register"
         element={token ? <Navigate to="/dashboard" /> : <Register />}
       />
 
+      {/* 5. Form Route (Protected) */}
       <Route
         path="/form"
         element={
