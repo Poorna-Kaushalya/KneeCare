@@ -35,7 +35,7 @@ The system follows a modular flow as outlined in the **System Architectural Flow
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/your-username/kneecare-platform.git
+[git@github.com:Poorna-Kaushalya/KneeCare.git](https://github.com/Poorna-Kaushalya/KneeCare.git)
 cd kneecare-platform
 
 ```
@@ -73,7 +73,3 @@ npm start
 ## 📜 Research Credits
 
 Developed under the **Centre of Excellence for AI (CoEAI)** as a specialized research project in biomechanical health monitoring.
-
----
-
-Would you like me to add a specific section for the **Acelopon** and **Mediprazole** medication management logic we discussed earlier?
