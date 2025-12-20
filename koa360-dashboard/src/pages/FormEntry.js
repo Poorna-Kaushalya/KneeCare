@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Play, Clock, Cpu, ActivitySquare, Wifi, Save } from "lucide-react";
 import api from "../api/api";
 import SignInNavbar from "../components/SignInNavbar";
+import formbg from "../images/formbg.png"; 
 
 function FormEntry({ logout }) {
   const DEFAULT_DEVICE = "KOA360-001";
@@ -163,13 +164,16 @@ function FormEntry({ logout }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen bg-fixed bg-cover  bg-center relative" 
+      style={{ backgroundImage: `url(${formbg})` }}
+    >
       <SignInNavbar logout={logout} /><br /><br /><br />
 
-      <main className="w-full max-w-none px-4 sm:px-6 lg:px-20 pt-10 pb-8 mt-0">
+      <main className="w-full max-w-none px-4 sm:px-6 lg:px-20 pt-10 pb-8 mt-[-20px]">
         <div className="grid grid-cols-1 md:[grid-template-columns:25%_74%] gap-4">
           {/* LEFT: Data Collection Panel */}
-          <section className="bg-white rounded-2xl shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
+          <section className="bg-white/70 rounded-2xl shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
             <header className="flex items-center gap-3 mb-4">
               <ActivitySquare className="w-5 h-5 text-blue-600" />
               <h2 className="text-xl font-bold text-blue-700">
@@ -247,7 +251,7 @@ function FormEntry({ logout }) {
           </section>
 
           {/* RIGHT: Clinical Form */}
-          <section className="bg-white  shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
+          <section className="bg-white/80 shadow-lg hover:shadow-xl border border-blue-300 p-6 transition-shadow">
             <h2 className="text-xl font-bold text-blue-700 mb-4">
               Clinical Form  &nbsp;&nbsp; <span className="text-xs text-gray-500">
                 ( * Required )
