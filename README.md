@@ -65,7 +65,7 @@ npm start
 
 ## 📸 Component Screenshots
 
-*(Place your images in `src/images/` and link them here)*
+![KneeCare Home Screen](Assets/Home.png)
 
 * **Dashboard:** Monitoring KL stages.
 * **IoT Section:** Real-time VAG signal visualization.
