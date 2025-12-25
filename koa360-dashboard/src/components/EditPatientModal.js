@@ -1,29 +1,53 @@
-import { useState, useEffect } from 'react';
-import api from '../api/api'; // Assuming your API client is here
+import { useState, useEffect, useRef } from "react";
+import api from "../api/api";
 
 const EditPatientModal = ({ show, onClose, onSuccess, patient }) => {
   const [formData, setFormData] = useState(patient || {});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('general'); // State for active tab
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [activeTab, setActiveTab] = useState("general"); 
 
-  // Update form data when the 'patient' prop changes
+  const modalCardRef = useRef(null);
+  useEffect(() => {
+    if (!show) return;
+
+    const handleEsc = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [show, onClose]);
+
+  useEffect(() => {
+    if (!show) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [show]);
+
   useEffect(() => {
     if (patient) {
-      // Format dates for input[type="date"]
       setFormData({
         ...patient,
-        lastClinicDate: patient.lastClinicDate ? new Date(patient.lastClinicDate).toISOString().split('T')[0] : '',
-        nextClinicDate: patient.nextClinicDate ? new Date(patient.nextClinicDate).toISOString().split('T')[0] : '',
-        // Convert medicationList array to a string for textarea
-        medicationList: Array.isArray(patient.medicationList) ? patient.medicationList.join('\n') : '',
-        // Don't pre-fill password for security reasons
-        password: '',
+        lastClinicDate: patient.lastClinicDate
+          ? new Date(patient.lastClinicDate).toISOString().split("T")[0]
+          : "",
+        nextClinicDate: patient.nextClinicDate
+          ? new Date(patient.nextClinicDate).toISOString().split("T")[0]
+          : "",
+        medicationList: Array.isArray(patient.medicationList)
+          ? patient.medicationList.join("\n")
+          : "",
+        password: "",
       });
-      setError('');
-      setSuccess('');
-      setActiveTab('general'); // Reset to default tab when a new patient is loaded
+      setError("");
+      setSuccess("");
+      setActiveTab("general");
     }
   }, [patient]);
 
@@ -42,296 +66,367 @@ const EditPatientModal = ({ show, onClose, onSuccess, patient }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      // Create a copy of formData to modify before sending
       const dataToSubmit = { ...formData };
 
-      // Remove empty password field if not updated
       if (!dataToSubmit.password) {
         delete dataToSubmit.password;
       }
 
-      // Convert medicationList string from textarea back to an array
-      if (typeof dataToSubmit.medicationList === 'string') {
+      if (typeof dataToSubmit.medicationList === "string") {
         dataToSubmit.medicationList = dataToSubmit.medicationList
-          .split('\n')
-          .map(item => item.trim())
-          .filter(item => item !== ''); // Remove empty strings
+          .split("\n")
+          .map((item) => item.trim())
+          .filter((item) => item !== "");
       } else {
-        dataToSubmit.medicationList = []; // Ensure it's an array if not provided
+        dataToSubmit.medicationList = [];
       }
 
-
       await api.put(`/api/patients/${patient.id}`, dataToSubmit);
-      setSuccess('Patient updated successfully!');
+      setSuccess("Patient updated successfully!");
       setTimeout(() => {
-        onSuccess(); // Call the parent's success handler
+        onSuccess();
       }, 1500);
     } catch (err) {
-      console.error('Error updating patient:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to update patient.');
+      console.error("Error updating patient:", err);
+      setError(
+        err.response?.data?.error || err.message || "Failed to update patient."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const tabButtonStyle = (tabName) =>
-    `px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200
-     ${activeTab === tabName
-      ? 'bg-blue-600 text-white'
-      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-    }`;
 
-  const tabContentStyle = "grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"; // A consistent grid for tab content
+  const tabButtonStyle = (tabName) =>
+    `px-4 py-2 text-sm font-extrabold rounded-full transition-all border
+     ${
+       activeTab === tabName
+         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+         : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+     }`;
+
+  const inputBase =
+    "mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm " +
+    "focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 caret-slate-900";
+
+  const inputReadOnly =
+    "mt-1 block w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600 shadow-sm cursor-not-allowed";
+
+  const labelBase = "block text-sm font-semibold text-slate-700";
+
+  const tabContentStyle = "grid grid-cols-1 md:grid-cols-2 gap-4 mt-5";
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl overflow-y-auto"> {/* Increased width to max-w-3xl */}
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Edit Patient: {patient.name}</h2>
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+        onMouseDown={!loading ? onClose : undefined}
+      />
 
-        {/* Tab Navigation */}
-        <div className="mb-4 border-b border-gray-200">
-          <ul className="flex flex-wrap -mb-px">
-            <li>
+      {/* Modal Wrapper */}
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        {/* Card */}
+        <div
+          ref={modalCardRef}
+          className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-extrabold text-slate-800">
+                  Edit Patient
+                </h2>
+                <p className="text-sm text-slate-600 mt-1">
+                  Update details and save changes.
+                </p>
+              </div>
+
               <button
                 type="button"
-                className={tabButtonStyle('general')}
-                onClick={() => setActiveTab('general')}
+                onClick={onClose}
+                disabled={loading}
+                className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition disabled:opacity-60"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Patient badge */}
+            <div className="mt-3 flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-slate-500">Patient</span>
+              <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-extrabold">
+                {patient.name}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+                ID: {patient.id}
+              </span>
+            </div>
+
+            {/* Tabs */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={tabButtonStyle("general")}
+                onClick={() => setActiveTab("general")}
               >
                 General Info
               </button>
-            </li>
-            <li>
               <button
                 type="button"
-                className={tabButtonStyle('medical')}
-                onClick={() => setActiveTab('medical')}
+                className={tabButtonStyle("medical")}
+                onClick={() => setActiveTab("medical")}
               >
                 Medical Details
               </button>
-            </li>
-            <li>
               <button
                 type="button"
-                className={tabButtonStyle('account')}
-                onClick={() => setActiveTab('account')}
+                className={tabButtonStyle("account")}
+                onClick={() => setActiveTab("account")}
               >
                 Account & Device
               </button>
-            </li>
-          </ul>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          {/* General Info Tab Content */}
-          {activeTab === 'general' && (
-            <div className={tabContentStyle}>
-              {/* Patient ID (Read-only) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Patient ID</label>
-                <input
-                  type="text"
-                  name="id"
-                  value={formData.id}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-not-allowed"
-                  readOnly
-                />
-              </div>
-              {/* Patient Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Name <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              {/* Age */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Age</label>
-                <input
-                  type="number"
-                  name="age"
-                  value={formData.age}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              {/* Gender */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Gender</label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              {/* Contact Information */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Contact</label>
-                <input
-                  type="text"
-                  name="contact"
-                  value={formData.contact}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              {/* Assigned Doctor/Therapist Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Assigned Doctor Name</label>
-                <input
-                  type="text"
-                  name="assignedDoctorName"
-                  value={formData.assignedDoctorName}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              {/* Doctor Registration Number */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Doctor Reg No.</label>
-                <input
-                  type="text"
-                  name="doctorRegNo"
-                  value={formData.doctorRegNo}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
             </div>
-          )}
-
-          {/* Medical Details Tab Content */}
-          {activeTab === 'medical' && (
-            <div className={tabContentStyle}>
-              {/* Severity Level */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Severity Level</label>
-                <select
-                  name="severityLevel"
-                  value={formData.severityLevel}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select Severity</option>
-                  <option value="Mild">Mild</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Severe">Severe</option>
-                  <option value="Critical">Critical</option>
-                </select>
-              </div>
-              {/* Last Clinic Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Clinic Date</label>
-                <input
-                  type="date"
-                  name="lastClinicDate"
-                  value={formData.lastClinicDate}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              {/* Next Clinic Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Next Clinic Date</label>
-                <input
-                  type="date"
-                  name="nextClinicDate"
-                  value={formData.nextClinicDate}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              {/* Medication List (Textarea) */}
-              <div className="md:col-span-2"> {/* This field spans both columns */}
-                <label className="block text-sm font-medium text-gray-700">Medication List (one per line)</label>
-                <textarea
-                  name="medicationList"
-                  value={formData.medicationList}
-                  onChange={handleChange}
-                  rows="6" // Increased rows for more space
-                  placeholder="Enter medications, one per line (e.g., Ibuprofen, Paracetamol)"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                ></textarea>
-              </div>
-            </div>
-          )}
-
-          {/* Account & Device Tab Content */}
-          {activeTab === 'account' && (
-            <div className={tabContentStyle}>
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              {/* Password (Optional, only change if new password is provided) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">New Password (optional)</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Leave blank to keep current password"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              {/* Device ID */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Device ID</label>
-                <input
-                  type="text"
-                  name="device_id"
-                  value={formData.device_id}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Buttons and messages - Always visible */}
-          <div className="flex justify-end items-center mt-6 space-x-3 pt-4 border-t border-gray-200">
-            {error && <p className="text-red-600 text-sm mr-auto">{error}</p>}
-            {success && <p className="text-green-600 text-sm mr-auto">{success}</p>}
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
           </div>
-        </form>
+
+          {/* Body */}
+          <div className="p-6">
+            <form onSubmit={handleSubmit}>
+              {activeTab === "general" && (
+                <div className={tabContentStyle}>
+                  <div>
+                    <label className={labelBase}>Patient ID</label>
+                    <input
+                      type="text"
+                      name="id"
+                      value={formData.id}
+                      className={inputReadOnly}
+                      readOnly
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>
+                      Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className={inputBase}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Age</label>
+                    <input
+                      type="number"
+                      name="age"
+                      value={formData.age}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Gender</label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className={inputBase}
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Contact</label>
+                    <input
+                      type="text"
+                      name="contact"
+                      value={formData.contact}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Assigned Doctor Name</label>
+                    <input
+                      type="text"
+                      name="assignedDoctorName"
+                      value={formData.assignedDoctorName}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Doctor Reg No.</label>
+                    <input
+                      type="text"
+                      name="doctorRegNo"
+                      value={formData.doctorRegNo}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Medical Details */}
+              {activeTab === "medical" && (
+                <div className={tabContentStyle}>
+                  <div>
+                    <label className={labelBase}>Severity Level</label>
+                    <select
+                      name="severityLevel"
+                      value={formData.severityLevel}
+                      onChange={handleChange}
+                      className={inputBase}
+                    >
+                      <option value="">Select Severity</option>
+                      <option value="Mild">Mild</option>
+                      <option value="Moderate">Moderate</option>
+                      <option value="Severe">Severe</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Last Clinic Date</label>
+                    <input
+                      type="date"
+                      name="lastClinicDate"
+                      value={formData.lastClinicDate}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Next Clinic Date</label>
+                    <input
+                      type="date"
+                      name="nextClinicDate"
+                      value={formData.nextClinicDate}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className={labelBase}>
+                      Medication List (one per line)
+                    </label>
+                    <textarea
+                      name="medicationList"
+                      value={formData.medicationList}
+                      onChange={handleChange}
+                      rows="5"
+                      placeholder="Enter medications, one per line (e.g., Ibuprofen, Paracetamol)"
+                      className={inputBase}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Account & Device */}
+              {activeTab === "account" && (
+                <div className={tabContentStyle}>
+                  <div>
+                    <label className={labelBase}>
+                      Username <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      className={inputBase}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>New Password (optional)</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Leave blank to keep current password"
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelBase}>Device ID</label>
+                    <input
+                      type="text"
+                      name="device_id"
+                      value={formData.device_id}
+                      onChange={handleChange}
+                      className={inputBase}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col md:flex-row md:items-center gap-3">
+                <div className="flex-1">
+                  {error && (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 font-semibold">
+                      {error}
+                    </div>
+                  )}
+                  {success && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 font-semibold">
+                      {success}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-extrabold hover:bg-slate-50 transition disabled:opacity-60"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold transition disabled:opacity-60 shadow-sm"
+                    disabled={loading}
+                  >
+                    {loading ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Bottom strip */}
+          <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
+            Make sure to click “Save Changes” to apply updates.
+          </div>
+        </div>
       </div>
     </div>
   );
