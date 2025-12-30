@@ -1,4 +1,5 @@
 {
-    "git.ignoreLimitWarning": true,
-    "C_Cpp.errorSquiggles": "disabled"
+  "git.ignoreLimitWarning": true,
+  "C_Cpp.errorSquiggles": "disabled",
+  "css.lint.unknownAtRules": "ignore"
 }

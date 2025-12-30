@@ -12,6 +12,17 @@ code {
     monospace;
 }
 
+@media print {
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+}
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

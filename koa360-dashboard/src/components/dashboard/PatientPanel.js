@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEdit,
@@ -11,7 +12,10 @@ import {
   faVenus,
   faGenderless,
   faBirthdayCake,
+  faFilePdf,
 } from "@fortawesome/free-solid-svg-icons";
+
+import PatientReportModal from "./PatientReportModal";
 
 export default function PatientPanel({
   selectedPatientDetails,
@@ -20,6 +24,7 @@ export default function PatientPanel({
   onDelete,
   onEditMedication,
 }) {
+  const [showReport, setShowReport] = useState(false);
   const details = selectedPatientDetails || selectedPatient || null;
 
   const card = "bg-white border border-slate-200 rounded-2xl shadow-sm";
@@ -57,14 +62,18 @@ export default function PatientPanel({
     </div>
   );
 
+  if (!details) {
+    return (
+      <div className={`${card} p-5 text-slate-600`}>
+        Select a patient to view details.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* =========================
-          PATIENT DETAILS (ONE CARD)
-         ========================= */}
+      {/* PATIENT DETAILS CARD */}
       <div className={`${card} p-4 md:p-5`}>
-        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs text-slate-500">Patient</div>
@@ -76,8 +85,7 @@ export default function PatientPanel({
           <div className="flex gap-2">
             <button
               onClick={onEditFull}
-              disabled={!selectedPatientDetails}
-              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center text-blue-600 disabled:opacity-50"
+              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center text-blue-600"
               title="Edit patient"
             >
               <FontAwesomeIcon icon={faEdit} />
@@ -85,124 +93,88 @@ export default function PatientPanel({
 
             <button
               onClick={onDelete}
-              disabled={!selectedPatient}
-              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center text-red-600 disabled:opacity-50"
+              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center text-red-600"
               title="Delete patient"
             >
               <FontAwesomeIcon icon={faTrash} />
             </button>
+
+            <button
+              onClick={() => setShowReport(true)}
+              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center text-purple-600"
+              title="Generate Report"
+            >
+              <FontAwesomeIcon icon={faFilePdf} />
+            </button>
           </div>
         </div>
 
-        {/* Patient Details Section */}
         <div className="mt-4">
-          <div className="mt-1">
-            <InfoRow
-              icon={faIdBadge}
-              label="ID"
-              value={details?.id ?? "N/A"}
-              iconClass="text-slate-500"
-            />
-
-            <InfoRow
-              icon={faBirthdayCake}
-              label="Age"
-              value={details?.age ?? "N/A"}
-              iconClass="text-slate-500"
-            />
-
-            <InfoRow
-              icon={getGenderIcon(details?.gender)}
-              label="Gender"
-              value={details?.gender ?? "N/A"}
-              iconClass={getGenderIconClass(details?.gender)}
-            />
-
-
-            <InfoRow
-              icon={faPhone}
-              label="Contact"
-              value={details?.contact ?? "N/A"}
-              iconClass="text-emerald-600"
-            />
-          </div>
+          <InfoRow icon={faIdBadge} label="ID" value={details?.id} />
+          <InfoRow icon={faBirthdayCake} label="Age" value={details?.age} />
+          <InfoRow
+            icon={getGenderIcon(details?.gender)}
+            label="Gender"
+            value={details?.gender}
+            iconClass={getGenderIconClass(details?.gender)}
+          />
+          <InfoRow icon={faPhone} label="Contact" value={details?.contact} />
         </div>
 
         <div className="my-4 border-t border-slate-200" />
 
-        {/* Clinical Data Section */}
         <div>
           <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wide text-center">
             Clinical Data
           </div>
-
           <div className="mt-2">
-            <InfoRow
-              icon={faUserDoctor}
-              label="Dr Name"
-              value={details?.assignedDoctorName ?? "N/A"}
-              iconClass="text-blue-600"
-            />
-            <InfoRow
-              icon={faIdBadge}
-              label="Dr Reg No"
-              value={details?.doctorRegNo ?? "N/A"}
-              iconClass="text-indigo-600"
-            />
-            <InfoRow
-              icon={faCalendarAlt}
-              label="Last Clinic"
-              value={formatDate(details?.lastClinicDate)}
-              iconClass="text-emerald-600"
-            />
-            <InfoRow
-              icon={faCalendarAlt}
-              label="Next Clinic"
-              value={formatDate(details?.nextClinicDate)}
-              iconClass="text-orange-500"
-            />
+            <InfoRow icon={faUserDoctor} label="Dr Name" value={details?.assignedDoctorName} />
+            <InfoRow icon={faIdBadge} label="Dr Reg No" value={details?.doctorRegNo} />
+            <InfoRow icon={faCalendarAlt} label="Last Clinic" value={formatDate(details?.lastClinicDate)} />
+            <InfoRow icon={faCalendarAlt} label="Next Clinic" value={formatDate(details?.nextClinicDate)} />
           </div>
         </div>
       </div>
 
-      {/* =========================
-          MEDICATION (SEPARATE CARD)
-         ========================= */}
-      {selectedPatientDetails && (
-        <div className={`${card} p-4 md:p-5`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faPills} className="text-orange-500" />
-              <h3 className="font-extrabold text-slate-900">
-                Current Medication
-              </h3>
-            </div>
-
-            <button
-              onClick={onEditMedication}
-              className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition flex items-center gap-2"
-              title="Update Medication"
-            >
-              <FontAwesomeIcon icon={faEdit} />
-              Update
-            </button>
+      {/* MEDICATION CARD */}
+      <div className={`${card} p-4 md:p-5`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faPills} className="text-orange-500" />
+            <h3 className="font-extrabold text-slate-900">Current Medication</h3>
           </div>
-
-          <div className="mt-3">
-            {selectedPatientDetails.medicationList?.length > 0 ? (
-              <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
-                {selectedPatientDetails.medicationList.map((med, idx) => (
-                  <li key={idx}>{med}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">
-                No active medication listed. Click “Update” to add medication.
-              </p>
-            )}
-          </div>
+          <button
+            onClick={onEditMedication}
+            className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition flex items-center gap-2"
+            title="Update Medication"
+          >
+            <FontAwesomeIcon icon={faEdit} />
+            Update
+          </button>
         </div>
-      )}
+
+        <div className="mt-3">
+          {details.medicationList?.length > 0 ? (
+            <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
+              {details.medicationList.map((med, idx) => (
+                <li key={idx}>{med}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">
+              No active medication listed. Click “Update” to add medication.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* REPORT MODAL */}
+      <PatientReportModal
+        open={showReport}
+        details={details}
+        formatDate={formatDate}
+        onClose={() => setShowReport(false)}
+      />
     </div>
   );
 }
