@@ -76,7 +76,10 @@ function App() {
           token ? <FormEntry logout={handleLogout} /> : <Navigate to="/" />
         }
       />
+      
     </Routes>
+
+    
   );
 }
 
