@@ -2,10 +2,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEdit,
   faTrash,
-  faUser,
   faPhone,
   faCalendarAlt,
   faPills,
+  faIdBadge,
+  faUserDoctor,
+  faMars,
+  faVenus,
+  faGenderless,
+  faBirthdayCake,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function PatientPanel({
@@ -15,17 +20,56 @@ export default function PatientPanel({
   onDelete,
   onEditMedication,
 }) {
+  const details = selectedPatientDetails || selectedPatient || null;
+
   const card = "bg-white border border-slate-200 rounded-2xl shadow-sm";
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString("en-GB");
+  };
+
+  const getGenderIcon = (g) => {
+    const gender = (g || "").toLowerCase();
+    if (gender === "male") return faMars;
+    if (gender === "female") return faVenus;
+    return faGenderless;
+  };
+
+  const getGenderIconClass = (g) => {
+    const gender = (g || "").toLowerCase();
+    if (gender === "male") return "text-blue-600";
+    if (gender === "female") return "text-pink-600";
+    return "text-slate-500";
+  };
+
+  const InfoRow = ({ icon, iconClass = "text-slate-500", label, value }) => (
+    <div className="flex items-center justify-between py-1.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <FontAwesomeIcon icon={icon} className={iconClass} />
+        <span className="text-slate-600 text-sm font-medium">{label}</span>
+      </div>
+      <span className="text-slate-900 text-sm font-extrabold truncate max-w-[55%] text-right">
+        {value ?? "N/A"}
+      </span>
+    </div>
+  );
+
 
   return (
     <div className="space-y-6">
-      {/* Patient details */}
+      {/* =========================
+          PATIENT DETAILS (ONE CARD)
+         ========================= */}
       <div className={`${card} p-4 md:p-5`}>
-        <div className="flex items-center justify-between">
-          <div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <div className="text-xs text-slate-500">Patient</div>
-            <div className="text-lg font-extrabold">
-              {selectedPatientDetails?.name || selectedPatient?.name || "N/A"}
+            <div className="text-lg font-extrabold text-slate-900 truncate">
+              {details?.name || "N/A"}
             </div>
           </div>
 
@@ -38,6 +82,7 @@ export default function PatientPanel({
             >
               <FontAwesomeIcon icon={faEdit} />
             </button>
+
             <button
               onClick={onDelete}
               disabled={!selectedPatient}
@@ -49,62 +94,88 @@ export default function PatientPanel({
           </div>
         </div>
 
-        <div className="mt-4 space-y-2 text-sm text-slate-700">
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faUser} className="text-slate-500" />
-            <span className="text-slate-500">ID:</span>
-            <span className="font-bold">{selectedPatientDetails?.id || "N/A"}</span>
+        {/* Patient Details Section */}
+        <div className="mt-4">
+          <div className="mt-1">
+            <InfoRow
+              icon={faIdBadge}
+              label="ID"
+              value={details?.id ?? "N/A"}
+              iconClass="text-slate-500"
+            />
+
+            <InfoRow
+              icon={faBirthdayCake}
+              label="Age"
+              value={details?.age ?? "N/A"}
+              iconClass="text-slate-500"
+            />
+
+            <InfoRow
+              icon={getGenderIcon(details?.gender)}
+              label="Gender"
+              value={details?.gender ?? "N/A"}
+              iconClass={getGenderIconClass(details?.gender)}
+            />
+
+
+            <InfoRow
+              icon={faPhone}
+              label="Contact"
+              value={details?.contact ?? "N/A"}
+              iconClass="text-emerald-600"
+            />
+          </div>
+        </div>
+
+        <div className="my-4 border-t border-slate-200" />
+
+        {/* Clinical Data Section */}
+        <div>
+          <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wide text-center">
+            Clinical Data
           </div>
 
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faUser} className="text-slate-500" />
-            <span className="text-slate-500">Age:</span>
-            <span className="font-bold">{selectedPatientDetails?.age || "N/A"}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faUser} className="text-slate-500" />
-            <span className="text-slate-500">Gender:</span>
-            <span className="font-bold">{selectedPatientDetails?.gender || "N/A"}</span>
-          </div>
-
-          {selectedPatientDetails?.contact && (
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faPhone} className="text-emerald-600" />
-              <span className="text-slate-500">Contact:</span>
-              <span className="font-bold">{selectedPatientDetails.contact}</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faCalendarAlt} className="text-emerald-600" />
-            <span className="text-slate-500">Last Clinic:</span>
-            <span className="font-bold">
-              {selectedPatientDetails?.lastClinicDate
-                ? new Date(selectedPatientDetails.lastClinicDate).toLocaleDateString()
-                : "N/A"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faCalendarAlt} className="text-orange-500" />
-            <span className="text-slate-500">Next Clinic:</span>
-            <span className="font-bold">
-              {selectedPatientDetails?.nextClinicDate
-                ? new Date(selectedPatientDetails.nextClinicDate).toLocaleDateString()
-                : "N/A"}
-            </span>
+          <div className="mt-2">
+            <InfoRow
+              icon={faUserDoctor}
+              label="Dr Name"
+              value={details?.assignedDoctorName ?? "N/A"}
+              iconClass="text-blue-600"
+            />
+            <InfoRow
+              icon={faIdBadge}
+              label="Dr Reg No"
+              value={details?.doctorRegNo ?? "N/A"}
+              iconClass="text-indigo-600"
+            />
+            <InfoRow
+              icon={faCalendarAlt}
+              label="Last Clinic"
+              value={formatDate(details?.lastClinicDate)}
+              iconClass="text-emerald-600"
+            />
+            <InfoRow
+              icon={faCalendarAlt}
+              label="Next Clinic"
+              value={formatDate(details?.nextClinicDate)}
+              iconClass="text-orange-500"
+            />
           </div>
         </div>
       </div>
 
-      {/* Medication */}
+      {/* =========================
+          MEDICATION (SEPARATE CARD)
+         ========================= */}
       {selectedPatientDetails && (
         <div className={`${card} p-4 md:p-5`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FontAwesomeIcon icon={faPills} className="text-orange-500" />
-              <h3 className="font-extrabold">Current Medication</h3>
+              <h3 className="font-extrabold text-slate-900">
+                Current Medication
+              </h3>
             </div>
 
             <button

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import SignOutNavbar from "../components/SignOutNavbar";
 import logo from "../images/Logo.png";
 import koaImg from "../images/koakee.png";
-import klImg from "../images/kl.png";
+import klImg from "../images/kl.jpg";
 import iotImg from "../images/iots.png";
 import sysImg from "../images/System Architectural Flow.png";
 import Landing from "../images/Landing copy.png";
