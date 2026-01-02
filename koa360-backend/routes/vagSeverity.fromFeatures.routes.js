@@ -4,10 +4,6 @@ const { spawn } = require("child_process");
 
 const router = express.Router();
 
-/**
- * POST /api/vag/severity-from-features
- * body: { rms_amplitude, spectral_entropy, zero_crossing_rate, mean_frequency, knee_tempurarture }
- */
 router.post("/api/vag/severity-from-features", async (req, res) => {
   try {
     const {

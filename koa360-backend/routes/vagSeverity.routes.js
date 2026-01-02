@@ -5,9 +5,6 @@ const AvgSensorData = require("../models/AvgSensorData");
 
 const router = express.Router();
 
-/**
- * GET /api/vag/severity/:deviceId?days=14&source=piezo
- */
 router.get("/api/vag/severity/:deviceId", async (req, res) => {
   try {
     const { deviceId } = req.params;
@@ -80,7 +77,7 @@ router.get("/api/vag/severity/:deviceId", async (req, res) => {
       });
     }
 
-    // ✅ run python from venv
+    // run python from venv
     const pythonExe = path.join(__dirname, "..", "pyenv", "Scripts", "python.exe");
     const scriptPath = path.join("python", "predict_vag_severity.py");
 
