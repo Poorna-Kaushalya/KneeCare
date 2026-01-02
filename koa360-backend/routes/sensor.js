@@ -1,11 +1,10 @@
-// routes/sensor.js
 const express = require("express");
 const RawSensorData = require("../models/RawSensorData");
 const AvgSensorData = require("../models/AvgSensorData");
 
 const router = express.Router();
 
-// ✅ Save raw sensor data (includes piezo)
+// Save raw sensor data (includes piezo)
 router.post("/api/sensor-data", async (req, res) => {
   try {
     const newData = new RawSensorData(req.body);
@@ -17,7 +16,7 @@ router.post("/api/sensor-data", async (req, res) => {
   }
 });
 
-// ✅ Check device connection status
+// Check device connection status
 router.get("/api/device-status", async (req, res) => {
   try {
     const recentData = await RawSensorData.findOne({}, {}, { sort: { createdAt: -1 } });
@@ -29,7 +28,7 @@ router.get("/api/device-status", async (req, res) => {
   }
 });
 
-// ✅ Get latest 10 average records
+// Get latest 10 average records
 router.get("/api/sensor-data", async (req, res) => {
   try {
     const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
@@ -40,7 +39,7 @@ router.get("/api/sensor-data", async (req, res) => {
   }
 });
 
-// ✅ Calculate 5-min averages every 5 minutes
+// Calculate 5-min averages every 5 minutes
 setInterval(async () => {
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -57,12 +56,11 @@ setInterval(async () => {
     let sum_angle = 0;
     let sum_temp = { ambient: 0, object: 0 };
 
-    // 🔥 NEW: piezo sums
     let sum_piezo = { raw: 0, voltage: 0, trigger: 0 };
     let piezoCount = 0;
 
     rawData.forEach((d) => {
-      // Upper sensor sums (add null-safety)
+      // Upper sensor sums
       if (d.upper) {
         sum_upper.ax += d.upper.ax || 0;
         sum_upper.ay += d.upper.ay || 0;
@@ -93,11 +91,11 @@ setInterval(async () => {
         sum_temp.object += d.temperature.object || 0;
       }
 
-      // 🔥 Piezo (VAG) sensor
+      // Piezo (VAG) sensor
       if (d.piezo) {
         sum_piezo.raw += d.piezo.raw || 0;
         sum_piezo.voltage += d.piezo.voltage || 0;
-        sum_piezo.trigger += d.piezo.trigger || 0; // usually 0/1
+        sum_piezo.trigger += d.piezo.trigger || 0;
         piezoCount++;
       }
     });
@@ -130,12 +128,10 @@ setInterval(async () => {
         object: sum_temp.object / count,
       },
 
-      // 🔥 store averaged piezo if any samples had piezo data
       avg_piezo: piezoCount > 0
         ? {
-          raw: sum_piezo.raw / piezoCount,      // mean ADC
-          voltage: sum_piezo.voltage / piezoCount,    // mean voltage
-          // fraction of samples where trigger == 1 (0–1)
+          raw: sum_piezo.raw / piezoCount,     
+          voltage: sum_piezo.voltage / piezoCount,  
           trigger_rate: sum_piezo.trigger / piezoCount,
         }
         : undefined,
@@ -149,7 +145,7 @@ setInterval(async () => {
   }
 }, 5 * 60 * 1000);
 
-// 📈 Get average records filtered by device ID and configurable time range
+// Get average records filtered by device ID and configurable time range
 router.get("/api/sensor-datas", async (req, res) => {
   try {
     const { deviceId, range } = req.query;
@@ -158,19 +154,17 @@ router.get("/api/sensor-datas", async (req, res) => {
       return res.status(400).json({ error: "Missing deviceId query parameter." });
     }
 
-    // Default to 7 days if no valid range is provided
+    // Default to 7 days
     const days = parseInt(range, 10) || 7;
     
-    // Calculate the start date (number of days ago)
-    // days * 24 (hours) * 60 (minutes) * 60 (seconds) * 1000 (milliseconds)
+    // Calculate the start date
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000); 
 
-    // Query for data greater than or equal to startDate
     const data = await AvgSensorData.find({
       device_id: deviceId,
-      createdAt: { $gte: startDate } // Filter by date
+      createdAt: { $gte: startDate }
     })
-      .sort({ createdAt: 1 }); // Sort oldest to newest (ascending) for charts
+      .sort({ createdAt: 1 });
 
     if (!data || data.length === 0) {
       return res.status(404).json({ error: `No sensor data found for device ID: ${deviceId} in the last ${days} day(s).` });
