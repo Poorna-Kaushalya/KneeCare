@@ -28,6 +28,7 @@ const patientRoutes = require("./routes/patient");
 const predictRoutes = require("./routes/predict");
 const vagSeverityRoutes = require("./routes/vagSeverity.routes");
 const koaSeverityRoutes = require("./routes/koaSeverity");
+const vagSeverityFromFeaturesRoutes = require("./routes/vagSeverity.fromFeatures.routes");
 
 // --- Use Routes ---
 app.use("/", authRoutes);
@@ -37,6 +38,7 @@ app.use("/", patientRoutes);
 app.use("/", predictRoutes);
 app.use("/", vagSeverityRoutes);
 app.use("/", koaSeverityRoutes);
+app.use("/", vagSeverityFromFeaturesRoutes);
 
 // --- Basic Route 
 app.get("/", (req, res) => {
