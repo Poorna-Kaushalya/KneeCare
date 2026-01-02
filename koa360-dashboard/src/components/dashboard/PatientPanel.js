@@ -27,7 +27,7 @@ export default function PatientPanel({
   const [showReport, setShowReport] = useState(false);
   const details = selectedPatientDetails || selectedPatient || null;
 
-  const card = "bg-white border border-slate-200 rounded-2xl shadow-sm";
+  const card = "bg-white border border-slate-200  shadow-sm";
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";

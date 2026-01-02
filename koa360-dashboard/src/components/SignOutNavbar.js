@@ -82,7 +82,7 @@ function SignOutNavbar({ isLoggedIn }) {
 
                 </div>
 
-                <div className="hidden md:block text-gray-700 font-semibold text-sm text-white">
+                <div className="hidden md:block font-semibold text-sm text-white">
                     {formattedDateTime}
                 </div>
 

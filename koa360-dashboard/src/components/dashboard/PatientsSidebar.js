@@ -24,7 +24,7 @@ export default function PatientsSidebar({
   onDelete,
   selectedPatientDetails,
 }) {
-  const card = "bg-white border border-slate-200 rounded-2xl shadow-sm";
+  const card = "bg-white border border-slate-200  shadow-sm";
   const iconBadge =
     "w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600";
 
