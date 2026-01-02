@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Home from "./pages/Home"; 
+import Home from "./pages/Home";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./pages/Dashboard";
 import FormEntry from "./pages/FormEntry";
+import KOApredict1 from "./components/PredicForms/KOAPredictForm";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
@@ -28,7 +29,7 @@ function App() {
 
   return (
     <Routes>
-      
+
       <Route
         path="/"
         element={
@@ -76,10 +77,13 @@ function App() {
           token ? <FormEntry logout={handleLogout} /> : <Navigate to="/" />
         }
       />
-      
+
+      <Route path="/koa-predict" element={<KOApredict1 />} />
+
+
     </Routes>
 
-    
+
   );
 }
 

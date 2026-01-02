@@ -15,6 +15,7 @@ function SignInNavbar({ logout }) {
     { label: "Appointments", path: "/appointments" },
     { label: "Reports", path: "/reports" },
     { label: "Sensor Form", path: "/form" },
+    { label: "KOA Predict", path: "/koa-predict" },
   ];
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -88,7 +89,7 @@ function SignInNavbar({ logout }) {
           <span className="font-semibold">
             {connected ? (
               <>
-                Device Connected <FiWifi className="inline ml-1" /> |
+                Device Connected <FiWifi className="inline ml-1" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
               </>
             ) : (
               "Device Disconnected |"
