@@ -7,7 +7,6 @@ import itertools
 import numpy as np
 import pytest
 
-from pandas.compat import WARNING_CHECK_DISABLED
 from pandas.errors import PerformanceWarning
 import pandas.util._test_decorators as td
 
@@ -185,6 +184,19 @@ class TestDataFrameBlockInternals:
         tm.assert_series_equal(result, expected)
 
     def test_construction_with_mixed(self, float_string_frame, using_infer_string):
+        # test construction edge cases with mixed types
+
+        # f7u12, this does not work without extensive workaround
+        data = [
+            [datetime(2001, 1, 5), np.nan, datetime(2001, 1, 2)],
+            [datetime(2000, 1, 2), datetime(2000, 1, 3), datetime(2000, 1, 1)],
+        ]
+        df = DataFrame(data)
+
+        # check dtypes
+        result = df.dtypes
+        expected = Series({"datetime64[us]": 3})
+
         # mixed-type frames
         float_string_frame["datetime"] = datetime.now()
         float_string_frame["timedelta"] = timedelta(days=1, seconds=1)
@@ -194,9 +206,7 @@ class TestDataFrameBlockInternals:
         expected = Series(
             [np.dtype("float64")] * 4
             + [
-                np.dtype("object")
-                if not using_infer_string
-                else pd.StringDtype(na_value=np.nan),
+                np.dtype("object") if not using_infer_string else "string",
                 np.dtype("datetime64[us]"),
                 np.dtype("timedelta64[us]"),
             ],
@@ -208,7 +218,8 @@ class TestDataFrameBlockInternals:
         # convert from a numpy array of non-ns timedelta64; as of 2.0 this does
         #  *not* convert
         arr = np.array([1, 2, 3], dtype="timedelta64[s]")
-        df = DataFrame({"A": arr})
+        df = DataFrame(index=range(3))
+        df["A"] = arr
         expected = DataFrame(
             {"A": pd.timedelta_range("00:00:01", periods=3, freq="s")}, index=range(3)
         )
@@ -226,11 +237,11 @@ class TestDataFrameBlockInternals:
         assert expected.dtypes["dt1"] == "M8[s]"
         assert expected.dtypes["dt2"] == "M8[s]"
 
-        dt1 = np.datetime64("2013-01-01")
-        dt2 = np.array(
+        df = DataFrame(index=range(3))
+        df["dt1"] = np.datetime64("2013-01-01")
+        df["dt2"] = np.array(
             ["2013-01-01", "2013-01-02", "2013-01-03"], dtype="datetime64[D]"
         )
-        df = DataFrame({"dt1": dt1, "dt2": dt2})
 
         # df['dt3'] = np.array(['2013-01-01 00:00:01','2013-01-01
         # 00:00:02','2013-01-01 00:00:03'],dtype='datetime64[s]')
@@ -412,10 +423,7 @@ def test_update_inplace_sets_valid_block_values(using_copy_on_write):
         with tm.raises_chained_assignment_error():
             df["a"].fillna(1, inplace=True)
     else:
-        with tm.assert_produces_warning(
-            FutureWarning if not WARNING_CHECK_DISABLED else None,
-            match="inplace method",
-        ):
+        with tm.assert_produces_warning(FutureWarning, match="inplace method"):
             df["a"].fillna(1, inplace=True)
 
     # check we haven't put a Series into any block.values
@@ -430,13 +438,9 @@ def test_nonconsolidated_item_cache_take():
     # https://github.com/pandas-dev/pandas/issues/35521
 
     # create non-consolidated dataframe with object dtype columns
-    df = DataFrame(
-        {
-            "col1": Series(["a"], dtype=object),
-        }
-    )
+    df = DataFrame()
+    df["col1"] = Series(["a"], dtype=object)
     df["col2"] = Series([0], dtype=object)
-    assert not df._mgr.is_consolidated()
 
     # access column (item cache)
     df["col1"] == "A"

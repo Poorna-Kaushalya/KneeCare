@@ -33,22 +33,14 @@ def frame_random_data_integer_multi_index():
 
 
 class TestMultiIndexLoc:
-    @pytest.mark.filterwarnings("ignore:Setting a value on a view:FutureWarning")
-    @pytest.mark.parametrize("has_ref", [True, False])
-    def test_loc_setitem_frame_with_multiindex(
-        self, multiindex_dataframe_random_data, has_ref
-    ):
+    def test_loc_setitem_frame_with_multiindex(self, multiindex_dataframe_random_data):
         frame = multiindex_dataframe_random_data
-        if has_ref:
-            view = frame[:]
         frame.loc[("bar", "two"), "B"] = 5
         assert frame.loc[("bar", "two"), "B"] == 5
 
         # with integer labels
         df = frame.copy()
         df.columns = list(range(3))
-        if has_ref:
-            view = df[:]  # noqa: F841
         df.loc[("bar", "two"), 1] = 7
         assert df.loc[("bar", "two"), 1] == 7
 
@@ -596,7 +588,7 @@ def test_loc_nan_multiindex(using_infer_string):
         np.ones((1, 4)),
         index=Index(
             [np.nan],
-            dtype="object" if not using_infer_string else "str",
+            dtype="object" if not using_infer_string else "string[pyarrow_numpy]",
             name="u3",
         ),
         columns=Index(["d1", "d2", "d3", "d4"]),

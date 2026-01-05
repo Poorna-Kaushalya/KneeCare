@@ -3,7 +3,6 @@ from datetime import datetime
 import numpy as np
 import pytest
 
-from pandas.errors import SettingWithCopyWarning
 import pandas.util._test_decorators as td
 
 from pandas.core.dtypes.base import _registry as ea_registry
@@ -147,31 +146,13 @@ class TestDataFrameSetItem:
         )
         tm.assert_series_equal(result, expected)
 
-    def test_setitem_overwrite_index(self):
-        # GH 13522 - assign the index as a column and then overwrite the values
-        # -> should not affect the index
+    def test_setitem_empty_columns(self):
+        # GH 13522
         df = DataFrame(index=["A", "B", "C"])
         df["X"] = df.index
         df["X"] = ["x", "y", "z"]
-        exp = DataFrame(
-            data={"X": ["x", "y", "z"]}, index=["A", "B", "C"], columns=["X"]
-        )
+        exp = DataFrame(data={"X": ["x", "y", "z"]}, index=["A", "B", "C"])
         tm.assert_frame_equal(df, exp)
-
-    def test_setitem_empty_columns(self):
-        # Starting from an empty DataFrame and setting a column should result
-        # in a default string dtype for the columns' Index
-        # https://github.com/pandas-dev/pandas/issues/60338
-
-        df = DataFrame()
-        df["foo"] = [1, 2, 3]
-        expected = DataFrame({"foo": [1, 2, 3]})
-        tm.assert_frame_equal(df, expected)
-
-        df = DataFrame(columns=Index([]))
-        df["foo"] = [1, 2, 3]
-        expected = DataFrame({"foo": [1, 2, 3]})
-        tm.assert_frame_equal(df, expected)
 
     def test_setitem_dt64_index_empty_columns(self):
         rng = date_range("1/1/2000 00:00:00", "1/1/2000 1:59:50", freq="10s")
@@ -186,7 +167,7 @@ class TestDataFrameSetItem:
         df["now"] = Timestamp("20130101", tz="UTC").as_unit("ns")
 
         expected = DataFrame(
-            [[Timestamp("20130101", tz="UTC")]] * 3, index=range(3), columns=["now"]
+            [[Timestamp("20130101", tz="UTC")]] * 3, index=[0, 1, 2], columns=["now"]
         )
         tm.assert_frame_equal(df, expected)
 
@@ -225,7 +206,7 @@ class TestDataFrameSetItem:
         result = DataFrame([])
         result["a"] = data
 
-        expected = DataFrame({"a": data}, columns=["a"])
+        expected = DataFrame({"a": data})
 
         tm.assert_frame_equal(result, expected)
 
@@ -694,7 +675,7 @@ class TestDataFrameSetItem:
     def test_setitem_dtypes_bytes_type_to_object(self):
         # GH 20734
         index = Series(name="id", dtype="S24")
-        df = DataFrame(index=index, columns=Index([], dtype="str"))
+        df = DataFrame(index=index)
         df["a"] = Series(name="a", index=index, dtype=np.uint32)
         df["b"] = Series(name="b", index=index, dtype="S64")
         df["c"] = Series(name="c", index=index, dtype="S64")
@@ -733,7 +714,7 @@ class TestDataFrameSetItem:
         )
 
         a = np.ones((10, 1))
-        df = DataFrame(index=np.arange(10), columns=Index([], dtype="str"))
+        df = DataFrame(index=np.arange(10))
         df["np-array"] = a
 
         # Instantiation of `np.matrix` gives PendingDeprecationWarning
@@ -1399,94 +1380,6 @@ class TestDataFrameSetitemCopyViewSemantics:
             columns=["3010", "2010"],
             index=dti[:0],
         )
-        tm.assert_frame_equal(df, expected)
-
-    def test_iloc_setitem_view_2dblock(self, using_copy_on_write, warn_copy_on_write):
-        # https://github.com/pandas-dev/pandas/issues/60309
-        df_parent = DataFrame(
-            {
-                "A": [1, 4, 1, 5],
-                "B": [2, 5, 2, 6],
-                "C": [3, 6, 1, 7],
-                "D": [8, 9, 10, 11],
-            }
-        )
-        df_orig = df_parent.copy()
-        df = df_parent[["B", "C"]]
-
-        # Perform the iloc operation
-        if using_copy_on_write:
-            df.iloc[[1, 3], :] = [[2, 2], [2, 2]]
-
-            # Check that original DataFrame is unchanged
-            tm.assert_frame_equal(df_parent, df_orig)
-        elif warn_copy_on_write:
-            # TODO(COW): should this warn?
-            # with tm.assert_cow_warning(warn_copy_on_write):
-            df.iloc[[1, 3], :] = [[2, 2], [2, 2]]
-        else:
-            with pd.option_context("chained_assignment", "warn"):
-                with tm.assert_produces_warning(SettingWithCopyWarning):
-                    df.iloc[[1, 3], :] = [[2, 2], [2, 2]]
-
-        # Check that df is modified correctly
-        expected = DataFrame({"B": [2, 2, 2, 2], "C": [3, 2, 1, 2]}, index=df.index)
-        tm.assert_frame_equal(df, expected)
-
-        # with setting to subset of columns
-        df = df_parent[["B", "C", "D"]]
-        if using_copy_on_write or warn_copy_on_write:
-            df.iloc[[1, 3], 0:3:2] = [[2, 2], [2, 2]]
-            tm.assert_frame_equal(df_parent, df_orig)
-        else:
-            with pd.option_context("chained_assignment", "warn"):
-                with tm.assert_produces_warning(SettingWithCopyWarning):
-                    df.iloc[[1, 3], 0:3:2] = [[2, 2], [2, 2]]
-
-        expected = DataFrame(
-            {"B": [2, 2, 2, 2], "C": [3, 6, 1, 7], "D": [8, 2, 10, 2]}, index=df.index
-        )
-        tm.assert_frame_equal(df, expected)
-
-    @pytest.mark.parametrize(
-        "indexer, value",
-        [
-            (([0, 2], slice(None)), [[2, 2, 2, 2], [2, 2, 2, 2]]),
-            ((slice(None), slice(None)), 2),
-            ((0, [1, 3]), [2, 2]),
-            (([0], 1), [2]),
-            (([0], np.int64(1)), [2]),
-            ((slice(None), np.int64(1)), [2, 2, 2]),
-            ((slice(None, 2), np.int64(1)), [2, 2]),
-            (
-                (np.array([False, True, False]), np.array([False, True, False, True])),
-                [2, 2],
-            ),
-        ],
-    )
-    def test_setitem_2dblock_with_ref(
-        self, indexer, value, using_copy_on_write, warn_copy_on_write
-    ):
-        # https://github.com/pandas-dev/pandas/issues/60309
-        arr = np.arange(12).reshape(3, 4)
-
-        df_parent = DataFrame(arr.copy(), columns=list("ABCD"))
-        # the test is specifically for the case where the df is backed by a single
-        # block (taking the non-split path)
-        assert df_parent._mgr.is_single_block
-        df_orig = df_parent.copy()
-        df = df_parent[:]
-
-        with tm.assert_cow_warning(warn_copy_on_write):
-            df.iloc[indexer] = value
-
-        # Check that original DataFrame is unchanged
-        if using_copy_on_write:
-            tm.assert_frame_equal(df_parent, df_orig)
-
-        # Check that df is modified correctly
-        arr[indexer] = value
-        expected = DataFrame(arr, columns=list("ABCD"))
         tm.assert_frame_equal(df, expected)
 
 

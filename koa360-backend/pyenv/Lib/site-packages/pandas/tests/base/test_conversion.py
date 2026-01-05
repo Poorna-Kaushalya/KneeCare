@@ -1,9 +1,6 @@
 import numpy as np
 import pytest
 
-from pandas.compat import HAS_PYARROW
-from pandas.compat.numpy import np_version_gt2
-
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 
 import pandas as pd
@@ -23,7 +20,6 @@ from pandas.core.arrays import (
     SparseArray,
     TimedeltaArray,
 )
-from pandas.core.arrays.string_ import StringArrayNumpySemantics
 from pandas.core.arrays.string_arrow import ArrowStringArrayNumpySemantics
 
 
@@ -222,9 +218,7 @@ class TestToIterable:
 )
 def test_values_consistent(arr, expected_type, dtype, using_infer_string):
     if using_infer_string and dtype == "object":
-        expected_type = (
-            ArrowStringArrayNumpySemantics if HAS_PYARROW else StringArrayNumpySemantics
-        )
+        expected_type = ArrowStringArrayNumpySemantics
     l_values = Series(arr)._values
     r_values = pd.Index(arr)._values
     assert type(l_values) is expected_type
@@ -296,27 +290,24 @@ def test_array_multiindex_raises():
 
 
 @pytest.mark.parametrize(
-    "arr, expected, zero_copy",
+    "arr, expected",
     [
-        (np.array([1, 2], dtype=np.int64), np.array([1, 2], dtype=np.int64), True),
-        (pd.Categorical(["a", "b"]), np.array(["a", "b"], dtype=object), False),
+        (np.array([1, 2], dtype=np.int64), np.array([1, 2], dtype=np.int64)),
+        (pd.Categorical(["a", "b"]), np.array(["a", "b"], dtype=object)),
         (
             pd.core.arrays.period_array(["2000", "2001"], freq="D"),
             np.array([pd.Period("2000", freq="D"), pd.Period("2001", freq="D")]),
-            False,
         ),
-        (pd.array([0, np.nan], dtype="Int64"), np.array([0, np.nan]), False),
+        (pd.array([0, np.nan], dtype="Int64"), np.array([0, np.nan])),
         (
             IntervalArray.from_breaks([0, 1, 2]),
             np.array([pd.Interval(0, 1), pd.Interval(1, 2)], dtype=object),
-            False,
         ),
-        (SparseArray([0, 1]), np.array([0, 1], dtype=np.int64), False),
+        (SparseArray([0, 1]), np.array([0, 1], dtype=np.int64)),
         # tz-naive datetime
         (
             DatetimeArray._from_sequence(np.array(["2000", "2001"], dtype="M8[ns]")),
             np.array(["2000", "2001"], dtype="M8[ns]"),
-            True,
         ),
         # tz-aware stays tz`-aware
         (
@@ -331,7 +322,6 @@ def test_array_multiindex_raises():
                     Timestamp("2000-01-02", tz="US/Central"),
                 ]
             ),
-            False,
         ),
         # Timedelta
         (
@@ -339,7 +329,6 @@ def test_array_multiindex_raises():
                 np.array([0, 3600000000000], dtype="i8").view("m8[ns]")
             ),
             np.array([0, 3600000000000], dtype="m8[ns]"),
-            True,
         ),
         # GH#26406 tz is preserved in Categorical[dt64tz]
         (
@@ -350,11 +339,10 @@ def test_array_multiindex_raises():
                     Timestamp("2016-01-02", tz="US/Pacific"),
                 ]
             ),
-            False,
         ),
     ],
 )
-def test_to_numpy(arr, expected, zero_copy, index_or_series_or_array):
+def test_to_numpy(arr, expected, index_or_series_or_array, request):
     box = index_or_series_or_array
 
     with tm.assert_produces_warning(None):
@@ -365,28 +353,6 @@ def test_to_numpy(arr, expected, zero_copy, index_or_series_or_array):
 
     result = np.asarray(thing)
     tm.assert_numpy_array_equal(result, expected)
-
-    # Additionally, we check the `copy=` semantics for array/asarray
-    # (these are implemented by us via `__array__`).
-    result_cp1 = np.array(thing, copy=True)
-    result_cp2 = np.array(thing, copy=True)
-    # When called with `copy=True` NumPy/we should ensure a copy was made
-    assert not np.may_share_memory(result_cp1, result_cp2)
-
-    if not np_version_gt2:
-        # copy=False semantics are only supported in NumPy>=2.
-        return
-
-    if not zero_copy:
-        msg = "Starting with NumPy 2.0, the behavior of the 'copy' keyword has changed"
-        with tm.assert_produces_warning(FutureWarning, match=msg):
-            np.array(thing, copy=False)
-
-    else:
-        result_nocopy1 = np.array(thing, copy=False)
-        result_nocopy2 = np.array(thing, copy=False)
-        # If copy=False was given, these must share the same data
-        assert np.may_share_memory(result_nocopy1, result_nocopy2)
 
 
 @pytest.mark.parametrize("as_series", [True, False])
@@ -400,13 +366,13 @@ def test_to_numpy_copy(arr, as_series, using_infer_string):
 
     # no copy by default
     result = obj.to_numpy()
-    if using_infer_string and arr.dtype == object and obj.dtype.storage == "pyarrow":
+    if using_infer_string and arr.dtype == object:
         assert np.shares_memory(arr, result) is False
     else:
         assert np.shares_memory(arr, result) is True
 
     result = obj.to_numpy(copy=False)
-    if using_infer_string and arr.dtype == object and obj.dtype.storage == "pyarrow":
+    if using_infer_string and arr.dtype == object:
         assert np.shares_memory(arr, result) is False
     else:
         assert np.shares_memory(arr, result) is True

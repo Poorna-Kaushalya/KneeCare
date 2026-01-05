@@ -7,7 +7,7 @@ from typing import (
     Literal,
 )
 
-from pandas._libs import lib
+import numpy as np
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -85,11 +85,7 @@ class BaseStringArrayMethods(abc.ABC):
 
     @abc.abstractmethod
     def _str_match(
-        self,
-        pat: str,
-        case: bool = True,
-        flags: int = 0,
-        na: Scalar | lib.NoDefault = lib.no_default,
+        self, pat: str, case: bool = True, flags: int = 0, na: Scalar = np.nan
     ):
         pass
 
@@ -99,7 +95,7 @@ class BaseStringArrayMethods(abc.ABC):
         pat: str | re.Pattern,
         case: bool = True,
         flags: int = 0,
-        na: Scalar | lib.NoDefault = lib.no_default,
+        na: Scalar = np.nan,
     ):
         pass
 

@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+from pandas._config import using_pyarrow_string_dtype
+
 from pandas import (
     DataFrame,
     DatetimeIndex,
@@ -40,11 +42,12 @@ class TestIntervalIndexRendering:
         result = repr(obj)
         assert result == expected
 
+    @pytest.mark.xfail(using_pyarrow_string_dtype(), reason="repr different")
     def test_repr_floats(self):
         # GH 32553
 
         markers = Series(
-            [1, 2],
+            ["foo", "bar"],
             index=IntervalIndex(
                 [
                     Interval(left, right)
@@ -56,12 +59,9 @@ class TestIntervalIndexRendering:
             ),
         )
         result = str(markers)
-        expected = "(329.973, 345.137]    1\n(345.137, 360.191]    2\ndtype: int64"
+        expected = "(329.973, 345.137]    foo\n(345.137, 360.191]    bar\ndtype: object"
         assert result == expected
 
-    @pytest.mark.filterwarnings(
-        "ignore:invalid value encountered in cast:RuntimeWarning"
-    )
     @pytest.mark.parametrize(
         "tuples, closed, expected_data",
         [

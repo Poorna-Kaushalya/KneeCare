@@ -120,7 +120,7 @@ class TestGetDummies:
 
         result = get_dummies(s_df, columns=["a"], sparse=sparse, dtype=dtype)
 
-        key = "str" if using_infer_string else "object"
+        key = "string" if using_infer_string else "object"
         expected_counts = {"int64": 1, key: 1}
         expected_counts[dtype_name] = 3 + expected_counts.get(dtype_name, 0)
 
@@ -214,10 +214,10 @@ class TestGetDummies:
 
         tm.assert_frame_equal(result, expected)
 
-    def test_dataframe_dummies_string_dtype(self, df, any_string_dtype):
+    def test_dataframe_dummies_string_dtype(self, df, using_infer_string):
         # GH44965
         df = df[["A", "B"]]
-        df = df.astype({"A": "str", "B": any_string_dtype})
+        df = df.astype({"A": "object", "B": "string"})
         result = get_dummies(df)
         expected = DataFrame(
             {
@@ -228,7 +228,8 @@ class TestGetDummies:
             },
             dtype=bool,
         )
-        if any_string_dtype == "string" and any_string_dtype.na_value is pd.NA:
+        if not using_infer_string:
+            # infer_string returns numpy bools
             expected[["B_b", "B_c"]] = expected[["B_b", "B_c"]].astype("boolean")
         tm.assert_frame_equal(result, expected)
 
@@ -707,17 +708,19 @@ class TestGetDummies:
         )
         tm.assert_frame_equal(result, expected)
 
-    @pytest.mark.parametrize("dtype_type", ["string", "category"])
-    def test_get_dummies_ea_dtype(self, dtype_type, string_dtype_no_object):
+    @td.skip_if_no("pyarrow")
+    def test_get_dummies_ea_dtype(self):
         # GH#56273
-        dtype = string_dtype_no_object
-        exp_dtype = "boolean" if dtype.na_value is pd.NA else "bool"
-        if dtype_type == "category":
-            dtype = CategoricalDtype(Index(["a"], dtype))
-        df = DataFrame({"name": Series(["a"], dtype=dtype), "x": 1})
-        result = get_dummies(df)
-        expected = DataFrame({"x": 1, "name_a": Series([True], dtype=exp_dtype)})
-        tm.assert_frame_equal(result, expected)
+        for dtype, exp_dtype in [
+            ("string[pyarrow]", "boolean"),
+            ("string[pyarrow_numpy]", "bool"),
+            (CategoricalDtype(Index(["a"], dtype="string[pyarrow]")), "boolean"),
+            (CategoricalDtype(Index(["a"], dtype="string[pyarrow_numpy]")), "bool"),
+        ]:
+            df = DataFrame({"name": Series(["a"], dtype=dtype), "x": 1})
+            result = get_dummies(df)
+            expected = DataFrame({"x": 1, "name_a": Series([True], dtype=exp_dtype)})
+            tm.assert_frame_equal(result, expected)
 
     @td.skip_if_no("pyarrow")
     def test_get_dummies_arrow_dtype(self):

@@ -39,10 +39,7 @@ from pandas._libs import (
 )
 from pandas._libs.lib import is_range_indexer
 from pandas.compat import PYPY
-from pandas.compat._constants import (
-    REF_COUNT,
-    WARNING_CHECK_DISABLED,
-)
+from pandas.compat._constants import REF_COUNT
 from pandas.compat._optional import import_optional_dependency
 from pandas.compat.numpy import function as nv
 from pandas.errors import (
@@ -994,7 +991,7 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
             the dtype is inferred from the data.
 
         copy : bool or None, optional
-            See :func:`numpy.asarray`.
+            Unused.
 
         Returns
         -------
@@ -1031,17 +1028,8 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
               dtype='datetime64[ns]')
         """
         values = self._values
-        if copy is None:
-            # Note: branch avoids `copy=None` for NumPy 1.x support
-            arr = np.asarray(values, dtype=dtype)
-        else:
-            arr = np.array(values, dtype=dtype, copy=copy)
-
-        if copy is True:
-            return arr
-        if using_copy_on_write() and (
-            copy is False or astype_is_view(values.dtype, arr.dtype)
-        ):
+        arr = np.asarray(values, dtype=dtype)
+        if using_copy_on_write() and astype_is_view(values.dtype, arr.dtype):
             arr = arr.view()
             arr.flags.writeable = False
         return arr
@@ -1272,12 +1260,12 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
 
     def __setitem__(self, key, value) -> None:
         warn = True
-        if not PYPY and not WARNING_CHECK_DISABLED and using_copy_on_write():
+        if not PYPY and using_copy_on_write():
             if sys.getrefcount(self) <= 3:
                 warnings.warn(
                     _chained_assignment_msg, ChainedAssignmentError, stacklevel=2
                 )
-        elif not PYPY and not WARNING_CHECK_DISABLED and not using_copy_on_write():
+        elif not PYPY and not using_copy_on_write():
             ctr = sys.getrefcount(self)
             ref_count = 3
             if not warn_copy_on_write() and _check_cacher(self):
@@ -2817,8 +2805,6 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         dtype: float64
         """
         nv.validate_round(args, kwargs)
-        if self.dtype == "object":
-            raise TypeError("Expected numeric dtype, got object instead.")
         new_mgr = self._mgr.round(decimals=decimals, using_cow=using_copy_on_write())
         return self._constructor_from_mgr(new_mgr, axes=new_mgr.axes).__finalize__(
             self, method="round"
@@ -3624,19 +3610,14 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         2    3
         dtype: int64
         """
-        if not PYPY and not WARNING_CHECK_DISABLED and using_copy_on_write():
+        if not PYPY and using_copy_on_write():
             if sys.getrefcount(self) <= REF_COUNT:
                 warnings.warn(
                     _chained_assignment_method_msg,
                     ChainedAssignmentError,
                     stacklevel=2,
                 )
-        elif (
-            not PYPY
-            and not WARNING_CHECK_DISABLED
-            and not using_copy_on_write()
-            and self._is_view_after_cow_rules()
-        ):
+        elif not PYPY and not using_copy_on_write() and self._is_view_after_cow_rules():
             ctr = sys.getrefcount(self)
             ref_count = REF_COUNT
             if _check_cacher(self):
@@ -6169,11 +6150,9 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
                         np.bool_,
                     ):
                         warnings.warn(
-                            "Operation between Series with different indexes "
-                            "that are not of numpy boolean or object dtype "
-                            "will no longer return a numpy boolean result "
-                            "in a future version. "
-                            "Cast both Series to object type "
+                            "Operation between non boolean Series with different "
+                            "indexes will no longer return a boolean result in "
+                            "a future version. Cast both Series to object type "
                             "to maintain the prior behavior.",
                             FutureWarning,
                             stacklevel=find_stack_level(),

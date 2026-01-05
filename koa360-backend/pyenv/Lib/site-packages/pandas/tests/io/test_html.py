@@ -29,6 +29,10 @@ from pandas import (
     to_datetime,
 )
 import pandas._testing as tm
+from pandas.core.arrays import (
+    ArrowStringArray,
+    StringArray,
+)
 
 from pandas.io.common import file_path_to_url
 
@@ -150,7 +154,7 @@ class TestReadHtml:
         df = (
             DataFrame(
                 np.random.default_rng(2).random((4, 3)),
-                columns=pd.Index(list("abc")),
+                columns=pd.Index(list("abc"), dtype=object),
             )
             # pylint: disable-next=consider-using-f-string
             .map("{:.3f}".format).astype(float)
@@ -176,15 +180,23 @@ class TestReadHtml:
             }
         )
 
+        if string_storage == "python":
+            string_array = StringArray(np.array(["a", "b", "c"], dtype=np.object_))
+            string_array_na = StringArray(np.array(["a", "b", NA], dtype=np.object_))
+        elif dtype_backend == "pyarrow":
+            pa = pytest.importorskip("pyarrow")
+            from pandas.arrays import ArrowExtensionArray
+
+            string_array = ArrowExtensionArray(pa.array(["a", "b", "c"]))
+            string_array_na = ArrowExtensionArray(pa.array(["a", "b", None]))
+        else:
+            pa = pytest.importorskip("pyarrow")
+            string_array = ArrowStringArray(pa.array(["a", "b", "c"]))
+            string_array_na = ArrowStringArray(pa.array(["a", "b", None]))
+
         out = df.to_html(index=False)
         with pd.option_context("mode.string_storage", string_storage):
             result = flavor_read_html(StringIO(out), dtype_backend=dtype_backend)[0]
-
-        if dtype_backend == "pyarrow":
-            pa = pytest.importorskip("pyarrow")
-            string_dtype = pd.ArrowDtype(pa.string())
-        else:
-            string_dtype = pd.StringDtype(string_storage)
 
         expected = DataFrame(
             {
@@ -194,8 +206,8 @@ class TestReadHtml:
                 "d": Series([1.5, 2.0, 2.5], dtype="Float64"),
                 "e": Series([True, False, NA], dtype="boolean"),
                 "f": Series([True, False, True], dtype="boolean"),
-                "g": Series(["a", "b", "c"], dtype=string_dtype),
-                "h": Series(["a", "b", None], dtype=string_dtype),
+                "g": string_array,
+                "h": string_array_na,
             }
         )
 
@@ -211,9 +223,7 @@ class TestReadHtml:
                 }
             )
 
-        # the storage of the str columns' Index is also affected by the
-        # string_storage setting -> ignore that for checking the result
-        tm.assert_frame_equal(result, expected, check_column_type=False)
+        tm.assert_frame_equal(result, expected)
 
     @pytest.mark.network
     @pytest.mark.single_cpu
@@ -1381,7 +1391,6 @@ class TestReadHtml:
         expected = DataFrame({"A": [1, 4], "B": [2, 5]})
         tm.assert_frame_equal(result, expected)
 
-    @td.skip_if_windows()
     @pytest.mark.filterwarnings(
         "ignore:You provided Unicode markup but also provided a value for "
         "from_encoding.*:UserWarning"

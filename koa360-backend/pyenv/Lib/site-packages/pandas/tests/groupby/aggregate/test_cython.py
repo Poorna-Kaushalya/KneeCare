@@ -108,9 +108,7 @@ def test_cython_agg_nothing_to_agg():
 
     result = frame[["b"]].groupby(frame["a"]).mean(numeric_only=True)
     expected = DataFrame(
-        [],
-        index=frame["a"].sort_values().drop_duplicates(),
-        columns=Index([], dtype="str"),
+        [], index=frame["a"].sort_values().drop_duplicates(), columns=[]
     )
     tm.assert_frame_equal(result, expected)
 
@@ -165,14 +163,14 @@ def test_cython_agg_return_dict():
 
 def test_cython_fail_agg():
     dr = bdate_range("1/1/2000", periods=50)
-    ts = Series(["A", "B", "C", "D", "E"] * 10, dtype=object, index=dr)
+    ts = Series(["A", "B", "C", "D", "E"] * 10, index=dr)
 
     grouped = ts.groupby(lambda x: x.month)
     summed = grouped.sum()
     msg = "using SeriesGroupBy.sum"
     with tm.assert_produces_warning(FutureWarning, match=msg):
         # GH#53425
-        expected = grouped.agg(np.sum).astype(object)
+        expected = grouped.agg(np.sum)
     tm.assert_series_equal(summed, expected)
 
 

@@ -26,18 +26,15 @@ def test_eq_all_na():
     tm.assert_extension_array_equal(result, expected)
 
 
-def test_config(string_storage, using_infer_string):
-    # with the default string_storage setting
-    # always "python" at the moment
-    assert StringDtype().storage == "python"
-
+def test_config(string_storage, request, using_infer_string):
+    if using_infer_string and string_storage != "pyarrow_numpy":
+        request.applymarker(pytest.mark.xfail(reason="infer string takes precedence"))
     with pd.option_context("string_storage", string_storage):
         assert StringDtype().storage == string_storage
         result = pd.array(["a", "b"])
         assert result.dtype.storage == string_storage
 
-    # pd.array(..) by default always returns the NA-variant
-    dtype = StringDtype(string_storage, na_value=pd.NA)
+    dtype = StringDtype(string_storage)
     expected = dtype.construct_array_type()._from_sequence(["a", "b"], dtype=dtype)
     tm.assert_equal(result, expected)
 
@@ -49,18 +46,18 @@ def test_config_bad_storage_raises():
 
 
 @pytest.mark.parametrize("chunked", [True, False])
-@pytest.mark.parametrize("array_lib", ["numpy", "pyarrow"])
-def test_constructor_not_string_type_raises(array_lib, chunked):
+@pytest.mark.parametrize("array", ["numpy", "pyarrow"])
+def test_constructor_not_string_type_raises(array, chunked, arrow_string_storage):
     pa = pytest.importorskip("pyarrow")
 
-    array_lib = pa if array_lib == "pyarrow" else np
+    array = pa if array in arrow_string_storage else np
 
-    arr = array_lib.array([1, 2, 3])
+    arr = array.array([1, 2, 3])
     if chunked:
-        if array_lib is np:
+        if array is np:
             pytest.skip("chunked not applicable to numpy array")
         arr = pa.chunked_array(arr)
-    if array_lib is np:
+    if array is np:
         msg = "Unsupported type '<class 'numpy.ndarray'>' for ArrowExtensionArray"
     else:
         msg = re.escape(
@@ -85,32 +82,19 @@ def test_constructor_not_string_type_value_dictionary_raises(chunked):
         ArrowStringArray(arr)
 
 
-@pytest.mark.parametrize("string_type", ["string", "large_string"])
+@pytest.mark.xfail(
+    reason="dict conversion does not seem to be implemented for large string in arrow"
+)
 @pytest.mark.parametrize("chunked", [True, False])
-def test_constructor_valid_string_type_value_dictionary(string_type, chunked):
+def test_constructor_valid_string_type_value_dictionary(chunked):
     pa = pytest.importorskip("pyarrow")
 
-    arr = pa.array(["1", "2", "3"], getattr(pa, string_type)()).dictionary_encode()
+    arr = pa.array(["1", "2", "3"], pa.large_string()).dictionary_encode()
     if chunked:
         arr = pa.chunked_array(arr)
 
     arr = ArrowStringArray(arr)
-    # dictionary type get converted to dense large string array
-    assert pa.types.is_large_string(arr._pa_array.type)
-
-
-@pytest.mark.parametrize("chunked", [True, False])
-def test_constructor_valid_string_view(chunked):
-    # requires pyarrow>=18 for casting string_view to string
-    pa = pytest.importorskip("pyarrow", minversion="18")
-
-    arr = pa.array(["1", "2", "3"], pa.string_view())
-    if chunked:
-        arr = pa.chunked_array(arr)
-
-    arr = ArrowStringArray(arr)
-    # dictionary type get converted to dense large string array
-    assert pa.types.is_large_string(arr._pa_array.type)
+    assert pa.types.is_string(arr._pa_array.type.value_type)
 
 
 def test_constructor_from_list():
@@ -255,11 +239,10 @@ def test_setitem_invalid_indexer_raises():
         arr[[0, 1]] = ["foo", "bar", "baz"]
 
 
-@pytest.mark.parametrize("na_value", [pd.NA, np.nan])
-def test_pickle_roundtrip(na_value):
+@pytest.mark.parametrize("dtype", ["string[pyarrow]", "string[pyarrow_numpy]"])
+def test_pickle_roundtrip(dtype):
     # GH 42600
     pytest.importorskip("pyarrow")
-    dtype = StringDtype("pyarrow", na_value=na_value)
     expected = pd.Series(range(10), dtype=dtype)
     expected_sliced = expected.head(2)
     full_pickled = pickle.dumps(expected)
@@ -277,6 +260,6 @@ def test_pickle_roundtrip(na_value):
 def test_string_dtype_error_message():
     # GH#55051
     pytest.importorskip("pyarrow")
-    msg = "Storage must be 'python' or 'pyarrow'."
+    msg = "Storage must be 'python', 'pyarrow' or 'pyarrow_numpy'."
     with pytest.raises(ValueError, match=msg):
         StringDtype("bla")

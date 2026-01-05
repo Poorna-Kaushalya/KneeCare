@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+from pandas._config import using_pyarrow_string_dtype
+
 from pandas.core.dtypes.common import is_integer
 
 import pandas as pd
@@ -230,6 +232,7 @@ def test_where_ndframe_align():
     tm.assert_series_equal(out, expected)
 
 
+@pytest.mark.xfail(using_pyarrow_string_dtype(), reason="can't set ints into string")
 def test_where_setitem_invalid():
     # GH 2702
     # make sure correct exceptions are raised on invalid list assignment
@@ -239,7 +242,7 @@ def test_where_setitem_invalid():
         "different length than the value"
     )
     # slice
-    s = Series(list("abc"), dtype=object)
+    s = Series(list("abc"))
 
     with pytest.raises(ValueError, match=msg("slice")):
         s[0:3] = list(range(27))
@@ -249,18 +252,18 @@ def test_where_setitem_invalid():
     tm.assert_series_equal(s.astype(np.int64), expected)
 
     # slice with step
-    s = Series(list("abcdef"), dtype=object)
+    s = Series(list("abcdef"))
 
     with pytest.raises(ValueError, match=msg("slice")):
         s[0:4:2] = list(range(27))
 
-    s = Series(list("abcdef"), dtype=object)
+    s = Series(list("abcdef"))
     s[0:4:2] = list(range(2))
     expected = Series([0, "b", 1, "d", "e", "f"])
     tm.assert_series_equal(s, expected)
 
     # neg slices
-    s = Series(list("abcdef"), dtype=object)
+    s = Series(list("abcdef"))
 
     with pytest.raises(ValueError, match=msg("slice")):
         s[:-1] = list(range(27))
@@ -270,18 +273,18 @@ def test_where_setitem_invalid():
     tm.assert_series_equal(s, expected)
 
     # list
-    s = Series(list("abc"), dtype=object)
+    s = Series(list("abc"))
 
     with pytest.raises(ValueError, match=msg("list-like")):
         s[[0, 1, 2]] = list(range(27))
 
-    s = Series(list("abc"), dtype=object)
+    s = Series(list("abc"))
 
     with pytest.raises(ValueError, match=msg("list-like")):
         s[[0, 1, 2]] = list(range(2))
 
     # scalar
-    s = Series(list("abc"), dtype=object)
+    s = Series(list("abc"))
     s[0] = list(range(10))
     expected = Series([list(range(10)), "b", "c"])
     tm.assert_series_equal(s, expected)

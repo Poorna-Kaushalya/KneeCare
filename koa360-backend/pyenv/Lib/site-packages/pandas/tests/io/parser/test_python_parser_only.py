@@ -520,8 +520,6 @@ a;b;c
             "c": [0, 4000, 131],
         }
     )
-    if dtype["a"] == object:
-        expected["a"] = expected["a"].astype(object)
     tm.assert_frame_equal(result, expected)
 
 

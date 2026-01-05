@@ -346,7 +346,7 @@ class TestStata:
             )
 
     @pytest.mark.parametrize("version", [114, 117, 118, 119, None])
-    def test_read_write_dta10(self, version, using_infer_string):
+    def test_read_write_dta10(self, version):
         original = DataFrame(
             data=[["string", "object", 1, 1.1, np.datetime64("2003-12-25")]],
             columns=["string", "object", "integer", "floating", "datetime"],
@@ -359,17 +359,12 @@ class TestStata:
         with tm.ensure_clean() as path:
             original.to_stata(path, convert_dates={"datetime": "tc"}, version=version)
             written_and_read_again = self.read_dta(path)
-
-        expected = original.copy()
-        if using_infer_string:
-            expected["object"] = expected["object"].astype("str")
-
-        # original.index is np.int32, read index is np.int64
-        tm.assert_frame_equal(
-            written_and_read_again.set_index("index"),
-            expected,
-            check_index_type=False,
-        )
+            # original.index is np.int32, read index is np.int64
+            tm.assert_frame_equal(
+                written_and_read_again.set_index("index"),
+                original,
+                check_index_type=False,
+            )
 
     def test_stata_doc_examples(self):
         with tm.ensure_clean() as path:
@@ -1216,10 +1211,6 @@ class TestStata:
                 if cat.categories.dtype == object:
                     categories = pd.Index._with_infer(cat.categories._values)
                     cat = cat.set_categories(categories)
-                elif cat.categories.dtype == "string" and len(cat.categories) == 0:
-                    # if the read categories are empty, it comes back as object dtype
-                    categories = cat.categories.astype(object)
-                    cat = cat.set_categories(categories)
                 from_frame[col] = cat
         return from_frame
 
@@ -1555,8 +1546,8 @@ The repeated labels are:\n-+\nwolof
     def test_path_pathlib(self):
         df = DataFrame(
             1.1 * np.arange(120).reshape((30, 4)),
-            columns=pd.Index(list("ABCD")),
-            index=pd.Index([f"i-{i}" for i in range(30)]),
+            columns=pd.Index(list("ABCD"), dtype=object),
+            index=pd.Index([f"i-{i}" for i in range(30)], dtype=object),
         )
         df.index.name = "index"
         reader = lambda x: read_stata(x).set_index("index")
@@ -1566,8 +1557,8 @@ The repeated labels are:\n-+\nwolof
     def test_pickle_path_localpath(self):
         df = DataFrame(
             1.1 * np.arange(120).reshape((30, 4)),
-            columns=pd.Index(list("ABCD")),
-            index=pd.Index([f"i-{i}" for i in range(30)]),
+            columns=pd.Index(list("ABCD"), dtype=object),
+            index=pd.Index([f"i-{i}" for i in range(30)], dtype=object),
         )
         df.index.name = "index"
         reader = lambda x: read_stata(x).set_index("index")
@@ -1591,8 +1582,8 @@ The repeated labels are:\n-+\nwolof
         # GH 17328
         df = DataFrame(
             1.1 * np.arange(120).reshape((30, 4)),
-            columns=pd.Index(list("ABCD")),
-            index=pd.Index([f"i-{i}" for i in range(30)]),
+            columns=pd.Index(list("ABCD"), dtype=object),
+            index=pd.Index([f"i-{i}" for i in range(30)], dtype=object),
         )
         df.index.name = "index"
         with tm.ensure_clean() as path:
@@ -1620,7 +1611,7 @@ The repeated labels are:\n-+\nwolof
         formatted = df.loc[0, column + "_fmt"]
         assert unformatted == formatted
 
-    def test_writer_117(self, using_infer_string):
+    def test_writer_117(self):
         original = DataFrame(
             data=[
                 [
@@ -1683,17 +1674,13 @@ The repeated labels are:\n-+\nwolof
                 version=117,
             )
             written_and_read_again = self.read_dta(path)
-
-        expected = original[:]
-        if using_infer_string:
-            # object dtype (with only strings/None) comes back as string dtype
-            expected["object"] = expected["object"].astype("str")
-
-        tm.assert_frame_equal(
-            written_and_read_again.set_index("index"),
-            expected,
-        )
-        tm.assert_frame_equal(original, copy)
+            # original.index is np.int32, read index is np.int64
+            tm.assert_frame_equal(
+                written_and_read_again.set_index("index"),
+                original,
+                check_index_type=False,
+            )
+            tm.assert_frame_equal(original, copy)
 
     def test_convert_strl_name_swap(self):
         original = DataFrame(
@@ -1736,8 +1723,8 @@ The repeated labels are:\n-+\nwolof
         bio = io.BytesIO()
         df = DataFrame(
             1.1 * np.arange(120).reshape((30, 4)),
-            columns=pd.Index(list("ABCD")),
-            index=pd.Index([f"i-{i}" for i in range(30)]),
+            columns=pd.Index(list("ABCD"), dtype=object),
+            index=pd.Index([f"i-{i}" for i in range(30)], dtype=object),
         )
         df.index.name = "index"
         with tm.ensure_clean() as path:
@@ -1752,8 +1739,8 @@ The repeated labels are:\n-+\nwolof
         # writing version 117 requires seek and cannot be used with gzip
         df = DataFrame(
             1.1 * np.arange(120).reshape((30, 4)),
-            columns=pd.Index(list("ABCD")),
-            index=pd.Index([f"i-{i}" for i in range(30)]),
+            columns=pd.Index(list("ABCD"), dtype=object),
+            index=pd.Index([f"i-{i}" for i in range(30)], dtype=object),
         )
         df.index.name = "index"
         with tm.ensure_clean() as path:
@@ -1780,7 +1767,7 @@ The repeated labels are:\n-+\nwolof
 
         tm.assert_frame_equal(unicode_df, expected)
 
-    def test_mixed_string_strl(self, using_infer_string):
+    def test_mixed_string_strl(self):
         # GH 23633
         output = [{"mixed": "string" * 500, "number": 0}, {"mixed": None, "number": 1}]
         output = DataFrame(output)
@@ -1798,10 +1785,7 @@ The repeated labels are:\n-+\nwolof
                 path, write_index=False, convert_strl=["mixed"], version=117
             )
             reread = read_stata(path)
-            expected = output.copy()
-            if using_infer_string:
-                expected["mixed"] = expected["mixed"].astype("str")
-            expected = expected.fillna("")
+            expected = output.fillna("")
             tm.assert_frame_equal(reread, expected)
 
     @pytest.mark.parametrize("version", [114, 117, 118, 119, None])
@@ -1880,7 +1864,6 @@ the string values returned are correct."""
                 reader._ensure_open()
                 assert reader._nvar == 32999
 
-    @pytest.mark.filterwarnings("ignore:Downcasting behavior:FutureWarning")
     @pytest.mark.parametrize("version", [118, 119, None])
     def test_utf8_writer(self, version):
         cat = pd.Categorical(["a", "β", "ĉ"], ordered=True)
@@ -2154,7 +2137,7 @@ def test_iterator_value_labels():
     df = DataFrame({f"col{k}": pd.Categorical(values, ordered=True) for k in range(2)})
     with tm.ensure_clean() as path:
         df.to_stata(path, write_index=False)
-        expected = pd.Index(["a_label", "b_label", "c_label"])
+        expected = pd.Index(["a_label", "b_label", "c_label"], dtype="object")
         with read_stata(path, chunksize=100) as reader:
             for j, chunk in enumerate(reader):
                 for i in range(2):

@@ -1580,7 +1580,7 @@ class Styler(StylerRenderer):
         for j in attrs.columns:
             ser = attrs[j]
             for i, c in ser.items():
-                if not c or pd.isna(c):
+                if not c:
                     continue
                 css_list = maybe_convert_css_to_tuples(c)
                 if axis == 0:

@@ -1,10 +1,6 @@
 import numpy as np
 import pytest
 
-from pandas.compat import (
-    HAS_PYARROW,
-    WARNING_CHECK_DISABLED,
-)
 from pandas.errors import SettingWithCopyWarning
 
 import pandas as pd
@@ -21,7 +17,6 @@ from pandas import (
 )
 import pandas._testing as tm
 from pandas.tests.copy_view.util import get_array
-from pandas.util.version import Version
 
 
 def test_copy(using_copy_on_write):
@@ -955,19 +950,14 @@ def test_head_tail(method, using_copy_on_write, warn_copy_on_write):
     tm.assert_frame_equal(df, df_orig)
 
 
-def test_infer_objects(using_copy_on_write, using_infer_string):
-    df = DataFrame(
-        {"a": [1, 2], "b": Series(["x", "y"], dtype=object), "c": 1, "d": "x"}
-    )
+def test_infer_objects(using_copy_on_write):
+    df = DataFrame({"a": [1, 2], "b": "c", "c": 1, "d": "x"})
     df_orig = df.copy()
     df2 = df.infer_objects()
 
     if using_copy_on_write:
         assert np.shares_memory(get_array(df2, "a"), get_array(df, "a"))
-        if using_infer_string:
-            assert not tm.shares_memory(get_array(df2, "b"), get_array(df, "b"))
-        else:
-            assert np.shares_memory(get_array(df2, "b"), get_array(df, "b"))
+        assert np.shares_memory(get_array(df2, "b"), get_array(df, "b"))
 
     else:
         assert not np.shares_memory(get_array(df2, "a"), get_array(df, "a"))
@@ -981,16 +971,16 @@ def test_infer_objects(using_copy_on_write, using_infer_string):
     tm.assert_frame_equal(df, df_orig)
 
 
-def test_infer_objects_no_reference(using_copy_on_write, using_infer_string):
+def test_infer_objects_no_reference(using_copy_on_write):
     df = DataFrame(
         {
             "a": [1, 2],
-            "b": Series(["x", "y"], dtype=object),
+            "b": "c",
             "c": 1,
             "d": Series(
                 [Timestamp("2019-12-31"), Timestamp("2020-12-31")], dtype="object"
             ),
-            "e": Series(["z", "w"], dtype=object),
+            "e": "b",
         }
     )
     df = df.infer_objects()
@@ -1004,22 +994,16 @@ def test_infer_objects_no_reference(using_copy_on_write, using_infer_string):
     df.iloc[0, 3] = Timestamp("2018-12-31")
     if using_copy_on_write:
         assert np.shares_memory(arr_a, get_array(df, "a"))
-        if using_infer_string:
-            # note that the underlying memory of arr_b has been copied anyway
-            # because of the assignment, but the EA is updated inplace so still
-            # appears the share memory
-            assert tm.shares_memory(arr_b, get_array(df, "b"))
-        else:
-            # TODO(CoW): Block splitting causes references here
-            assert not np.shares_memory(arr_b, get_array(df, "b"))
+        # TODO(CoW): Block splitting causes references here
+        assert not np.shares_memory(arr_b, get_array(df, "b"))
         assert np.shares_memory(arr_d, get_array(df, "d"))
 
 
-def test_infer_objects_reference(using_copy_on_write, using_infer_string):
+def test_infer_objects_reference(using_copy_on_write):
     df = DataFrame(
         {
             "a": [1, 2],
-            "b": Series(["x", "y"], dtype=object),
+            "b": "c",
             "c": 1,
             "d": Series(
                 [Timestamp("2019-12-31"), Timestamp("2020-12-31")], dtype="object"
@@ -1038,8 +1022,7 @@ def test_infer_objects_reference(using_copy_on_write, using_infer_string):
     df.iloc[0, 3] = Timestamp("2018-12-31")
     if using_copy_on_write:
         assert not np.shares_memory(arr_a, get_array(df, "a"))
-        if not using_infer_string or HAS_PYARROW:
-            assert not np.shares_memory(arr_b, get_array(df, "b"))
+        assert not np.shares_memory(arr_b, get_array(df, "b"))
         assert np.shares_memory(arr_d, get_array(df, "d"))
 
 
@@ -1201,11 +1184,10 @@ def test_round(using_copy_on_write, warn_copy_on_write, decimals):
     df2 = df.round(decimals=decimals)
 
     if using_copy_on_write:
-        assert tm.shares_memory(get_array(df2, "b"), get_array(df, "b"))
+        assert np.shares_memory(get_array(df2, "b"), get_array(df, "b"))
         # TODO: Make inplace by using out parameter of ndarray.round?
-        if decimals >= 0 and Version(np.__version__) < Version("2.4.0.dev0"):
+        if decimals >= 0:
             # Ensure lazy copy if no-op
-            # TODO: Cannot rely on Numpy returning view after version 2.3
             assert np.shares_memory(get_array(df2, "a"), get_array(df, "a"))
         else:
             assert not np.shares_memory(get_array(df2, "a"), get_array(df, "a"))
@@ -1588,10 +1570,7 @@ def test_chained_where_mask(using_copy_on_write, func):
             getattr(df[["a"]], func)(df["a"] > 2, 5, inplace=True)
         tm.assert_frame_equal(df, df_orig)
     else:
-        with tm.assert_produces_warning(
-            FutureWarning if not WARNING_CHECK_DISABLED else None,
-            match="inplace method",
-        ):
+        with tm.assert_produces_warning(FutureWarning, match="inplace method"):
             getattr(df["a"], func)(df["a"] > 2, 5, inplace=True)
 
         with tm.assert_produces_warning(None):
@@ -1870,10 +1849,7 @@ def test_update_chained_assignment(using_copy_on_write):
             df[["a"]].update(ser2.to_frame())
         tm.assert_frame_equal(df, df_orig)
     else:
-        with tm.assert_produces_warning(
-            FutureWarning if not WARNING_CHECK_DISABLED else None,
-            match="inplace method",
-        ):
+        with tm.assert_produces_warning(FutureWarning, match="inplace method"):
             df["a"].update(ser2)
 
         with tm.assert_produces_warning(None):

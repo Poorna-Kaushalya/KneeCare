@@ -14,7 +14,7 @@ from pandas import (
 )
 from pandas.tests.strings import (
     _convert_na_value,
-    is_object_or_nan_string_dtype,
+    object_pyarrow_numpy,
 )
 
 
@@ -384,7 +384,7 @@ def test_split_nan_expand(any_string_dtype):
     # check that these are actually np.nan/pd.NA and not None
     # TODO see GH 18463
     # tm.assert_frame_equal does not differentiate
-    if is_object_or_nan_string_dtype(any_string_dtype):
+    if any_string_dtype in object_pyarrow_numpy:
         assert all(np.isnan(x) for x in result.iloc[1])
     else:
         assert all(x is pd.NA for x in result.iloc[1])

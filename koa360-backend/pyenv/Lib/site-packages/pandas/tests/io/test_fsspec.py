@@ -3,8 +3,6 @@ import io
 import numpy as np
 import pytest
 
-from pandas._config import using_string_dtype
-
 from pandas import (
     DataFrame,
     date_range,
@@ -254,7 +252,6 @@ def test_s3_protocols(s3_public_bucket_with_data, tips_file, protocol, s3so):
     )
 
 
-@pytest.mark.xfail(using_string_dtype(), reason="TODO(infer_string) fastparquet")
 @pytest.mark.single_cpu
 @td.skip_array_manager_not_yet_implemented  # TODO(ArrayManager) fastparquet
 def test_s3_parquet(s3_public_bucket, s3so, df1):

@@ -2366,36 +2366,13 @@ class ExtensionArray:
         kind = WrappedCythonOp.get_kind_from_how(how)
         op = WrappedCythonOp(how=how, kind=kind, has_dropped_na=has_dropped_na)
 
-        initial: Any = 0
         # GH#43682
         if isinstance(self.dtype, StringDtype):
             # StringArray
-            if op.how in [
-                "prod",
-                "mean",
-                "median",
-                "cumsum",
-                "cumprod",
-                "std",
-                "sem",
-                "var",
-                "skew",
-            ]:
-                raise TypeError(
-                    f"dtype '{self.dtype}' does not support operation '{how}'"
-                )
             if op.how not in ["any", "all"]:
                 # Fail early to avoid conversion to object
                 op._get_cython_function(op.kind, op.how, np.dtype(object), False)
-
-            arr = self
-            if op.how == "sum":
-                initial = ""
-                # https://github.com/pandas-dev/pandas/issues/60229
-                # All NA should result in the empty string.
-                if min_count == 0:
-                    arr = arr.fillna("")
-            npvalues = arr.to_numpy(object, na_value=np.nan)
+            npvalues = self.to_numpy(object, na_value=np.nan)
         else:
             raise NotImplementedError(
                 f"function is not implemented for this dtype: {self.dtype}"
@@ -2407,7 +2384,6 @@ class ExtensionArray:
             ngroups=ngroups,
             comp_ids=ids,
             mask=None,
-            initial=initial,
             **kwargs,
         )
 

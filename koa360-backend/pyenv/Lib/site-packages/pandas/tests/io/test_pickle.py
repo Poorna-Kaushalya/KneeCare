@@ -413,16 +413,10 @@ class TestProtocol:
 @pytest.mark.parametrize(
     ["pickle_file", "excols"],
     [
-        ("test_py27.pkl", Index(["a", "b", "c"], dtype=object)),
+        ("test_py27.pkl", Index(["a", "b", "c"])),
         (
             "test_mi_py27.pkl",
-            pd.MultiIndex(
-                [
-                    Index(["a", "b", "c"], dtype=object),
-                    Index(["A", "B", "C"], dtype=object),
-                ],
-                [np.array([0, 1, 2]), np.array([0, 1, 2])],
-            ),
+            pd.MultiIndex.from_arrays([["a", "b", "c"], ["A", "B", "C"]]),
         ),
     ],
 )

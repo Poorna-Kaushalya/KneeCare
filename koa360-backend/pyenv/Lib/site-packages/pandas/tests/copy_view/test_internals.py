@@ -4,10 +4,7 @@ import pytest
 import pandas.util._test_decorators as td
 
 import pandas as pd
-from pandas import (
-    DataFrame,
-    Series,
-)
+from pandas import DataFrame
 import pandas._testing as tm
 from pandas.tests.copy_view.util import get_array
 
@@ -105,7 +102,7 @@ def test_iset_splits_blocks_inplace(using_copy_on_write, locs, arr, dtype):
             "c": [7, 8, 9],
             "d": [10, 11, 12],
             "e": [13, 14, 15],
-            "f": Series(["a", "b", "c"], dtype=object),
+            "f": ["a", "b", "c"],
         },
     )
     arr = arr.astype(dtype)

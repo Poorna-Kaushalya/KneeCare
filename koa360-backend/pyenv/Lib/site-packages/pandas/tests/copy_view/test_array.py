@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
 
-from pandas.compat.numpy import np_version_gt2
-
 from pandas import (
     DataFrame,
     Series,
@@ -17,12 +15,8 @@ from pandas.tests.copy_view.util import get_array
 
 @pytest.mark.parametrize(
     "method",
-    [
-        lambda ser: ser.values,
-        lambda ser: np.asarray(ser),
-        lambda ser: np.array(ser, copy=False),
-    ],
-    ids=["values", "asarray", "array"],
+    [lambda ser: ser.values, lambda ser: np.asarray(ser)],
+    ids=["values", "asarray"],
 )
 def test_series_values(using_copy_on_write, method):
     ser = Series([1, 2, 3], name="name")
@@ -51,12 +45,8 @@ def test_series_values(using_copy_on_write, method):
 
 @pytest.mark.parametrize(
     "method",
-    [
-        lambda df: df.values,
-        lambda df: np.asarray(df),
-        lambda ser: np.array(ser, copy=False),
-    ],
-    ids=["values", "asarray", "array"],
+    [lambda df: df.values, lambda df: np.asarray(df)],
+    ids=["values", "asarray"],
 )
 def test_dataframe_values(using_copy_on_write, using_array_manager, method):
     df = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -110,7 +100,7 @@ def test_series_to_numpy(using_copy_on_write):
         arr[0] = 0
         assert ser.iloc[0] == 0
 
-    # specify copy=True gives a writeable array
+    # specify copy=False gives a writeable array
     ser = Series([1, 2, 3], name="name")
     arr = ser.to_numpy(copy=True)
     assert not np.shares_memory(arr, get_array(ser, "name"))
@@ -181,24 +171,6 @@ def test_dataframe_array_string_dtype(using_copy_on_write, using_array_manager):
 def test_dataframe_multiple_numpy_dtypes():
     df = DataFrame({"a": [1, 2, 3], "b": 1.5})
     arr = np.asarray(df)
-    assert not np.shares_memory(arr, get_array(df, "a"))
-    assert arr.flags.writeable is True
-
-    if np_version_gt2:
-        # copy=False semantics are only supported in NumPy>=2.
-
-        msg = "Starting with NumPy 2.0, the behavior of the 'copy' keyword has changed"
-        with pytest.raises(FutureWarning, match=msg):
-            arr = np.array(df, copy=False)
-
-    arr = np.array(df, copy=True)
-    assert arr.flags.writeable is True
-
-
-def test_dataframe_single_block_copy_true():
-    # the copy=False/None cases are tested above in test_dataframe_values
-    df = DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    arr = np.array(df, copy=True)
     assert not np.shares_memory(arr, get_array(df, "a"))
     assert arr.flags.writeable is True
 

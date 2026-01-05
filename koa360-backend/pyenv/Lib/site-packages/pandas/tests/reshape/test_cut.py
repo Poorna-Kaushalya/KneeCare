@@ -727,7 +727,6 @@ def test_cut_with_duplicated_index_lowest_included():
     tm.assert_series_equal(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_cut_with_nonexact_categorical_indices():
     # GH 42424
 
