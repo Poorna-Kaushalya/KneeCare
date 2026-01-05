@@ -6,6 +6,7 @@ import Register from "./components/Register";
 import Dashboard from "./pages/Dashboard";
 import FormEntry from "./pages/FormEntry";
 import KOApredict1 from "./components/PredicForms/KOAPredictForm";
+import KOAFusionPredictPage from "./pages/KOAFusionPredictPage";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
@@ -79,7 +80,7 @@ function App() {
       />
 
       <Route path="/koa-predict" element={<KOApredict1 />} />
-
+      <Route path="/koa-predict/combined" element={<KOAFusionPredictPage />} />
 
     </Routes>
 

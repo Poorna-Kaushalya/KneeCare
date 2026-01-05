@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { faXRay, faMicrochip, faChartLine, faBrain } from "@fortawesome/free-solid-svg-icons";
 
 import clinicalBg from "../../images/clinic.jpg";
 import xrayBg from "../../images/xray.jpg";
@@ -59,7 +58,6 @@ export default function PredictionButtons({
           disabled={disabled}
         />
 
-        {/* ✅ X-ray opens modal instead of navigate */}
         <PredictionCard
           image={xrayBg}
           title="X-ray"

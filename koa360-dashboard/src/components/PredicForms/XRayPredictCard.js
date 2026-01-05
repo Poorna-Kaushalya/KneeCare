@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../../api/api"; // ✅ must match your api.js location
+import api from "../../api/api"; 
 
 export default function XRayPredictCard({ open, onClose, patientId, deviceId }) {
   const [file, setFile] = useState(null);
@@ -66,7 +66,6 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
       const fd = new FormData();
       fd.append("image", file);
 
-      // ✅ DO NOT set Content-Type manually for FormData
       const res = await api.post("/api/predict/xray", fd);
 
       if (!res?.data) {

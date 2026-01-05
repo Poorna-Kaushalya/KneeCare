@@ -26,7 +26,6 @@ export default function KOASensorSeverity({ deviceId }) {
        // setConfidence(null);
         setMeta(null);
 
-        // ✅ uses real route now
         const res = await api.get(`/api/koa-severity?deviceId=${deviceId}&days=14&source=piezo`);
 
         setSeverity(res.data.severity);
