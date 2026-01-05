@@ -16,6 +16,8 @@ import EmptyState from "../components/dashboard/EmptyState";
 import PredictionButtons from "../components/dashboard/Buttons";
 import XRayPredictCard from "../components/PredicForms/XRayPredictCard";
 
+
+
 // Popup Picker Modal
 function PatientPickerModal({
   show,
@@ -158,7 +160,6 @@ function Dashboard({ logout }) {
 
   const [showPatientPicker, setShowPatientPicker] = useState(true);
 
-  // ✅ X-ray modal state
   const [showXrayModal, setShowXrayModal] = useState(false);
 
   const rangeOptions = useMemo(
