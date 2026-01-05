@@ -25,6 +25,7 @@ def main():
 
         model = YOLO(model_path)
 
+        # ✅ IMPORTANT: verbose=False stops Ultralytics printing those lines
         results = model.predict(source=image_path, verbose=False)
         r0 = results[0]
 
