@@ -1,22 +1,13 @@
 import pickle
 
 import numpy as np
-from numpy.ma.core import (
-    MaskedArray,
-    MaskType,
-    add,
-    allequal,
-    divide,
-    getmask,
-    hypot,
-    log,
-    masked,
-    masked_array,
-    masked_values,
-    nomask,
-)
+from numpy.testing import assert_warns
+from numpy.ma.testutils import (assert_, assert_equal, assert_raises,
+                                assert_array_equal)
+from numpy.ma.core import (masked_array, masked_values, masked, allequal,
+                           MaskType, getmask, MaskedArray, nomask,
+                           log, add, hypot, divide)
 from numpy.ma.extras import mr_
-from numpy.ma.testutils import assert_, assert_array_equal, assert_equal, assert_raises
 
 
 class MMatrix(MaskedArray, np.matrix,):
@@ -29,6 +20,7 @@ class MMatrix(MaskedArray, np.matrix,):
     def __array_finalize__(self, obj):
         np.matrix.__array_finalize__(self, obj)
         MaskedArray.__array_finalize__(self, obj)
+        return
 
     @property
     def _series(self):
@@ -116,7 +108,7 @@ class TestMaskedMatrix:
         # Test setting
         test = masked_array(np.matrix([[1, 2, 3]]), mask=[0, 0, 1])
         testflat = test.flat
-        testflat[:] = testflat[np.array([2, 1, 0])]
+        testflat[:] = testflat[[2, 1, 0]]
         assert_equal(test, control)
         testflat[0] = 9
         # test that matrices keep the correct shape (#4615)
@@ -182,40 +174,40 @@ class TestMaskedMatrix:
 class TestSubclassing:
     # Test suite for masked subclasses of ndarray.
 
-    def _create_data(self):
+    def setup_method(self):
         x = np.arange(5, dtype='float')
         mx = MMatrix(x, mask=[0, 1, 0, 0, 0])
-        return x, mx
+        self.data = (x, mx)
 
     def test_maskedarray_subclassing(self):
         # Tests subclassing MaskedArray
-        mx = self._create_data()[1]
+        (x, mx) = self.data
         assert_(isinstance(mx._data, np.matrix))
 
     def test_masked_unary_operations(self):
         # Tests masked_unary_operation
-        x, mx = self._create_data()
+        (x, mx) = self.data
         with np.errstate(divide='ignore'):
             assert_(isinstance(log(mx), MMatrix))
             assert_equal(log(x), np.log(x))
 
     def test_masked_binary_operations(self):
         # Tests masked_binary_operation
-        x, mx = self._create_data()
+        (x, mx) = self.data
         # Result should be a MMatrix
         assert_(isinstance(add(mx, mx), MMatrix))
         assert_(isinstance(add(mx, x), MMatrix))
         # Result should work
-        assert_equal(add(mx, x), mx + x)
+        assert_equal(add(mx, x), mx+x)
         assert_(isinstance(add(mx, mx)._data, np.matrix))
-        with assert_raises(TypeError):
-            add.outer(mx, mx)
+        with assert_warns(DeprecationWarning):
+            assert_(isinstance(add.outer(mx, mx), MMatrix))
         assert_(isinstance(hypot(mx, mx), MMatrix))
         assert_(isinstance(hypot(mx, x), MMatrix))
 
     def test_masked_binary_operations2(self):
         # Tests domained_masked_binary_operation
-        x, mx = self._create_data()
+        (x, mx) = self.data
         xmx = masked_array(mx.data.__array__(), mask=mx.mask)
         assert_(isinstance(divide(mx, mx), MMatrix))
         assert_(isinstance(divide(mx, x), MMatrix))

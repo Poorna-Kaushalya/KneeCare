@@ -1,7 +1,5 @@
 import pytest
-
 from numpy._core._simd import targets
-
 """
 This testing unit only for checking the sanity of common functionality,
 therefore all we need is just to take one submodule that represents any
@@ -23,8 +21,7 @@ if npyv and npyv.simd_f64:
 int_sfx = unsigned_sfx + signed_sfx
 all_sfx = unsigned_sfx + int_sfx
 
-@pytest.mark.skipif(not npyv,
-                    reason="could not find any SIMD extension with NPYV support")
+@pytest.mark.skipif(not npyv, reason="could not find any SIMD extension with NPYV support")
 class Test_SIMD_MODULE:
 
     @pytest.mark.parametrize('sfx', all_sfx)
@@ -39,7 +36,7 @@ class Test_SIMD_MODULE:
         assert vector.__name__ == "npyv_" + sfx
 
     def test_raises(self):
-        a, b = [npyv.setall_u32(1)] * 2
+        a, b = [npyv.setall_u32(1)]*2
         for sfx in all_sfx:
             vcb = lambda intrin: getattr(npyv, f"{intrin}_{sfx}")
             pytest.raises(TypeError, vcb("add"), a)
@@ -48,8 +45,7 @@ class Test_SIMD_MODULE:
             pytest.raises(TypeError, vcb("setall"), [1])
             pytest.raises(TypeError, vcb("load"), 1)
             pytest.raises(ValueError, vcb("load"), [1])
-            value = getattr(npyv, f"reinterpret_{sfx}_u32")(a)
-            pytest.raises(ValueError, vcb("store"), [1], value)
+            pytest.raises(ValueError, vcb("store"), [1], getattr(npyv, f"reinterpret_{sfx}_u32")(a))
 
     @pytest.mark.skipif(not npyv2, reason=(
         "could not find a second SIMD extension with NPYV support"
@@ -97,7 +93,7 @@ class Test_SIMD_MODULE:
         assert round(f32, 1) == 0.1
 
     def test_compare(self):
-        data_range = range(npyv.nlanes_u32)
+        data_range = range(0, npyv.nlanes_u32)
         vdata = npyv.load_u32(data_range)
         assert vdata == list(data_range)
         assert vdata == tuple(data_range)

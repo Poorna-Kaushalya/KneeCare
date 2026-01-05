@@ -1,11 +1,12 @@
-from _typeshed import Incomplete
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Literal, TypeAlias, overload
+
+from _typeshed import Incomplete
 from typing_extensions import TypeVar
 
 import numpy as np
 import numpy.typing as npt
-from numpy._typing import _AnyShape, _DTypeLike, _DTypeLikeVoid
+from numpy._typing import _DTypeLike, _DTypeLikeVoid
 from numpy.ma.mrecords import MaskedRecords
 
 __all__ = [
@@ -35,7 +36,7 @@ __all__ = [
 _T = TypeVar("_T")
 _ShapeT = TypeVar("_ShapeT", bound=tuple[int, ...])
 _ScalarT = TypeVar("_ScalarT", bound=np.generic)
-_DTypeT = TypeVar("_DTypeT", bound=np.dtype)
+_DTypeT = TypeVar("_DTypeT", bound=np.dtype[Any])
 _ArrayT = TypeVar("_ArrayT", bound=npt.NDArray[Any])
 _VoidArrayT = TypeVar("_VoidArrayT", bound=npt.NDArray[np.void])
 _NonVoidDTypeT = TypeVar("_NonVoidDTypeT", bound=_NonVoidDType)
@@ -61,7 +62,7 @@ def get_names_flat(adtype: np.dtype[np.void]) -> tuple[str, ...]: ...
 @overload
 def flatten_descr(ndtype: _NonVoidDTypeT) -> tuple[tuple[Literal[""], _NonVoidDTypeT]]: ...
 @overload
-def flatten_descr(ndtype: np.dtype[np.void]) -> tuple[tuple[str, np.dtype]]: ...
+def flatten_descr(ndtype: np.dtype[np.void]) -> tuple[tuple[str, np.dtype[Any]]]: ...
 
 #
 def get_fieldstructure(
@@ -73,7 +74,7 @@ def get_fieldstructure(
 #
 @overload
 def merge_arrays(
-    seqarrays: Sequence[np.ndarray[_ShapeT, np.dtype]] | np.ndarray[_ShapeT, np.dtype],
+    seqarrays: Sequence[np.ndarray[_ShapeT, np.dtype[Any]]] | np.ndarray[_ShapeT, np.dtype[Any]],
     fill_value: float = -1,
     flatten: bool = False,
     usemask: bool = False,
@@ -86,7 +87,7 @@ def merge_arrays(
     flatten: bool = False,
     usemask: bool = False,
     asrecarray: bool = False,
-) -> np.recarray[_AnyShape, np.dtype[np.void]]: ...
+) -> np.recarray[Any, np.dtype[np.void]]: ...
 
 #
 @overload
@@ -140,7 +141,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None,
     fill_value: int,
     usemask: Literal[False],
     asrecarray: Literal[False] = False,
@@ -150,7 +151,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None = None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None = None,
     fill_value: int = -1,
     *,
     usemask: Literal[False],
@@ -161,7 +162,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None,
     fill_value: int,
     usemask: Literal[False],
     asrecarray: Literal[True],
@@ -171,7 +172,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None = None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None = None,
     fill_value: int = -1,
     *,
     usemask: Literal[False],
@@ -182,7 +183,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None = None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None = None,
     fill_value: int = -1,
     usemask: Literal[True] = True,
     asrecarray: Literal[False] = False,
@@ -192,7 +193,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None,
     fill_value: int,
     usemask: Literal[True],
     asrecarray: Literal[True],
@@ -202,7 +203,7 @@ def append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None = None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None = None,
     fill_value: int = -1,
     usemask: Literal[True] = True,
     *,
@@ -220,7 +221,7 @@ def rec_append_fields(
     base: np.ndarray[_ShapeT, np.dtype[np.void]],
     names: _OneOrMany[str],
     data: _OneOrMany[npt.NDArray[Any]],
-    dtypes: _BuiltinSequence[np.dtype] | None = None,
+    dtypes: _BuiltinSequence[np.dtype[Any]] | None = None,
 ) -> np.ma.MaskedArray[_ShapeT, np.dtype[np.void]]: ...
 
 # TODO(jorenham): Stop passing `void` directly once structured dtypes are implemented,
@@ -263,16 +264,6 @@ def unstructured_to_structured(
 def unstructured_to_structured(
     arr: npt.NDArray[Any],
     dtype: None,
-    names: _OneOrMany[str],
-    align: bool = False,
-    copy: bool = False,
-    casting: str = "unsafe",
-) -> npt.NDArray[np.void]: ...
-@overload
-def unstructured_to_structured(
-    arr: npt.NDArray[Any],
-    dtype: None = None,
-    *,
     names: _OneOrMany[str],
     align: bool = False,
     copy: bool = False,
@@ -328,7 +319,7 @@ def stack_arrays(
     usemask: Literal[False],
     asrecarray: Literal[True],
     autoconvert: bool = False,
-) -> np.recarray[_AnyShape, np.dtype[np.void]]: ...
+) -> np.recarray[tuple[int, ...], np.dtype[np.void]]: ...
 @overload
 def stack_arrays(
     arrays: Sequence[npt.NDArray[Any]],
@@ -336,7 +327,7 @@ def stack_arrays(
     usemask: Literal[True] = True,
     asrecarray: Literal[False] = False,
     autoconvert: bool = False,
-) -> np.ma.MaskedArray[_AnyShape, np.dtype[np.void]]: ...
+) -> np.ma.MaskedArray[tuple[int, ...], np.dtype[np.void]]: ...
 @overload
 def stack_arrays(
     arrays: Sequence[npt.NDArray[Any]],
@@ -344,7 +335,7 @@ def stack_arrays(
     usemask: Literal[True],
     asrecarray: Literal[True],
     autoconvert: bool = False,
-) -> MaskedRecords[_AnyShape, np.dtype[np.void]]: ...
+) -> MaskedRecords[tuple[int, ...], np.dtype[np.void]]: ...
 @overload
 def stack_arrays(
     arrays: Sequence[npt.NDArray[Any]],
@@ -353,7 +344,7 @@ def stack_arrays(
     *,
     asrecarray: Literal[True],
     autoconvert: bool = False,
-) -> MaskedRecords[_AnyShape, np.dtype[np.void]]: ...
+) -> MaskedRecords[tuple[int, ...], np.dtype[np.void]]: ...
 
 #
 @overload
