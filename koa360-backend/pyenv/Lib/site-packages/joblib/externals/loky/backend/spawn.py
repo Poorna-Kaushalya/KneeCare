@@ -82,12 +82,13 @@ def get_preparation_data(name, init_main_module=True):
     from .resource_tracker import _resource_tracker
 
     _resource_tracker.ensure_running()
+    d["tracker_args"] = {"pid": _resource_tracker._pid}
     if sys.platform == "win32":
-        d["tracker_fd"] = msvcrt.get_osfhandle(_resource_tracker._fd)
+        d["tracker_args"]["fh"] = msvcrt.get_osfhandle(_resource_tracker._fd)
     else:
-        d["tracker_fd"] = _resource_tracker._fd
+        d["tracker_args"]["fd"] = _resource_tracker._fd
 
-    if os.name == "posix":
+    if sys.version_info >= (3, 8) and os.name == "posix":
         # joblib/loky#242: allow loky processes to retrieve the resource
         # tracker of their parent in case the child processes depickles
         # shared_memory objects, that are still tracked by multiprocessing's
@@ -104,7 +105,10 @@ def get_preparation_data(name, init_main_module=True):
         # process is created (othewise the child won't be able to use it if it
         # is created later on)
         mp_resource_tracker.ensure_running()
-        d["mp_tracker_fd"] = mp_resource_tracker._fd
+        d["mp_tracker_args"] = {
+            "fd": mp_resource_tracker._fd,
+            "pid": mp_resource_tracker._pid,
+        }
 
     # Figure out whether to initialise main in the subprocess as a module
     # or through direct execution (or to leave it alone entirely)
@@ -168,21 +172,23 @@ def prepare(data, parent_sentinel=None):
     if "orig_dir" in data:
         process.ORIGINAL_DIR = data["orig_dir"]
 
-    if "mp_tracker_fd" in data:
+    if "mp_tracker_args" in data:
         from multiprocessing.resource_tracker import (
             _resource_tracker as mp_resource_tracker,
         )
 
-        mp_resource_tracker._fd = data["mp_tracker_fd"]
-    if "tracker_fd" in data:
+        mp_resource_tracker._fd = data["mp_tracker_args"]["fd"]
+        mp_resource_tracker._pid = data["mp_tracker_args"]["pid"]
+    if "tracker_args" in data:
         from .resource_tracker import _resource_tracker
 
+        _resource_tracker._pid = data["tracker_args"]["pid"]
         if sys.platform == "win32":
-            handle = data["tracker_fd"]
+            handle = data["tracker_args"]["fh"]
             handle = duplicate(handle, source_process=parent_sentinel)
             _resource_tracker._fd = msvcrt.open_osfhandle(handle, os.O_RDONLY)
         else:
-            _resource_tracker._fd = data["tracker_fd"]
+            _resource_tracker._fd = data["tracker_args"]["fd"]
 
     if "init_main_from_name" in data:
         _fixup_main_from_name(data["init_main_from_name"])

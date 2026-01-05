@@ -2,7 +2,6 @@
 
 try:
     from joblib import *  # noqa
-
     _top_import_error = None
 except Exception as ex:  # pragma: no cover
     _top_import_error = ex

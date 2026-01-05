@@ -1,8 +1,7 @@
 """ Testing data types for ndimage calls
 """
 import numpy as np
-
-from scipy._lib._array_api import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_
 import pytest
 
 from scipy import ndimage
@@ -59,9 +58,9 @@ def test_uint64_max():
     # Tests geometric transform (map_coordinates, affine_transform)
     inds = np.indices(arr.shape) - 0.1
     x = ndimage.map_coordinates(arr, inds)
-    assert x[1] == int(float(big))
-    assert x[2] == int(float(big))
+    assert_(x[1] == int(float(big)))
+    assert_(x[2] == int(float(big)))
     # Tests zoom / shift
     x = ndimage.shift(arr, 0.1)
-    assert x[1] == int(float(big))
-    assert x[2] == int(float(big))
+    assert_(x[1] == int(float(big)))
+    assert_(x[2] == int(float(big)))
