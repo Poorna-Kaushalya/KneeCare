@@ -54,6 +54,17 @@ export default function KOAFusionPredictForm() {
     setForm((p) => ({ ...p, [name]: value }));
   };
 
+  const severityMap = {
+    KL0: "Normal",
+    KL1: "Doubtful",
+    KL2: "Mild",
+    KL3: "Moderate",
+    KL4: "Severe",
+  };
+
+  const getSeverityName = (kl) => severityMap[kl] || "Unknown";
+
+
   const submit = async (e) => {
     e.preventDefault();
     setResult(null);
@@ -73,7 +84,6 @@ export default function KOAFusionPredictForm() {
         fd.append(k, v ?? "");
       });
 
-      // ✅ IMPORTANT: use axios instance (baseURL -> http://localhost:5000)
       const resp = await api.post("/api/fusion/predict", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -94,40 +104,84 @@ export default function KOAFusionPredictForm() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="rounded-2xl shadow-md bg-white p-6">
-        <div className="text-xl font-extrabold text-slate-800">
-          Fusion Prediction (X-ray + Clinical)
-        </div>
+    <div className="max-w-12xl mx-auto pb-0 mb-0">
+      <div className="rounded-xl shadow-md pb-0 mb-0">
 
-        <div className="text-sm text-slate-500 mt-1">
-          Upload X-ray + fill clinical/biomarker fields → get X-ray, Tabular, and Final Fusion severity.
-        </div>
-
-        <form onSubmit={submit} className="mt-6 space-y-6">
+        <form onSubmit={submit} className="mt-0 space-y-4">
           {/* X-ray Upload */}
-          <div className="rounded-xl border p-4">
-            <div className="font-bold text-slate-700">X-ray Image</div>
-            <input
-              type="file"
-              accept="image/*"
-              className="mt-2"
-              onChange={(e) => setXray(e.target.files?.[0] || null)}
-            />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4">
+            {/* Upload */}
+            <div>
+              <div className="font-bold text-slate-700 mb-2">X-ray Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="font-sans text-sm"
+                  onChange={(e) => setXray(e.target.files?.[0] || null)}
+                /></div>
+
+              {xray && (
+                <div className="text-sm text-slate-500 mt-2">
+                  Selected: {xray.name}
+                </div>
+              )}
+            </div>
+
+            {/* Preview */}
             {xray && (
-              <div className="text-xs text-slate-500 mt-2">
-                Selected: {xray.name}
+              <div className="relative -left-[180px] -top-4">
+                <div className="  bg-white">
+                  <img
+                    src={URL.createObjectURL(xray)}
+                    alt="X-ray Preview"
+                    className="w-48 h-32 rounded-xl border"
+                  />
+                </div>
               </div>
             )}
           </div>
 
+
+          {result && (
+            <div className="absolute top-12 right-64 flex justify-center">
+              <div
+                className={`
+                    px-4 py-1
+                    rounded-full
+                    font-extrabold text-sm
+                    shadow-lg
+                    border
+                    flex items-center gap-3
+        ${result?.fusion?.pred_label === "KL0"
+                    ? "bg-green-500 border-green-600"
+                    : result?.fusion?.pred_label === "KL1"
+                      ? "bg-yellow-400 border-yellow-500"
+                      : result?.fusion?.pred_label === "KL2"
+                        ? "bg-orange-400 border-orange-500"
+                        : result?.fusion?.pred_label === "KL3"
+                          ? "bg-orange-600 border-orange-700"
+                          : "bg-red-600 border-red-700"
+                  }
+        text-white
+      `}
+              >
+                <span className="uppercase tracking-wide text-sm opacity-90">
+                  Severity Level -
+                </span>
+                <span className="text-sm">
+                  {getSeverityName(result?.fusion?.pred_label)}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Tabular Fields */}
-          <div className="rounded-xl border p-4">
+          <div className="rounded-xl p-4 relative -top-12 mb-0">
             <div className="font-bold text-slate-700 mb-3">
               Clinical / Biomarker Inputs
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <Input label="Age" name="age" value={form.age} onChange={onChange} />
               <Select label="Gender" name="gender" value={form.gender} onChange={onChange} options={OPTIONS.gender} />
               <Input label="Height" name="height" value={form.height} onChange={onChange} />
@@ -169,24 +223,11 @@ export default function KOAFusionPredictForm() {
 
           <button
             disabled={loading}
-            className="w-full rounded-2xl bg-slate-900 text-white py-3 font-bold hover:opacity-95 disabled:opacity-50"
+            className="relative w-96 rounded-3xl -top-32 left-[700px] bg-blue-600 text-white py-2 font-bold hover:opacity-95 disabled:opacity-50"
           >
-            {loading ? "Predicting..." : "Predict (Fusion)"}
+            {loading ? "Predicting..." : "Predict Severity Level"}
           </button>
         </form>
-
-        {/* Result */}
-        {result && (
-          <div className="mt-6 rounded-2xl border p-4 bg-slate-50">
-            <div className="text-lg font-extrabold text-slate-800">Result</div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <ResultBox title="X-ray Model" label={result?.xray?.pred_label} probs={result?.xray?.probs} />
-              <ResultBox title="Tabular Model" label={result?.tabular?.pred_label} probs={result?.tabular?.probs} />
-              <ResultBox title="Fusion (Final)" label={result?.fusion?.pred_label} probs={result?.fusion?.probs} highlight />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -200,7 +241,7 @@ function Input({ label, name, value, onChange }) {
         name={name}
         value={value}
         onChange={onChange}
-        className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+        className="mt-0 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
         placeholder={label}
       />
     </div>
@@ -229,7 +270,7 @@ function Select({ label, name, value, onChange, options }) {
 
 function ResultBox({ title, label, probs, highlight }) {
   return (
-    <div className={`rounded-2xl p-4 border ${highlight ? "border-slate-900 bg-white" : "bg-white"}`}>
+    <div className={`rounded-2xl p-4 ${highlight ? "border-slate-900 bg-white" : "bg-white"}`}>
       <div className="text-sm font-bold text-slate-700">{title}</div>
       <div className="mt-2 text-2xl font-extrabold text-slate-900">{label}</div>
 

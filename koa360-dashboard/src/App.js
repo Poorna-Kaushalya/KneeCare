@@ -6,7 +6,7 @@ import Register from "./components/Register";
 import Dashboard from "./pages/Dashboard";
 import FormEntry from "./pages/FormEntry";
 import KOApredict1 from "./components/PredicForms/KOAPredictForm";
-import KOAFusionPredictPage from "./pages/KOAFusionPredictPage";
+import KOAFusionPredictPage from "../src/components/dashboard/KOAFusionPredictPage";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || null);

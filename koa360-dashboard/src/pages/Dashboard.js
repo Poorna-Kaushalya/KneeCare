@@ -15,7 +15,7 @@ import EmptyState from "../components/dashboard/EmptyState";
 
 import PredictionButtons from "../components/dashboard/Buttons";
 import XRayPredictCard from "../components/PredicForms/XRayPredictCard";
-
+import KOAFusionPredictPage from "../components/dashboard/KOAFusionPredictPage";
 
 
 // Popup Picker Modal
@@ -161,6 +161,8 @@ function Dashboard({ logout }) {
   const [showPatientPicker, setShowPatientPicker] = useState(true);
 
   const [showXrayModal, setShowXrayModal] = useState(false);
+  const [showFusionModal, setShowFusionModal] = useState(false);
+
 
   const rangeOptions = useMemo(
     () => [
@@ -236,26 +238,26 @@ function Dashboard({ logout }) {
         const enriched = lastPoints.map((d) => {
           const upperAccelMag = Math.sqrt(
             (d.avg_upper?.ax || 0) ** 2 +
-              (d.avg_upper?.ay || 0) ** 2 +
-              (d.avg_upper?.az || 0) ** 2
+            (d.avg_upper?.ay || 0) ** 2 +
+            (d.avg_upper?.az || 0) ** 2
           );
 
           const lowerAccelMag = Math.sqrt(
             (d.avg_lower?.ax || 0) ** 2 +
-              (d.avg_lower?.ay || 0) ** 2 +
-              (d.avg_lower?.az || 0) ** 2
+            (d.avg_lower?.ay || 0) ** 2 +
+            (d.avg_lower?.az || 0) ** 2
           );
 
           const gyroMag =
             Math.sqrt(
               (d.avg_upper?.gx || 0) ** 2 +
-                (d.avg_upper?.gy || 0) ** 2 +
-                (d.avg_upper?.gz || 0) ** 2
+              (d.avg_upper?.gy || 0) ** 2 +
+              (d.avg_upper?.gz || 0) ** 2
             ) +
             Math.sqrt(
               (d.avg_lower?.gx || 0) ** 2 +
-                (d.avg_lower?.gy || 0) ** 2 +
-                (d.avg_lower?.gz || 0) ** 2
+              (d.avg_lower?.gy || 0) ** 2 +
+              (d.avg_lower?.gz || 0) ** 2
             );
 
           const totalAccelGyroMag = upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
@@ -442,8 +444,10 @@ function Dashboard({ logout }) {
                     patientId={selectedPatientId}
                     deviceId={selectedPatientDetails?.device_id}
                     disabled={!selectedPatientId}
-                    onXrayClick={() => setShowXrayModal(true)} // ✅ open modal
+                    onXrayClick={() => setShowXrayModal(true)}
+                    onFusionClick={() => setShowFusionModal(true)}
                   />
+
 
                   <ChartsTabs
                     activeTab={activeTab}
@@ -510,10 +514,16 @@ function Dashboard({ logout }) {
         />
       )}
 
-      {/* X-ray Predict Modal */}
       <XRayPredictCard
         open={showXrayModal}
         onClose={() => setShowXrayModal(false)}
+        patientId={selectedPatientId}
+        deviceId={selectedPatientDetails?.device_id}
+      />
+
+      <KOAFusionPredictPage
+        open={showFusionModal}
+        onClose={() => setShowFusionModal(false)}
         patientId={selectedPatientId}
         deviceId={selectedPatientDetails?.device_id}
       />
