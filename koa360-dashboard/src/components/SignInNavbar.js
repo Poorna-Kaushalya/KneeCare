@@ -92,7 +92,7 @@ function SignInNavbar({ logout }) {
                 Device Connected <FiWifi className="inline ml-1" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
               </>
             ) : (
-              "Device Disconnected |"
+              "Device Disconnected" 
             )}
           </span>
         </div>
