@@ -1,7 +1,10 @@
-from typing import Literal as L, TypeAlias, assert_type
+from typing import Any, Literal as L, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
+from numpy._typing import _64Bit, _32Bit
+
+from typing_extensions import assert_type
 
 FalseType: TypeAlias = L[False]
 TrueType: TypeAlias = L[True]
@@ -24,17 +27,18 @@ i: int
 
 AR: npt.NDArray[np.int32]
 
+
 assert_type(i8 << i8, np.int64)
 assert_type(i8 >> i8, np.int64)
 assert_type(i8 | i8, np.int64)
 assert_type(i8 ^ i8, np.int64)
 assert_type(i8 & i8, np.int64)
 
-assert_type(i8 << AR, npt.NDArray[np.signedinteger])
-assert_type(i8 >> AR, npt.NDArray[np.signedinteger])
-assert_type(i8 | AR, npt.NDArray[np.signedinteger])
-assert_type(i8 ^ AR, npt.NDArray[np.signedinteger])
-assert_type(i8 & AR, npt.NDArray[np.signedinteger])
+assert_type(i8 << AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(i8 >> AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(i8 | AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(i8 ^ AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(i8 & AR, npt.NDArray[np.signedinteger[Any]])
 
 assert_type(i4 << i4, np.int32)
 assert_type(i4 >> i4, np.int32)
@@ -42,11 +46,11 @@ assert_type(i4 | i4, np.int32)
 assert_type(i4 ^ i4, np.int32)
 assert_type(i4 & i4, np.int32)
 
-assert_type(i8 << i4, np.signedinteger)
-assert_type(i8 >> i4, np.signedinteger)
-assert_type(i8 | i4, np.signedinteger)
-assert_type(i8 ^ i4, np.signedinteger)
-assert_type(i8 & i4, np.signedinteger)
+assert_type(i8 << i4, np.signedinteger[_32Bit] | np.signedinteger[_64Bit])
+assert_type(i8 >> i4, np.signedinteger[_32Bit] | np.signedinteger[_64Bit])
+assert_type(i8 | i4, np.signedinteger[_32Bit] | np.signedinteger[_64Bit])
+assert_type(i8 ^ i4, np.signedinteger[_32Bit] | np.signedinteger[_64Bit])
+assert_type(i8 & i4, np.signedinteger[_32Bit] | np.signedinteger[_64Bit])
 
 assert_type(i8 << b_, np.int64)
 assert_type(i8 >> b_, np.int64)
@@ -66,11 +70,11 @@ assert_type(u8 | u8, np.uint64)
 assert_type(u8 ^ u8, np.uint64)
 assert_type(u8 & u8, np.uint64)
 
-assert_type(u8 << AR, npt.NDArray[np.signedinteger])
-assert_type(u8 >> AR, npt.NDArray[np.signedinteger])
-assert_type(u8 | AR, npt.NDArray[np.signedinteger])
-assert_type(u8 ^ AR, npt.NDArray[np.signedinteger])
-assert_type(u8 & AR, npt.NDArray[np.signedinteger])
+assert_type(u8 << AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(u8 >> AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(u8 | AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(u8 ^ AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(u8 & AR, npt.NDArray[np.signedinteger[Any]])
 
 assert_type(u4 << u4, np.uint32)
 assert_type(u4 >> u4, np.uint32)
@@ -78,17 +82,17 @@ assert_type(u4 | u4, np.uint32)
 assert_type(u4 ^ u4, np.uint32)
 assert_type(u4 & u4, np.uint32)
 
-assert_type(u4 << i4, np.signedinteger)
-assert_type(u4 >> i4, np.signedinteger)
-assert_type(u4 | i4, np.signedinteger)
-assert_type(u4 ^ i4, np.signedinteger)
-assert_type(u4 & i4, np.signedinteger)
+assert_type(u4 << i4, np.signedinteger[Any])
+assert_type(u4 >> i4, np.signedinteger[Any])
+assert_type(u4 | i4, np.signedinteger[Any])
+assert_type(u4 ^ i4, np.signedinteger[Any])
+assert_type(u4 & i4, np.signedinteger[Any])
 
-assert_type(u4 << i, np.uint32)
-assert_type(u4 >> i, np.uint32)
-assert_type(u4 | i, np.uint32)
-assert_type(u4 ^ i, np.uint32)
-assert_type(u4 & i, np.uint32)
+assert_type(u4 << i, np.signedinteger[Any])
+assert_type(u4 >> i, np.signedinteger[Any])
+assert_type(u4 | i, np.signedinteger[Any])
+assert_type(u4 ^ i, np.signedinteger[Any])
+assert_type(u4 & i, np.signedinteger[Any])
 
 assert_type(u8 << b_, np.uint64)
 assert_type(u8 >> b_, np.uint64)
@@ -108,11 +112,11 @@ assert_type(b_ | b_, np.bool)
 assert_type(b_ ^ b_, np.bool)
 assert_type(b_ & b_, np.bool)
 
-assert_type(b_ << AR, npt.NDArray[np.signedinteger])
-assert_type(b_ >> AR, npt.NDArray[np.signedinteger])
-assert_type(b_ | AR, npt.NDArray[np.signedinteger])
-assert_type(b_ ^ AR, npt.NDArray[np.signedinteger])
-assert_type(b_ & AR, npt.NDArray[np.signedinteger])
+assert_type(b_ << AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(b_ >> AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(b_ | AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(b_ ^ AR, npt.NDArray[np.signedinteger[Any]])
+assert_type(b_ & AR, npt.NDArray[np.signedinteger[Any]])
 
 assert_type(b_ << b, np.int8)
 assert_type(b_ >> b, np.int8)

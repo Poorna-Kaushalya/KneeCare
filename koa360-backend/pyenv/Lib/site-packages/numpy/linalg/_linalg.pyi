@@ -1,48 +1,47 @@
 from collections.abc import Iterable
 from typing import (
-    Any,
     Literal as L,
-    NamedTuple,
-    Never,
-    SupportsIndex,
-    SupportsInt,
+    overload,
     TypeAlias,
     TypeVar,
-    overload,
+    Any,
+    SupportsIndex,
+    SupportsInt,
+    NamedTuple,
 )
 
 import numpy as np
 from numpy import (
-    complex128,
-    complexfloating,
-    float64,
-    floating,
-    int32,
-    object_,
-    signedinteger,
-    timedelta64,
-    unsignedinteger,
+    # re-exports
     vecdot,
-)
-from numpy._core.fromnumeric import matrix_transpose
-from numpy._globals import _NoValueType
-from numpy._typing import (
-    ArrayLike,
-    DTypeLike,
-    NDArray,
-    _ArrayLike,
-    _ArrayLikeBool_co,
-    _ArrayLikeComplex_co,
-    _ArrayLikeFloat_co,
-    _ArrayLikeInt_co,
-    _ArrayLikeNumber_co,
-    _ArrayLikeObject_co,
-    _ArrayLikeTD64_co,
-    _ArrayLikeUInt_co,
-    _NestedSequence,
-    _ShapeLike,
+
+    # other
+    floating,
+    complexfloating,
+    signedinteger,
+    unsignedinteger,
+    timedelta64,
+    object_,
+    int32,
+    float64,
+    complex128,
 )
 from numpy.linalg import LinAlgError
+from numpy._core.fromnumeric import matrix_transpose
+from numpy._core.numeric import tensordot
+from numpy._typing import (
+    NDArray,
+    ArrayLike,
+    DTypeLike,
+    _ArrayLikeUnknown,
+    _ArrayLikeBool_co,
+    _ArrayLikeInt_co,
+    _ArrayLikeUInt_co,
+    _ArrayLikeFloat_co,
+    _ArrayLikeComplex_co,
+    _ArrayLikeTD64_co,
+    _ArrayLikeObject_co,
+)
 
 __all__ = [
     "matrix_power",
@@ -79,8 +78,7 @@ __all__ = [
     "vecdot",
 ]
 
-_NumberT = TypeVar("_NumberT", bound=np.number)
-_NumericScalarT = TypeVar("_NumericScalarT", bound=np.number | np.timedelta64 | np.object_)
+_ArrayType = TypeVar("_ArrayType", bound=NDArray[Any])
 
 _ModeKind: TypeAlias = L["reduced", "complete", "r", "raw"]
 
@@ -115,20 +113,20 @@ class SVDResult(NamedTuple):
 def tensorsolve(
     a: _ArrayLikeInt_co,
     b: _ArrayLikeInt_co,
-    axes: Iterable[int] | None = None,
+    axes: None | Iterable[int] =...,
 ) -> NDArray[float64]: ...
 @overload
 def tensorsolve(
     a: _ArrayLikeFloat_co,
     b: _ArrayLikeFloat_co,
-    axes: Iterable[int] | None = None,
-) -> NDArray[floating]: ...
+    axes: None | Iterable[int] =...,
+) -> NDArray[floating[Any]]: ...
 @overload
 def tensorsolve(
     a: _ArrayLikeComplex_co,
     b: _ArrayLikeComplex_co,
-    axes: Iterable[int] | None = None,
-) -> NDArray[complexfloating]: ...
+    axes: None | Iterable[int] =...,
+) -> NDArray[complexfloating[Any, Any]]: ...
 
 @overload
 def solve(
@@ -139,35 +137,35 @@ def solve(
 def solve(
     a: _ArrayLikeFloat_co,
     b: _ArrayLikeFloat_co,
-) -> NDArray[floating]: ...
+) -> NDArray[floating[Any]]: ...
 @overload
 def solve(
     a: _ArrayLikeComplex_co,
     b: _ArrayLikeComplex_co,
-) -> NDArray[complexfloating]: ...
+) -> NDArray[complexfloating[Any, Any]]: ...
 
 @overload
 def tensorinv(
     a: _ArrayLikeInt_co,
-    ind: int = 2,
+    ind: int = ...,
 ) -> NDArray[float64]: ...
 @overload
 def tensorinv(
     a: _ArrayLikeFloat_co,
-    ind: int = 2,
-) -> NDArray[floating]: ...
+    ind: int = ...,
+) -> NDArray[floating[Any]]: ...
 @overload
 def tensorinv(
     a: _ArrayLikeComplex_co,
-    ind: int = 2,
-) -> NDArray[complexfloating]: ...
+    ind: int = ...,
+) -> NDArray[complexfloating[Any, Any]]: ...
 
 @overload
 def inv(a: _ArrayLikeInt_co) -> NDArray[float64]: ...
 @overload
-def inv(a: _ArrayLikeFloat_co) -> NDArray[floating]: ...
+def inv(a: _ArrayLikeFloat_co) -> NDArray[floating[Any]]: ...
 @overload
-def inv(a: _ArrayLikeComplex_co) -> NDArray[complexfloating]: ...
+def inv(a: _ArrayLikeComplex_co) -> NDArray[complexfloating[Any, Any]]: ...
 
 # TODO: The supported input and output dtypes are dependent on the value of `n`.
 # For example: `n < 0` always casts integer types to float64
@@ -179,53 +177,57 @@ def matrix_power(
 @overload
 def cholesky(a: _ArrayLikeInt_co, /, *, upper: bool = False) -> NDArray[float64]: ...
 @overload
-def cholesky(a: _ArrayLikeFloat_co, /, *, upper: bool = False) -> NDArray[floating]: ...
+def cholesky(a: _ArrayLikeFloat_co, /, *, upper: bool = False) -> NDArray[floating[Any]]: ...
 @overload
-def cholesky(a: _ArrayLikeComplex_co, /, *, upper: bool = False) -> NDArray[complexfloating]: ...
+def cholesky(a: _ArrayLikeComplex_co, /, *, upper: bool = False) -> NDArray[complexfloating[Any, Any]]: ...
 
 @overload
-def outer(x1: _ArrayLike[Never], x2: _ArrayLike[Never], /) -> NDArray[Any]: ...
+def outer(x1: _ArrayLikeUnknown, x2: _ArrayLikeUnknown) -> NDArray[Any]: ...
 @overload
-def outer(x1: _ArrayLikeBool_co, x2: _ArrayLikeBool_co, /) -> NDArray[np.bool]: ...
+def outer(x1: _ArrayLikeBool_co, x2: _ArrayLikeBool_co) -> NDArray[np.bool]: ...
 @overload
-def outer(x1: _ArrayLike[_NumberT], x2: _ArrayLike[_NumberT], /) -> NDArray[_NumberT]: ...
+def outer(x1: _ArrayLikeUInt_co, x2: _ArrayLikeUInt_co) -> NDArray[unsignedinteger[Any]]: ...
 @overload
-def outer(x1: _ArrayLikeUInt_co, x2: _ArrayLikeUInt_co, /) -> NDArray[unsignedinteger]: ...
+def outer(x1: _ArrayLikeInt_co, x2: _ArrayLikeInt_co) -> NDArray[signedinteger[Any]]: ...
 @overload
-def outer(x1: _ArrayLikeInt_co, x2: _ArrayLikeInt_co, /) -> NDArray[signedinteger]: ...
+def outer(x1: _ArrayLikeFloat_co, x2: _ArrayLikeFloat_co) -> NDArray[floating[Any]]: ...
 @overload
-def outer(x1: _ArrayLikeFloat_co, x2: _ArrayLikeFloat_co, /) -> NDArray[floating]: ...
+def outer(
+    x1: _ArrayLikeComplex_co,
+    x2: _ArrayLikeComplex_co,
+) -> NDArray[complexfloating[Any, Any]]: ...
 @overload
-def outer(x1: _ArrayLikeComplex_co, x2: _ArrayLikeComplex_co, /) -> NDArray[complexfloating]: ...
+def outer(
+    x1: _ArrayLikeTD64_co,
+    x2: _ArrayLikeTD64_co,
+    out: None = ...,
+) -> NDArray[timedelta64]: ...
 @overload
-def outer(x1: _ArrayLikeTD64_co, x2: _ArrayLikeTD64_co, /) -> NDArray[timedelta64]: ...
-@overload
-def outer(x1: _ArrayLikeObject_co, x2: _ArrayLikeObject_co, /) -> NDArray[object_]: ...
+def outer(x1: _ArrayLikeObject_co, x2: _ArrayLikeObject_co) -> NDArray[object_]: ...
 @overload
 def outer(
     x1: _ArrayLikeComplex_co | _ArrayLikeTD64_co | _ArrayLikeObject_co,
     x2: _ArrayLikeComplex_co | _ArrayLikeTD64_co | _ArrayLikeObject_co,
-    /,
-) -> NDArray[Any]: ...
+) -> _ArrayType: ...
 
 @overload
-def qr(a: _ArrayLikeInt_co, mode: _ModeKind = "reduced") -> QRResult: ...
+def qr(a: _ArrayLikeInt_co, mode: _ModeKind = ...) -> QRResult: ...
 @overload
-def qr(a: _ArrayLikeFloat_co, mode: _ModeKind = "reduced") -> QRResult: ...
+def qr(a: _ArrayLikeFloat_co, mode: _ModeKind = ...) -> QRResult: ...
 @overload
-def qr(a: _ArrayLikeComplex_co, mode: _ModeKind = "reduced") -> QRResult: ...
+def qr(a: _ArrayLikeComplex_co, mode: _ModeKind = ...) -> QRResult: ...
 
 @overload
 def eigvals(a: _ArrayLikeInt_co) -> NDArray[float64] | NDArray[complex128]: ...
 @overload
-def eigvals(a: _ArrayLikeFloat_co) -> NDArray[floating] | NDArray[complexfloating]: ...
+def eigvals(a: _ArrayLikeFloat_co) -> NDArray[floating[Any]] | NDArray[complexfloating[Any, Any]]: ...
 @overload
-def eigvals(a: _ArrayLikeComplex_co) -> NDArray[complexfloating]: ...
+def eigvals(a: _ArrayLikeComplex_co) -> NDArray[complexfloating[Any, Any]]: ...
 
 @overload
-def eigvalsh(a: _ArrayLikeInt_co, UPLO: L["L", "U", "l", "u"] = "L") -> NDArray[float64]: ...
+def eigvalsh(a: _ArrayLikeInt_co, UPLO: L["L", "U", "l", "u"] = ...) -> NDArray[float64]: ...
 @overload
-def eigvalsh(a: _ArrayLikeComplex_co, UPLO: L["L", "U", "l", "u"] = "L") -> NDArray[floating]: ...
+def eigvalsh(a: _ArrayLikeComplex_co, UPLO: L["L", "U", "l", "u"] = ...) -> NDArray[floating[Any]]: ...
 
 @overload
 def eig(a: _ArrayLikeInt_co) -> EigResult: ...
@@ -237,118 +239,90 @@ def eig(a: _ArrayLikeComplex_co) -> EigResult: ...
 @overload
 def eigh(
     a: _ArrayLikeInt_co,
-    UPLO: L["L", "U", "l", "u"] = "L",
+    UPLO: L["L", "U", "l", "u"] = ...,
 ) -> EighResult: ...
 @overload
 def eigh(
     a: _ArrayLikeFloat_co,
-    UPLO: L["L", "U", "l", "u"] = "L",
+    UPLO: L["L", "U", "l", "u"] = ...,
 ) -> EighResult: ...
 @overload
 def eigh(
     a: _ArrayLikeComplex_co,
-    UPLO: L["L", "U", "l", "u"] = "L",
+    UPLO: L["L", "U", "l", "u"] = ...,
 ) -> EighResult: ...
 
 @overload
 def svd(
     a: _ArrayLikeInt_co,
-    full_matrices: bool = True,
-    compute_uv: L[True] = True,
-    hermitian: bool = False,
+    full_matrices: bool = ...,
+    compute_uv: L[True] = ...,
+    hermitian: bool = ...,
 ) -> SVDResult: ...
 @overload
 def svd(
     a: _ArrayLikeFloat_co,
-    full_matrices: bool = True,
-    compute_uv: L[True] = True,
-    hermitian: bool = False,
+    full_matrices: bool = ...,
+    compute_uv: L[True] = ...,
+    hermitian: bool = ...,
 ) -> SVDResult: ...
 @overload
 def svd(
     a: _ArrayLikeComplex_co,
-    full_matrices: bool = True,
-    compute_uv: L[True] = True,
-    hermitian: bool = False,
+    full_matrices: bool = ...,
+    compute_uv: L[True] = ...,
+    hermitian: bool = ...,
 ) -> SVDResult: ...
 @overload
 def svd(
     a: _ArrayLikeInt_co,
-    full_matrices: bool = True,
-    *,
-    compute_uv: L[False],
-    hermitian: bool = False,
-) -> NDArray[float64]: ...
-@overload
-def svd(
-    a: _ArrayLikeInt_co,
-    full_matrices: bool,
-    compute_uv: L[False],
-    hermitian: bool = False,
+    full_matrices: bool = ...,
+    compute_uv: L[False] = ...,
+    hermitian: bool = ...,
 ) -> NDArray[float64]: ...
 @overload
 def svd(
     a: _ArrayLikeComplex_co,
-    full_matrices: bool = True,
-    *,
-    compute_uv: L[False],
-    hermitian: bool = False,
-) -> NDArray[floating]: ...
-@overload
-def svd(
-    a: _ArrayLikeComplex_co,
-    full_matrices: bool,
-    compute_uv: L[False],
-    hermitian: bool = False,
-) -> NDArray[floating]: ...
+    full_matrices: bool = ...,
+    compute_uv: L[False] = ...,
+    hermitian: bool = ...,
+) -> NDArray[floating[Any]]: ...
 
-# the ignored `overload-overlap` mypy error below is a false-positive
-@overload
-def svdvals(  # type: ignore[overload-overlap]
-    x: _ArrayLike[np.float64 | np.complex128 | np.integer | np.bool] | _NestedSequence[complex], /
-) -> NDArray[np.float64]: ...
-@overload
-def svdvals(x: _ArrayLike[np.float32 | np.complex64], /) -> NDArray[np.float32]: ...
-@overload
-def svdvals(x: _ArrayLikeNumber_co, /) -> NDArray[floating]: ...
+def svdvals(
+    x: _ArrayLikeInt_co | _ArrayLikeFloat_co | _ArrayLikeComplex_co
+) -> NDArray[floating[Any]]: ...
 
 # TODO: Returns a scalar for 2D arrays and
 # a `(x.ndim - 2)`` dimensionl array otherwise
-def cond(x: _ArrayLikeComplex_co, p: float | L["fro", "nuc"] | None = None) -> Any: ...
+def cond(x: _ArrayLikeComplex_co, p: None | float | L["fro", "nuc"] = ...) -> Any: ...
 
 # TODO: Returns `int` for <2D arrays and `intp` otherwise
 def matrix_rank(
     A: _ArrayLikeComplex_co,
-    tol: _ArrayLikeFloat_co | None = None,
-    hermitian: bool = False,
+    tol: None | _ArrayLikeFloat_co = ...,
+    hermitian: bool = ...,
     *,
-    rtol: _ArrayLikeFloat_co | None = None,
+    rtol: None | _ArrayLikeFloat_co = ...,
 ) -> Any: ...
 
 @overload
 def pinv(
     a: _ArrayLikeInt_co,
-    rcond: _ArrayLikeFloat_co | None = None,
-    hermitian: bool = False,
-    *,
-    rtol: _ArrayLikeFloat_co | _NoValueType = ...,
+    rcond: _ArrayLikeFloat_co = ...,
+    hermitian: bool = ...,
 ) -> NDArray[float64]: ...
 @overload
 def pinv(
     a: _ArrayLikeFloat_co,
-    rcond: _ArrayLikeFloat_co | None = None,
-    hermitian: bool = False,
-    *,
-    rtol: _ArrayLikeFloat_co | _NoValueType = ...,
-) -> NDArray[floating]: ...
+    rcond: _ArrayLikeFloat_co = ...,
+    hermitian: bool = ...,
+) -> NDArray[floating[Any]]: ...
 @overload
 def pinv(
     a: _ArrayLikeComplex_co,
-    rcond: _ArrayLikeFloat_co | None = None,
-    hermitian: bool = False,
-    *,
-    rtol: _ArrayLikeFloat_co | _NoValueType = ...,
-) -> NDArray[complexfloating]: ...
+    rcond: _ArrayLikeFloat_co = ...,
+    hermitian: bool = ...,
+) -> NDArray[complexfloating[Any, Any]]: ...
 
 # TODO: Returns a 2-tuple of scalars for 2D arrays and
 # a 2-tuple of `(a.ndim - 2)`` dimensionl arrays otherwise
@@ -359,48 +333,40 @@ def slogdet(a: _ArrayLikeComplex_co) -> SlogdetResult: ...
 def det(a: _ArrayLikeComplex_co) -> Any: ...
 
 @overload
-def lstsq(a: _ArrayLikeInt_co, b: _ArrayLikeInt_co, rcond: float | None = None) -> tuple[
+def lstsq(a: _ArrayLikeInt_co, b: _ArrayLikeInt_co, rcond: None | float = ...) -> tuple[
     NDArray[float64],
     NDArray[float64],
     int32,
     NDArray[float64],
 ]: ...
 @overload
-def lstsq(a: _ArrayLikeFloat_co, b: _ArrayLikeFloat_co, rcond: float | None = None) -> tuple[
-    NDArray[floating],
-    NDArray[floating],
+def lstsq(a: _ArrayLikeFloat_co, b: _ArrayLikeFloat_co, rcond: None | float = ...) -> tuple[
+    NDArray[floating[Any]],
+    NDArray[floating[Any]],
     int32,
-    NDArray[floating],
+    NDArray[floating[Any]],
 ]: ...
 @overload
-def lstsq(a: _ArrayLikeComplex_co, b: _ArrayLikeComplex_co, rcond: float | None = None) -> tuple[
-    NDArray[complexfloating],
-    NDArray[floating],
+def lstsq(a: _ArrayLikeComplex_co, b: _ArrayLikeComplex_co, rcond: None | float = ...) -> tuple[
+    NDArray[complexfloating[Any, Any]],
+    NDArray[floating[Any]],
     int32,
-    NDArray[floating],
+    NDArray[floating[Any]],
 ]: ...
 
 @overload
 def norm(
     x: ArrayLike,
-    ord: float | L["fro", "nuc"] | None = None,
-    axis: None = None,
-    keepdims: L[False] = False,
-) -> floating: ...
+    ord: None | float | L["fro", "nuc"] = ...,
+    axis: None = ...,
+    keepdims: bool = ...,
+) -> floating[Any]: ...
 @overload
 def norm(
     x: ArrayLike,
-    ord: float | L["fro", "nuc"] | None,
-    axis: SupportsInt | SupportsIndex | tuple[int, ...] | None,
-    keepdims: bool = False,
-) -> Any: ...
-@overload
-def norm(
-    x: ArrayLike,
-    ord: float | L["fro", "nuc"] | None = None,
-    *,
-    axis: SupportsInt | SupportsIndex | tuple[int, ...] | None,
-    keepdims: bool = False,
+    ord: None | float | L["fro", "nuc"] = ...,
+    axis: SupportsInt | SupportsIndex | tuple[int, ...] = ...,
+    keepdims: bool = ...,
 ) -> Any: ...
 
 @overload
@@ -408,16 +374,16 @@ def matrix_norm(
     x: ArrayLike,
     /,
     *,
-    ord: float | L["fro", "nuc"] | None = "fro",
-    keepdims: L[False] = False,
-) -> floating: ...
+    ord: None | float | L["fro", "nuc"] = ...,
+    keepdims: bool = ...,
+) -> floating[Any]: ...
 @overload
 def matrix_norm(
     x: ArrayLike,
     /,
     *,
-    ord: float | L["fro", "nuc"] | None = "fro",
-    keepdims: bool = False,
+    ord: None | float | L["fro", "nuc"] = ...,
+    keepdims: bool = ...,
 ) -> Any: ...
 
 @overload
@@ -425,82 +391,40 @@ def vector_norm(
     x: ArrayLike,
     /,
     *,
-    axis: None = None,
-    ord: float | None = 2,
-    keepdims: L[False] = False,
-) -> floating: ...
+    axis: None = ...,
+    ord: None | float = ...,
+    keepdims: bool = ...,
+) -> floating[Any]: ...
 @overload
 def vector_norm(
     x: ArrayLike,
     /,
     *,
-    axis: SupportsInt | SupportsIndex | tuple[int, ...],
-    ord: float | None = 2,
-    keepdims: bool = False,
+    axis: SupportsInt | SupportsIndex | tuple[int, ...] = ...,
+    ord: None | float = ...,
+    keepdims: bool = ...,
 ) -> Any: ...
-
-# keep in sync with numpy._core.numeric.tensordot (ignoring `/, *`)
-@overload
-def tensordot(
-    a: _ArrayLike[_NumericScalarT],
-    b: _ArrayLike[_NumericScalarT],
-    /,
-    *,
-    axes: int | tuple[_ShapeLike, _ShapeLike] = 2,
-) -> NDArray[_NumericScalarT]: ...
-@overload
-def tensordot(
-    a: _ArrayLikeBool_co,
-    b: _ArrayLikeBool_co,
-    /,
-    *,
-    axes: int | tuple[_ShapeLike, _ShapeLike] = 2,
-) -> NDArray[np.bool_]: ...
-@overload
-def tensordot(
-    a: _ArrayLikeInt_co,
-    b: _ArrayLikeInt_co,
-    /,
-    *,
-    axes: int | tuple[_ShapeLike, _ShapeLike] = 2,
-) -> NDArray[np.int_ | Any]: ...
-@overload
-def tensordot(
-    a: _ArrayLikeFloat_co,
-    b: _ArrayLikeFloat_co,
-    /,
-    *,
-    axes: int | tuple[_ShapeLike, _ShapeLike] = 2,
-) -> NDArray[np.float64 | Any]: ...
-@overload
-def tensordot(
-    a: _ArrayLikeComplex_co,
-    b: _ArrayLikeComplex_co,
-    /,
-    *,
-    axes: int | tuple[_ShapeLike, _ShapeLike] = 2,
-) -> NDArray[np.complex128 | Any]: ...
 
 # TODO: Returns a scalar or array
 def multi_dot(
     arrays: Iterable[_ArrayLikeComplex_co | _ArrayLikeObject_co | _ArrayLikeTD64_co],
     *,
-    out: NDArray[Any] | None = None,
+    out: None | NDArray[Any] = ...,
 ) -> Any: ...
 
 def diagonal(
     x: ArrayLike,  # >= 2D array
     /,
     *,
-    offset: SupportsIndex = 0,
+    offset: SupportsIndex = ...,
 ) -> NDArray[Any]: ...
 
 def trace(
     x: ArrayLike,  # >= 2D array
     /,
     *,
-    offset: SupportsIndex = 0,
-    dtype: DTypeLike | None = None,
+    offset: SupportsIndex = ...,
+    dtype: DTypeLike = ...,
 ) -> Any: ...
 
 @overload
@@ -509,40 +433,50 @@ def cross(
     x2: _ArrayLikeUInt_co,
     /,
     *,
-    axis: int = -1,
-) -> NDArray[unsignedinteger]: ...
+    axis: int = ...,
+) -> NDArray[unsignedinteger[Any]]: ...
 @overload
 def cross(
     x1: _ArrayLikeInt_co,
     x2: _ArrayLikeInt_co,
     /,
     *,
-    axis: int = -1,
-) -> NDArray[signedinteger]: ...
+    axis: int = ...,
+) -> NDArray[signedinteger[Any]]: ...
 @overload
 def cross(
     x1: _ArrayLikeFloat_co,
     x2: _ArrayLikeFloat_co,
     /,
     *,
-    axis: int = -1,
-) -> NDArray[floating]: ...
+    axis: int = ...,
+) -> NDArray[floating[Any]]: ...
 @overload
 def cross(
     x1: _ArrayLikeComplex_co,
     x2: _ArrayLikeComplex_co,
     /,
     *,
-    axis: int = -1,
-) -> NDArray[complexfloating]: ...
+    axis: int = ...,
+) -> NDArray[complexfloating[Any, Any]]: ...
 
 @overload
-def matmul(x1: _ArrayLike[_NumberT], x2: _ArrayLike[_NumberT], /) -> NDArray[_NumberT]: ...
+def matmul(
+    x1: _ArrayLikeInt_co,
+    x2: _ArrayLikeInt_co,
+) -> NDArray[signedinteger[Any]]: ...
 @overload
-def matmul(x1: _ArrayLikeUInt_co, x2: _ArrayLikeUInt_co, /) -> NDArray[unsignedinteger]: ...
+def matmul(
+    x1: _ArrayLikeUInt_co,
+    x2: _ArrayLikeUInt_co,
+) -> NDArray[unsignedinteger[Any]]: ...
 @overload
-def matmul(x1: _ArrayLikeInt_co, x2: _ArrayLikeInt_co, /) -> NDArray[signedinteger]: ...
+def matmul(
+    x1: _ArrayLikeFloat_co,
+    x2: _ArrayLikeFloat_co,
+) -> NDArray[floating[Any]]: ...
 @overload
-def matmul(x1: _ArrayLikeFloat_co, x2: _ArrayLikeFloat_co, /) -> NDArray[floating]: ...
-@overload
-def matmul(x1: _ArrayLikeComplex_co, x2: _ArrayLikeComplex_co, /) -> NDArray[complexfloating]: ...
+def matmul(
+    x1: _ArrayLikeComplex_co,
+    x2: _ArrayLikeComplex_co,
+) -> NDArray[complexfloating[Any, Any]]: ...

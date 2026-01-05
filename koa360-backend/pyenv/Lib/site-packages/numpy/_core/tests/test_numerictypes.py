@@ -1,17 +1,14 @@
-import itertools
 import sys
+import itertools
 
 import pytest
-
 import numpy as np
 import numpy._core.numerictypes as nt
-from numpy._core.numerictypes import issctype, maximum_sctype, sctype2char, sctypes
+from numpy._core.numerictypes import (
+    issctype, sctype2char, maximum_sctype, sctypes
+)
 from numpy.testing import (
-    IS_PYPY,
-    assert_,
-    assert_equal,
-    assert_raises,
-    assert_raises_regex,
+    assert_, assert_equal, assert_raises, assert_raises_regex, IS_PYPY
 )
 
 # This is the structure of the table used for plain objects:
@@ -76,7 +73,7 @@ NbufferT = [
     ]
 
 
-byteorder = {'little': '<', 'big': '>'}[sys.byteorder]
+byteorder = {'little':'<', 'big':'>'}[sys.byteorder]
 
 def normalize_descr(descr):
     "Normalize a description adding the platform byteorder."
@@ -100,7 +97,8 @@ def normalize_descr(descr):
             l = normalize_descr(dtype)
             out.append((item[0], l))
         else:
-            raise ValueError(f"Expected a str or list and got {type(item)}")
+            raise ValueError("Expected a str or list and got %s" %
+                             (type(item)))
     return out
 
 
@@ -347,16 +345,17 @@ class TestEmptyField:
 
 
 class TestMultipleFields:
+    def setup_method(self):
+        self.ary = np.array([(1, 2, 3, 4), (5, 6, 7, 8)], dtype='i4,f4,i2,c8')
+
     def _bad_call(self):
-        ary = np.array([(1, 2, 3, 4), (5, 6, 7, 8)], dtype='i4,f4,i2,c8')
-        return ary['f0', 'f1']
+        return self.ary['f0', 'f1']
 
     def test_no_tuple(self):
         assert_raises(IndexError, self._bad_call)
 
     def test_return(self):
-        ary = np.array([(1, 2, 3, 4), (5, 6, 7, 8)], dtype='i4,f4,i2,c8')
-        res = ary[['f0', 'f2']].tolist()
+        res = self.ary[['f0', 'f2']].tolist()
         assert_(res == [(1, 3), (5, 7)])
 
 
@@ -614,35 +613,6 @@ class TestScalarTypeNames:
     def test_names_are_undersood_by_dtype(self, t):
         """ Test the dtype constructor maps names back to the type """
         assert np.dtype(t.__name__).type is t
-
-
-class TestScalarTypeOrder:
-    @pytest.mark.parametrize(('a', 'b'), [
-        # signedinteger
-        (np.byte, np.short),
-        (np.short, np.intc),
-        (np.intc, np.long),
-        (np.long, np.longlong),
-        # unsignedinteger
-        (np.ubyte, np.ushort),
-        (np.ushort, np.uintc),
-        (np.uintc, np.ulong),
-        (np.ulong, np.ulonglong),
-        # floating
-        (np.half, np.single),
-        (np.single, np.double),
-        (np.double, np.longdouble),
-        # complexfloating
-        (np.csingle, np.cdouble),
-        (np.cdouble, np.clongdouble),
-        # flexible
-        (np.bytes_, np.str_),
-        (np.str_, np.void),
-        # bouncy castles
-        (np.datetime64, np.timedelta64),
-    ])
-    def test_stable_ordering(self, a: type[np.generic], b: type[np.generic]):
-        assert np.ScalarType.index(a) <= np.ScalarType.index(b)
 
 
 class TestBoolDefinition:

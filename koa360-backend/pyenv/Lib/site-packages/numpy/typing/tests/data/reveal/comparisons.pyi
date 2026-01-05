@@ -1,9 +1,11 @@
-import decimal
 import fractions
-from typing import assert_type
+import decimal
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+
+from typing_extensions import assert_type
 
 c16 = np.complex128()
 f8 = np.float64()
@@ -20,10 +22,10 @@ td = np.timedelta64(0, "D")
 
 b_ = np.bool()
 
-b = False
+b = bool()
 c = complex()
-f = 0.0
-i = 0
+f = float()
+i = int()
 
 AR = np.array([0], dtype=np.int64)
 AR.setflags(write=False)

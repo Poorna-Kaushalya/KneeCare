@@ -14,6 +14,7 @@ import PatientPanel from "../components/dashboard/PatientPanel";
 import EmptyState from "../components/dashboard/EmptyState";
 
 import PredictionButtons from "../components/dashboard/Buttons";
+import XRayPredictCard from "../components/PredicForms/XRayPredictCard"; // ✅ correct path
 
 // Popup Picker Modal
 function PatientPickerModal({
@@ -30,13 +31,11 @@ function PatientPickerModal({
 
   return (
     <div className="fixed inset-0 z-[60]">
-      {/* overlay */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
 
-      {/* modal */}
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
           <div className="p-5 border-b bg-slate-50 flex items-start justify-between gap-3">
@@ -60,7 +59,6 @@ function PatientPickerModal({
           </div>
 
           <div className="p-5">
-            {/* Search + Add */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
                 <label className="text-xs font-bold text-slate-600">Search</label>
@@ -83,7 +81,6 @@ function PatientPickerModal({
               </div>
             </div>
 
-            {/* List */}
             <div className="mt-4 max-h-[380px] overflow-y-auto pr-1">
               {filteredPatients.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
@@ -159,12 +156,11 @@ function Dashboard({ logout }) {
   const [dataRange, setDataRange] = useState(7);
   const [activeTab, setActiveTab] = useState("motion");
 
-  // popup state
   const [showPatientPicker, setShowPatientPicker] = useState(true);
 
-  // -------------------------
-  // Options
-  // -------------------------
+  // ✅ X-ray modal state
+  const [showXrayModal, setShowXrayModal] = useState(false);
+
   const rangeOptions = useMemo(
     () => [
       { label: "Last 3 Days", value: 3 },
@@ -173,9 +169,6 @@ function Dashboard({ logout }) {
     []
   );
 
-  // -------------------------
-  // Helpers
-  // -------------------------
   const isPatientMatch = useCallback(
     (patient) => {
       if (!searchTerm) return true;
@@ -193,7 +186,6 @@ function Dashboard({ logout }) {
     return patients.find((p) => p.id === selectedPatientId) || null;
   }, [selectedPatientId, patients]);
 
-  // API Calls
   const fetchPatients = useCallback(async () => {
     try {
       const res = await api.get("/api/patients");
@@ -317,7 +309,6 @@ function Dashboard({ logout }) {
     [patients, dataRange, logout]
   );
 
-  // Effects
   useEffect(() => {
     fetchPatients();
   }, [fetchPatients]);
@@ -337,12 +328,10 @@ function Dashboard({ logout }) {
     return () => clearInterval(interval);
   }, [selectedPatientId, fetchData, fetchPatientDetails]);
 
-  // show popup whenever selection is cleared
   useEffect(() => {
     if (!selectedPatientId) setShowPatientPicker(true);
   }, [selectedPatientId]);
 
-  // Handlers
   const handlePatientSelect = (patientId) => {
     setSelectedPatientId(patientId);
     setActiveTab("motion");
@@ -403,7 +392,6 @@ function Dashboard({ logout }) {
         <Navbar2 logout={logout} />
       </div>
 
-      {/* POPUP shown when no patient selected */}
       <PatientPickerModal
         show={showPatientPicker && !selectedPatientId}
         onClose={() => setShowPatientPicker(false)}
@@ -417,7 +405,6 @@ function Dashboard({ logout }) {
 
       <div className="max-w-[1500px] mx-auto p-4 md:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Sidebar */}
           <aside className="lg:col-span-3">
             <PatientsSidebar
               patients={patients}
@@ -434,7 +421,6 @@ function Dashboard({ logout }) {
             />
           </aside>
 
-          {/* Main */}
           <main className="lg:col-span-9">
             <HeaderKpis
               rangeOptions={rangeOptions}
@@ -451,11 +437,11 @@ function Dashboard({ logout }) {
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 <section className="xl:col-span-8">
-                  {/* Prediction navigation buttons*/}
                   <PredictionButtons
                     patientId={selectedPatientId}
                     deviceId={selectedPatientDetails?.device_id}
                     disabled={!selectedPatientId}
+                    onXrayClick={() => setShowXrayModal(true)} // ✅ open modal
                   />
 
                   <ChartsTabs
@@ -522,6 +508,14 @@ function Dashboard({ logout }) {
           onDeletionSuccess={handleDeletionFlowSuccess}
         />
       )}
+
+      {/* ✅ X-ray Predict Modal */}
+      <XRayPredictCard
+        open={showXrayModal}
+        onClose={() => setShowXrayModal(false)}
+        patientId={selectedPatientId}
+        deviceId={selectedPatientDetails?.device_id}
+      />
     </div>
   );
 }

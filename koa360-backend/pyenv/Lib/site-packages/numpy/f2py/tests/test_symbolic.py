@@ -1,35 +1,34 @@
 import pytest
 
 from numpy.f2py.symbolic import (
-    ArithOp,
     Expr,
-    Language,
     Op,
-    as_apply,
+    ArithOp,
+    Language,
+    as_symbol,
+    as_number,
+    as_string,
     as_array,
     as_complex,
-    as_deref,
-    as_eq,
-    as_expr,
+    as_terms,
     as_factors,
-    as_ge,
+    eliminate_quotes,
+    insert_quotes,
+    fromstring,
+    as_expr,
+    as_apply,
+    as_numer_denom,
+    as_ternary,
+    as_ref,
+    as_deref,
+    normalize,
+    as_eq,
+    as_ne,
+    as_lt,
     as_gt,
     as_le,
-    as_lt,
-    as_ne,
-    as_number,
-    as_numer_denom,
-    as_ref,
-    as_string,
-    as_symbol,
-    as_terms,
-    as_ternary,
-    eliminate_quotes,
-    fromstring,
-    insert_quotes,
-    normalize,
+    as_ge,
 )
-
 from . import util
 
 
@@ -493,8 +492,3 @@ class TestSymbolic(util.F2PyTest):
         assert (y(x) + x).polynomial_atoms() == {y(x), x}
         assert (y(x) * x[y]).polynomial_atoms() == {y(x), x[y]}
         assert (y(x)**x).polynomial_atoms() == {y(x)}
-
-    def test_unmatched_parenthesis_gh30268(self):
-        #gh - 30268
-        with pytest.raises(ValueError, match=r"Mismatch of \(\) parenthesis"):
-            Expr.parse("DATA (A, I=1, N", language=Language.Fortran)

@@ -1,89 +1,27 @@
-import pickle
 from functools import reduce
+import pickle
 
 import pytest
 
 import numpy as np
-import numpy._core.fromnumeric as fromnumeric
 import numpy._core.umath as umath
+import numpy._core.fromnumeric as fromnumeric
+from numpy.testing import (
+    assert_, assert_raises, assert_equal,
+    )
 from numpy.ma import (
-    MaskedArray,
-    MaskType,
-    absolute,
-    add,
-    all,
-    allclose,
-    allequal,
-    alltrue,
-    arange,
-    arccos,
-    arcsin,
-    arctan,
-    arctan2,
-    array,
-    average,
-    choose,
-    concatenate,
-    conjugate,
-    cos,
-    cosh,
-    count,
-    divide,
-    equal,
-    exp,
-    filled,
-    getmask,
-    greater,
-    greater_equal,
-    inner,
-    isMaskedArray,
-    less,
-    less_equal,
-    log,
-    log10,
-    make_mask,
-    masked,
-    masked_array,
-    masked_equal,
-    masked_greater,
-    masked_greater_equal,
-    masked_inside,
-    masked_less,
-    masked_less_equal,
-    masked_not_equal,
-    masked_outside,
-    masked_print_option,
-    masked_values,
-    masked_where,
-    maximum,
-    minimum,
-    multiply,
-    nomask,
-    nonzero,
-    not_equal,
-    ones,
-    outer,
-    product,
-    put,
-    ravel,
-    repeat,
-    resize,
-    shape,
-    sin,
-    sinh,
-    sometrue,
-    sort,
-    sqrt,
-    subtract,
-    sum,
-    take,
-    tan,
-    tanh,
-    transpose,
-    where,
-    zeros,
-)
-from numpy.testing import assert_, assert_equal, assert_raises
+    MaskType, MaskedArray, absolute, add, all, allclose, allequal, alltrue,
+    arange, arccos, arcsin, arctan, arctan2, array, average, choose,
+    concatenate, conjugate, cos, cosh, count, divide, equal, exp, filled,
+    getmask, greater, greater_equal, inner, isMaskedArray, less,
+    less_equal, log, log10, make_mask, masked, masked_array, masked_equal,
+    masked_greater, masked_greater_equal, masked_inside, masked_less,
+    masked_less_equal, masked_not_equal, masked_outside,
+    masked_print_option, masked_values, masked_where, maximum, minimum,
+    multiply, nomask, nonzero, not_equal, ones, outer, product, put, ravel,
+    repeat, resize, shape, sin, sinh, sometrue, sort, sqrt, subtract, sum,
+    take, tan, tanh, transpose, where, zeros,
+    )
 
 pi = np.pi
 
@@ -97,8 +35,8 @@ def eq(v, w, msg=''):
 
 class TestMa:
 
-    def _create_data(self):
-        x = np.array([1., 1., 1., -2., pi / 2.0, 4., 5., -10., 10., 1., 2., 3.])
+    def setup_method(self):
+        x = np.array([1., 1., 1., -2., pi/2.0, 4., 5., -10., 10., 1., 2., 3.])
         y = np.array([5., 0., 3., 2., -1., -4., 0., -10., 10., 1., 0., 3.])
         a10 = 10.
         m1 = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
@@ -110,18 +48,18 @@ class TestMa:
         xf = np.where(m1, 1e+20, x)
         s = x.shape
         xm.set_fill_value(1e+20)
-        return x, y, a10, m1, m2, xm, ym, z, zm, xf, s
+        self.d = (x, y, a10, m1, m2, xm, ym, z, zm, xf, s)
 
     def test_testBasic1d(self):
         # Test of basic array creation and properties in 1 dimension.
-        x, _, _, m1, _, xm, _, _, _, xf, s = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         assert_(not isMaskedArray(x))
         assert_(isMaskedArray(xm))
         assert_equal(shape(xm), s)
         assert_equal(xm.shape, s)
         assert_equal(xm.dtype, x.dtype)
-        assert_equal(xm.size, reduce(lambda x, y: x * y, s))
-        assert_equal(count(xm), len(m1) - reduce(lambda x, y: x + y, m1))
+        assert_equal(xm.size, reduce(lambda x, y:x * y, s))
+        assert_equal(count(xm), len(m1) - reduce(lambda x, y:x + y, m1))
         assert_(eq(xm, xf))
         assert_(eq(filled(xm, 1.e20), xf))
         assert_(eq(x, xm))
@@ -129,7 +67,7 @@ class TestMa:
     @pytest.mark.parametrize("s", [(4, 3), (6, 2)])
     def test_testBasic2d(self, s):
         # Test of basic array creation and properties in 2 dimensions.
-        x, y, _, m1, _, xm, ym, _, _, xf, s = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         x.shape = s
         y.shape = s
         xm.shape = s
@@ -148,7 +86,7 @@ class TestMa:
 
     def test_testArithmetic(self):
         # Test of basic arithmetic.
-        x, y, a10, _, _, xm, ym, _, _, xf, s = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         a2d = array([[1, 2], [0, 4]])
         a2dm = masked_array(a2d, [[0, 0], [1, 0]])
         assert_(eq(a2d * a2d, a2d * a2dm))
@@ -192,7 +130,7 @@ class TestMa:
 
     def test_testUfuncs1(self):
         # Test various functions such as sin, cos.
-        x, y, _, _, _, xm, ym, z, zm, _, _ = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         assert_(eq(np.cos(x), cos(xm)))
         assert_(eq(np.cosh(x), cosh(xm)))
         assert_(eq(np.sin(x), sin(xm)))
@@ -238,7 +176,7 @@ class TestMa:
 
     def test_testMinMax(self):
         # Test minimum and maximum.
-        x, _, _, _, _, xm, _, _, _, _, _ = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         xr = np.ravel(x)  # max doesn't work if shaped
         xmr = ravel(xm)
 
@@ -248,7 +186,7 @@ class TestMa:
 
     def test_testAddSumProd(self):
         # Test add, sum, product.
-        x, y, _, _, _, xm, ym, _, _, _, s = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         assert_(eq(np.add.reduce(x), add.reduce(x)))
         assert_(eq(np.add.accumulate(x), add.accumulate(x)))
         assert_(eq(4, sum(array(4), axis=0)))
@@ -417,7 +355,7 @@ class TestMa:
         assert_(eq(x, [0, 1, 10, 40, 4]))
 
     def test_testMaPut(self):
-        _, _, _, _, _, _, ym, _, zm, _, _ = self._create_data()
+        (x, y, a10, m1, m2, xm, ym, z, zm, xf, s) = self.d
         m = [1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]
         i = np.nonzero(m)[0]
         put(ym, i, zm)
@@ -656,12 +594,12 @@ class TestMa:
                                  np.add.reduce(np.arange(6)) * 3. / 12.))
         assert_(allclose(average(y, axis=0), np.arange(6) * 3. / 2.))
         assert_(allclose(average(y, axis=1),
-                                 [average(x, axis=0), average(x, axis=0) * 2.0]))
+                                 [average(x, axis=0), average(x, axis=0)*2.0]))
         assert_(allclose(average(y, None, weights=w2), 20. / 6.))
         assert_(allclose(average(y, axis=0, weights=w2),
                                  [0., 1., 2., 3., 4., 10.]))
         assert_(allclose(average(y, axis=1),
-                                 [average(x, axis=0), average(x, axis=0) * 2.0]))
+                                 [average(x, axis=0), average(x, axis=0)*2.0]))
         m1 = zeros(6)
         m2 = [0, 0, 1, 1, 0, 0]
         m3 = [[0, 0, 1, 1, 0, 0], [0, 1, 1, 1, 1, 0]]
@@ -713,7 +651,7 @@ class TestMa:
 
     def test_testScalarArithmetic(self):
         xm = array(0, mask=1)
-        # TODO FIXME: Find out what the following raises a warning in r8247
+        #TODO FIXME: Find out what the following raises a warning in r8247
         with np.errstate(divide='ignore'):
             assert_((1 / array(0)).mask)
         assert_((1 + xm).mask)
@@ -777,9 +715,8 @@ class TestMa:
 
 
 class TestUfuncs:
-
-    def _create_data(self):
-        return (array([1.0, 0, -1, pi / 2] * 2, mask=[0, 1] + [0] * 6),
+    def setup_method(self):
+        self.d = (array([1.0, 0, -1, pi / 2] * 2, mask=[0, 1] + [0] * 6),
                   array([1.0, 0, -1, pi / 2] * 2, mask=[1, 0] + [0] * 6),)
 
     def test_testUfuncRegression(self):
@@ -808,7 +745,7 @@ class TestUfuncs:
             except AttributeError:
                 uf = getattr(fromnumeric, f)
             mf = getattr(np.ma, f)
-            args = self._create_data()[:uf.nin]
+            args = self.d[:uf.nin]
             with np.errstate():
                 if f in f_invalid_ignore:
                     np.seterr(invalid='ignore')
@@ -820,7 +757,7 @@ class TestUfuncs:
             assert_(eqmask(ur.mask, mr.mask))
 
     def test_reduce(self):
-        a = self._create_data()[0]
+        a = self.d[0]
         assert_(not alltrue(a, axis=0))
         assert_(sometrue(a, axis=0))
         assert_equal(sum(a[:3], axis=0), 0)
@@ -844,7 +781,7 @@ class TestUfuncs:
 
 class TestArrayMethods:
 
-    def _create_data(self):
+    def setup_method(self):
         x = np.array([8.375, 7.545, 8.828, 8.5, 1.757, 5.928,
                       8.43, 7.78, 9.865, 5.878, 8.979, 4.732,
                       3.012, 6.022, 5.095, 3.116, 5.238, 3.957,
@@ -864,10 +801,10 @@ class TestArrayMethods:
         mX = array(data=X, mask=m.reshape(X.shape))
         mXX = array(data=XX, mask=m.reshape(XX.shape))
 
-        return x, X, XX, m, mx, mX, mXX
+        self.d = (x, X, XX, m, mx, mX, mXX)
 
     def test_trace(self):
-        _, X, _, _, _, mX, _ = self._create_data()
+        (x, X, XX, m, mx, mX, mXX,) = self.d
         mXdiag = mX.diagonal()
         assert_equal(mX.trace(), mX.diagonal().compressed().sum())
         assert_(eq(mX.trace(),
@@ -875,15 +812,15 @@ class TestArrayMethods:
                                            axis=0)))
 
     def test_clip(self):
-        x, _, _, _, mx, _, _ = self._create_data()
+        (x, X, XX, m, mx, mX, mXX,) = self.d
         clipped = mx.clip(2, 8)
         assert_(eq(clipped.mask, mx.mask))
         assert_(eq(clipped._data, x.clip(2, 8)))
         assert_(eq(clipped._data, mx._data.clip(2, 8)))
 
     def test_ptp(self):
-        _, X, _, m, mx, mX, _ = self._create_data()
-        n, m = X.shape
+        (x, X, XX, m, mx, mX, mXX,) = self.d
+        (n, m) = X.shape
         # print(type(mx), mx.compressed())
         # raise Exception()
         assert_equal(mx.ptp(), np.ptp(mx.compressed()))
@@ -897,28 +834,28 @@ class TestArrayMethods:
         assert_(eq(mX.ptp(1), rows))
 
     def test_swapaxes(self):
-        _, _, _, _, _, mX, mXX = self._create_data()
+        (x, X, XX, m, mx, mX, mXX,) = self.d
         mXswapped = mX.swapaxes(0, 1)
         assert_(eq(mXswapped[-1], mX[:, -1]))
         mXXswapped = mXX.swapaxes(0, 2)
         assert_equal(mXXswapped.shape, (2, 2, 3, 3))
 
     def test_cumprod(self):
-        mX = self._create_data()[5]
+        (x, X, XX, m, mx, mX, mXX,) = self.d
         mXcp = mX.cumprod(0)
         assert_(eq(mXcp._data, mX.filled(1).cumprod(0)))
         mXcp = mX.cumprod(1)
         assert_(eq(mXcp._data, mX.filled(1).cumprod(1)))
 
     def test_cumsum(self):
-        mX = self._create_data()[5]
+        (x, X, XX, m, mx, mX, mXX,) = self.d
         mXcp = mX.cumsum(0)
         assert_(eq(mXcp._data, mX.filled(0).cumsum(0)))
         mXcp = mX.cumsum(1)
         assert_(eq(mXcp._data, mX.filled(0).cumsum(1)))
 
     def test_varstd(self):
-        _, X, XX, _, _, mX, mXX = self._create_data()
+        (x, X, XX, m, mx, mX, mXX,) = self.d
         assert_(eq(mX.var(axis=None), mX.compressed().var()))
         assert_(eq(mX.std(axis=None), mX.compressed().std()))
         assert_(eq(mXX.var(axis=3).shape, XX.var(axis=3).shape))
