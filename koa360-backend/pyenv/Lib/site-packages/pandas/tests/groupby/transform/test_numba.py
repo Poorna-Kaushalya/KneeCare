@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from pandas.compat import is_platform_arm
 from pandas.errors import NumbaUtilError
 
 from pandas import (
@@ -10,17 +9,8 @@ from pandas import (
     option_context,
 )
 import pandas._testing as tm
-from pandas.util.version import Version
 
-pytestmark = [pytest.mark.single_cpu]
-
-numba = pytest.importorskip("numba")
-pytestmark.append(
-    pytest.mark.skipif(
-        Version(numba.__version__) == Version("0.61") and is_platform_arm(),
-        reason=f"Segfaults on ARM platforms with numba {numba.__version__}",
-    )
-)
+pytestmark = pytest.mark.single_cpu
 
 
 def test_correct_function_signature():

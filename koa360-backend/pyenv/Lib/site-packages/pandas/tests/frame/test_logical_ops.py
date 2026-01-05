@@ -107,12 +107,15 @@ class TestDataFrameLogicalOperators:
 
         df1 = DataFrame("foo", index=[1], columns=["A"])
         df2 = DataFrame(True, index=[1], columns=["A"])
-        if using_infer_string and df1["A"].dtype.storage == "pyarrow":
-            msg = "operation 'or_' not supported for dtype 'str'"
+        msg = re.escape("unsupported operand type(s) for |: 'str' and 'bool'")
+        if using_infer_string:
+            import pyarrow as pa
+
+            with pytest.raises(pa.lib.ArrowNotImplementedError, match="|has no kernel"):
+                df1 | df2
         else:
-            msg = re.escape("unsupported operand type(s) for |: 'str' and 'bool'")
-        with pytest.raises(TypeError, match=msg):
-            df1 | df2
+            with pytest.raises(TypeError, match=msg):
+                df1 | df2
 
     def test_logical_operators(self):
         def _check_bin_op(op):

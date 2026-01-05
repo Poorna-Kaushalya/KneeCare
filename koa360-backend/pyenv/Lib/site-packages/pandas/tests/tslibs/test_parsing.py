@@ -17,7 +17,6 @@ from pandas._libs.tslibs import (
 from pandas._libs.tslibs.parsing import parse_datetime_string_with_reso
 from pandas.compat import (
     ISMUSL,
-    is_platform_arm,
     is_platform_windows,
 )
 import pandas.util._test_decorators as td
@@ -27,7 +26,7 @@ from pandas._testing._hypothesis import DATETIME_NO_TZ
 
 
 @pytest.mark.skipif(
-    is_platform_windows() or ISMUSL or is_platform_arm(),
+    is_platform_windows() or ISMUSL,
     reason="TZ setting incorrect on Windows and MUSL Linux",
 )
 def test_parsing_tzlocal_deprecated():
@@ -395,8 +394,7 @@ def test_hypothesis_delimited_date(
         request.applymarker(
             pytest.mark.xfail(
                 reason="parse_datetime_string cannot reliably tell whether "
-                "e.g. %m.%Y is a float or a date",
-                strict=False,
+                "e.g. %m.%Y is a float or a date"
             )
         )
     date_string = test_datetime.strftime(date_format.replace(" ", delimiter))

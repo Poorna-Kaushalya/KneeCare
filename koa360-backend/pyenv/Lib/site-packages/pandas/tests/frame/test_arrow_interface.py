@@ -10,7 +10,7 @@ pa = pytest.importorskip("pyarrow")
 
 
 @td.skip_if_no("pyarrow", min_version="14.0")
-def test_dataframe_arrow_interface(using_infer_string):
+def test_dataframe_arrow_interface():
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["a", "b", "c"]})
 
     capsule = df.__arrow_c_stream__()
@@ -22,8 +22,7 @@ def test_dataframe_arrow_interface(using_infer_string):
     )
 
     table = pa.table(df)
-    string_type = pa.large_string() if using_infer_string else pa.string()
-    expected = pa.table({"a": [1, 2, 3], "b": pa.array(["a", "b", "c"], string_type)})
+    expected = pa.table({"a": [1, 2, 3], "b": ["a", "b", "c"]})
     assert table.equals(expected)
 
     schema = pa.schema([("a", pa.int8()), ("b", pa.string())])
@@ -33,12 +32,11 @@ def test_dataframe_arrow_interface(using_infer_string):
 
 
 @td.skip_if_no("pyarrow", min_version="15.0")
-def test_dataframe_to_arrow(using_infer_string):
+def test_dataframe_to_arrow():
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["a", "b", "c"]})
 
     table = pa.RecordBatchReader.from_stream(df).read_all()
-    string_type = pa.large_string() if using_infer_string else pa.string()
-    expected = pa.table({"a": [1, 2, 3], "b": pa.array(["a", "b", "c"], string_type)})
+    expected = pa.table({"a": [1, 2, 3], "b": ["a", "b", "c"]})
     assert table.equals(expected)
 
     schema = pa.schema([("a", pa.int8()), ("b", pa.string())])

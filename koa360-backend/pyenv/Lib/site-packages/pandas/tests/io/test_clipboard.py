@@ -17,6 +17,10 @@ from pandas import (
     read_clipboard,
 )
 import pandas._testing as tm
+from pandas.core.arrays import (
+    ArrowStringArray,
+    StringArray,
+)
 
 from pandas.io.clipboard import (
     CheckedCall,
@@ -345,18 +349,26 @@ class TestClipboard:
 
     @pytest.mark.parametrize("engine", ["c", "python"])
     def test_read_clipboard_dtype_backend(
-        self, clipboard, string_storage, dtype_backend, engine, using_infer_string
+        self, clipboard, string_storage, dtype_backend, engine
     ):
         # GH#50502
-        if dtype_backend == "pyarrow":
+        if string_storage == "pyarrow" or dtype_backend == "pyarrow":
             pa = pytest.importorskip("pyarrow")
-            if engine == "c" and string_storage == "pyarrow":
-                # TODO avoid this exception?
-                string_dtype = pd.ArrowDtype(pa.large_string())
-            else:
-                string_dtype = pd.ArrowDtype(pa.string())
+
+        if string_storage == "python":
+            string_array = StringArray(np.array(["x", "y"], dtype=np.object_))
+            string_array_na = StringArray(np.array(["x", NA], dtype=np.object_))
+
+        elif dtype_backend == "pyarrow" and engine != "c":
+            pa = pytest.importorskip("pyarrow")
+            from pandas.arrays import ArrowExtensionArray
+
+            string_array = ArrowExtensionArray(pa.array(["x", "y"]))
+            string_array_na = ArrowExtensionArray(pa.array(["x", None]))
+
         else:
-            string_dtype = pd.StringDtype(string_storage)
+            string_array = ArrowStringArray(pa.array(["x", "y"]))
+            string_array_na = ArrowStringArray(pa.array(["x", None]))
 
         text = """a,b,c,d,e,f,g,h,i
 x,1,4.0,x,2,4.0,,True,False
@@ -368,10 +380,10 @@ y,2,5.0,,,,,False,"""
 
         expected = DataFrame(
             {
-                "a": Series(["x", "y"], dtype=string_dtype),
+                "a": string_array,
                 "b": Series([1, 2], dtype="Int64"),
                 "c": Series([4.0, 5.0], dtype="Float64"),
-                "d": Series(["x", None], dtype=string_dtype),
+                "d": string_array_na,
                 "e": Series([2, NA], dtype="Int64"),
                 "f": Series([4.0, NA], dtype="Float64"),
                 "g": Series([NA, NA], dtype="Int64"),
@@ -389,11 +401,6 @@ y,2,5.0,,,,,False,"""
                 }
             )
             expected["g"] = ArrowExtensionArray(pa.array([None, None]))
-
-        if using_infer_string:
-            expected.columns = expected.columns.astype(
-                pd.StringDtype(string_storage, na_value=np.nan)
-            )
 
         tm.assert_frame_equal(result, expected)
 

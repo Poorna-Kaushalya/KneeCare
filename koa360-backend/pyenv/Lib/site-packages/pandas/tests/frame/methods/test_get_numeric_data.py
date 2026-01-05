@@ -33,9 +33,7 @@ class TestGetNumericData:
             [
                 np.dtype("float64"),
                 np.dtype("int64"),
-                np.dtype(objectname)
-                if not using_infer_string
-                else pd.StringDtype(na_value=np.nan),
+                np.dtype(objectname) if not using_infer_string else "string",
                 np.dtype(datetime64name),
             ],
             index=["a", "b", "c", "f"],

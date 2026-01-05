@@ -18,8 +18,6 @@ import uuid
 import numpy as np
 import pytest
 
-from pandas._config import using_string_dtype
-
 from pandas._libs import lib
 from pandas.compat import (
     pa_version_under13p0,
@@ -42,6 +40,10 @@ from pandas import (
     to_timedelta,
 )
 import pandas._testing as tm
+from pandas.core.arrays import (
+    ArrowStringArray,
+    StringArray,
+)
 from pandas.util.version import Version
 
 from pandas.io import sql
@@ -59,12 +61,9 @@ if TYPE_CHECKING:
     import sqlalchemy
 
 
-pytestmark = [
-    pytest.mark.filterwarnings(
-        "ignore:Passing a BlockManager to DataFrame:DeprecationWarning"
-    ),
-    pytest.mark.single_cpu,
-]
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Passing a BlockManager to DataFrame:DeprecationWarning"
+)
 
 
 @pytest.fixture
@@ -685,7 +684,6 @@ def postgresql_psycopg2_conn(postgresql_psycopg2_engine):
 
 @pytest.fixture
 def postgresql_adbc_conn():
-    pytest.importorskip("pyarrow")
     pytest.importorskip("adbc_driver_postgresql")
     from adbc_driver_postgresql import dbapi
 
@@ -818,7 +816,6 @@ def sqlite_conn_types(sqlite_engine_types):
 
 @pytest.fixture
 def sqlite_adbc_conn():
-    pytest.importorskip("pyarrow")
     pytest.importorskip("adbc_driver_sqlite")
     from adbc_driver_sqlite import dbapi
 
@@ -959,12 +956,12 @@ adbc_connectable = [
 
 adbc_connectable_iris = [
     pytest.param("postgresql_adbc_iris", marks=pytest.mark.db),
-    "sqlite_adbc_iris",
+    pytest.param("sqlite_adbc_iris", marks=pytest.mark.db),
 ]
 
 adbc_connectable_types = [
     pytest.param("postgresql_adbc_types", marks=pytest.mark.db),
-    "sqlite_adbc_types",
+    pytest.param("sqlite_adbc_types", marks=pytest.mark.db),
 ]
 
 
@@ -988,13 +985,13 @@ def test_dataframe_to_sql(conn, test_frame1, request):
 
 @pytest.mark.parametrize("conn", all_connectable)
 def test_dataframe_to_sql_empty(conn, test_frame1, request):
-    if conn == "postgresql_adbc_conn" and not using_string_dtype():
+    if conn == "postgresql_adbc_conn":
         request.node.add_marker(
             pytest.mark.xfail(
-                reason="postgres ADBC driver < 1.2 cannot insert index with null type",
+                reason="postgres ADBC driver cannot insert index with null type",
+                strict=True,
             )
         )
-
     # GH 51086 if conn is sqlite_engine
     conn = request.getfixturevalue(conn)
     empty_df = test_frame1.iloc[:0]
@@ -3573,8 +3570,7 @@ def test_read_sql_dtype_backend(
         result = getattr(pd, func)(
             f"Select * from {table}", conn, dtype_backend=dtype_backend
         )
-        expected = dtype_backend_expected(string_storage, dtype_backend, conn_name)
-
+    expected = dtype_backend_expected(string_storage, dtype_backend, conn_name)
     tm.assert_frame_equal(result, expected)
 
     if "adbc" in conn_name:
@@ -3624,7 +3620,7 @@ def test_read_sql_dtype_backend_table(
 
     with pd.option_context("mode.string_storage", string_storage):
         result = getattr(pd, func)(table, conn, dtype_backend=dtype_backend)
-        expected = dtype_backend_expected(string_storage, dtype_backend, conn_name)
+    expected = dtype_backend_expected(string_storage, dtype_backend, conn_name)
     tm.assert_frame_equal(result, expected)
 
     if "adbc" in conn_name:
@@ -3677,13 +3673,24 @@ def dtype_backend_data() -> DataFrame:
 
 @pytest.fixture
 def dtype_backend_expected():
-    def func(string_storage, dtype_backend, conn_name) -> DataFrame:
-        string_dtype: pd.StringDtype | pd.ArrowDtype
-        if dtype_backend == "pyarrow":
+    def func(storage, dtype_backend, conn_name) -> DataFrame:
+        string_array: StringArray | ArrowStringArray
+        string_array_na: StringArray | ArrowStringArray
+        if storage == "python":
+            string_array = StringArray(np.array(["a", "b", "c"], dtype=np.object_))
+            string_array_na = StringArray(np.array(["a", "b", pd.NA], dtype=np.object_))
+
+        elif dtype_backend == "pyarrow":
             pa = pytest.importorskip("pyarrow")
-            string_dtype = pd.ArrowDtype(pa.string())
+            from pandas.arrays import ArrowExtensionArray
+
+            string_array = ArrowExtensionArray(pa.array(["a", "b", "c"]))  # type: ignore[assignment]
+            string_array_na = ArrowExtensionArray(pa.array(["a", "b", None]))  # type: ignore[assignment]
+
         else:
-            string_dtype = pd.StringDtype(string_storage)
+            pa = pytest.importorskip("pyarrow")
+            string_array = ArrowStringArray(pa.array(["a", "b", "c"]))
+            string_array_na = ArrowStringArray(pa.array(["a", "b", None]))
 
         df = DataFrame(
             {
@@ -3693,8 +3700,8 @@ def dtype_backend_expected():
                 "d": Series([1.5, 2.0, 2.5], dtype="Float64"),
                 "e": Series([True, False, pd.NA], dtype="boolean"),
                 "f": Series([True, False, True], dtype="boolean"),
-                "g": Series(["a", "b", "c"], dtype=string_dtype),
-                "h": Series(["a", "b", None], dtype=string_dtype),
+                "g": string_array,
+                "h": string_array_na,
             }
         )
         if dtype_backend == "pyarrow":
@@ -3843,6 +3850,7 @@ def test_row_object_is_named_tuple(sqlite_engine):
 def test_read_sql_string_inference(sqlite_engine):
     conn = sqlite_engine
     # GH#54430
+    pytest.importorskip("pyarrow")
     table = "test"
     df = DataFrame({"a": ["x", "y"]})
     df.to_sql(table, con=conn, index=False, if_exists="replace")
@@ -3850,7 +3858,7 @@ def test_read_sql_string_inference(sqlite_engine):
     with pd.option_context("future.infer_string", True):
         result = read_sql_table(table, conn)
 
-    dtype = pd.StringDtype(na_value=np.nan)
+    dtype = "string[pyarrow_numpy]"
     expected = DataFrame(
         {"a": ["x", "y"]}, dtype=dtype, columns=Index(["a"], dtype=dtype)
     )
@@ -4153,7 +4161,7 @@ def tquery(query, con=None):
 def test_xsqlite_basic(sqlite_buildin):
     frame = DataFrame(
         np.random.default_rng(2).standard_normal((10, 4)),
-        columns=Index(list("ABCD")),
+        columns=Index(list("ABCD"), dtype=object),
         index=date_range("2000-01-01", periods=10, freq="B"),
     )
     assert sql.to_sql(frame, name="test_table", con=sqlite_buildin, index=False) == 10
@@ -4180,7 +4188,7 @@ def test_xsqlite_basic(sqlite_buildin):
 def test_xsqlite_write_row_by_row(sqlite_buildin):
     frame = DataFrame(
         np.random.default_rng(2).standard_normal((10, 4)),
-        columns=Index(list("ABCD")),
+        columns=Index(list("ABCD"), dtype=object),
         index=date_range("2000-01-01", periods=10, freq="B"),
     )
     frame.iloc[0, 0] = np.nan
@@ -4203,7 +4211,7 @@ def test_xsqlite_write_row_by_row(sqlite_buildin):
 def test_xsqlite_execute(sqlite_buildin):
     frame = DataFrame(
         np.random.default_rng(2).standard_normal((10, 4)),
-        columns=Index(list("ABCD")),
+        columns=Index(list("ABCD"), dtype=object),
         index=date_range("2000-01-01", periods=10, freq="B"),
     )
     create_sql = sql.get_schema(frame, "test")
@@ -4224,7 +4232,7 @@ def test_xsqlite_execute(sqlite_buildin):
 def test_xsqlite_schema(sqlite_buildin):
     frame = DataFrame(
         np.random.default_rng(2).standard_normal((10, 4)),
-        columns=Index(list("ABCD")),
+        columns=Index(list("ABCD"), dtype=object),
         index=date_range("2000-01-01", periods=10, freq="B"),
     )
     create_sql = sql.get_schema(frame, "test")
@@ -4255,11 +4263,11 @@ def test_xsqlite_execute_fail(sqlite_buildin):
     cur.execute(create_sql)
 
     with sql.pandasSQL_builder(sqlite_buildin) as pandas_sql:
-        pandas_sql.execute("INSERT INTO test VALUES('foo', 'bar', 1.234)")
-        pandas_sql.execute("INSERT INTO test VALUES('foo', 'baz', 2.567)")
+        pandas_sql.execute('INSERT INTO test VALUES("foo", "bar", 1.234)')
+        pandas_sql.execute('INSERT INTO test VALUES("foo", "baz", 2.567)')
 
         with pytest.raises(sql.DatabaseError, match="Execution failed on sql"):
-            pandas_sql.execute("INSERT INTO test VALUES('foo', 'bar', 7)")
+            pandas_sql.execute('INSERT INTO test VALUES("foo", "bar", 7)')
 
 
 def test_xsqlite_execute_closed_connection():
@@ -4277,7 +4285,7 @@ def test_xsqlite_execute_closed_connection():
         cur.execute(create_sql)
 
         with sql.pandasSQL_builder(conn) as pandas_sql:
-            pandas_sql.execute("INSERT INTO test VALUES('foo', 'bar', 1.234)")
+            pandas_sql.execute('INSERT INTO test VALUES("foo", "bar", 1.234)')
 
     msg = "Cannot operate on a closed database."
     with pytest.raises(sqlite3.ProgrammingError, match=msg):

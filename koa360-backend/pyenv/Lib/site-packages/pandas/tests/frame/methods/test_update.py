@@ -169,7 +169,7 @@ class TestDataFrameUpdate:
             {
                 "a": [1, 3],
                 "b": [np.nan, 2],
-                "c": Series(["foo", np.nan]),
+                "c": Series(["foo", np.nan], dtype="object"),
             }
         )
         tm.assert_frame_equal(df, expected)

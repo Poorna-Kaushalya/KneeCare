@@ -40,6 +40,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.dtypes.dtypes import PeriodDtype
 
 from pandas import (
+    ArrowDtype,
     DataFrame,
     Index,
     MultiIndex,
@@ -51,7 +52,6 @@ from pandas import (
 from pandas.core.reshape.concat import concat
 from pandas.core.shared_docs import _shared_docs
 
-from pandas.io._util import arrow_table_to_pandas
 from pandas.io.common import (
     IOHandles,
     dedup_names,
@@ -997,7 +997,18 @@ class JsonReader(abc.Iterator, Generic[FrameSeriesStrT]):
             if self.engine == "pyarrow":
                 pyarrow_json = import_optional_dependency("pyarrow.json")
                 pa_table = pyarrow_json.read_json(self.data)
-                return arrow_table_to_pandas(pa_table, dtype_backend=self.dtype_backend)
+
+                mapping: type[ArrowDtype] | None | Callable
+                if self.dtype_backend == "pyarrow":
+                    mapping = ArrowDtype
+                elif self.dtype_backend == "numpy_nullable":
+                    from pandas.io._util import _arrow_dtype_mapping
+
+                    mapping = _arrow_dtype_mapping().get
+                else:
+                    mapping = None
+
+                return pa_table.to_pandas(types_mapper=mapping)
             elif self.engine == "ujson":
                 if self.lines:
                     if self.chunksize:

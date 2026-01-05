@@ -7,37 +7,29 @@ import operator
 import numpy as np
 import pytest
 
-from pandas._config import using_string_dtype
-
-from pandas.compat import HAS_PYARROW
-from pandas.compat.pyarrow import (
-    pa_version_under12p0,
-    pa_version_under19p0,
-)
-import pandas.util._test_decorators as td
+from pandas.compat.pyarrow import pa_version_under12p0
 
 from pandas.core.dtypes.common import is_dtype_equal
 
 import pandas as pd
 import pandas._testing as tm
-from pandas.core.arrays.string_ import StringArrayNumpySemantics
 from pandas.core.arrays.string_arrow import (
     ArrowStringArray,
     ArrowStringArrayNumpySemantics,
 )
 
 
-@pytest.fixture
-def dtype(string_dtype_arguments):
-    """Fixture giving StringDtype from parametrized storage and na_value arguments"""
-    storage, na_value = string_dtype_arguments
-    return pd.StringDtype(storage=storage, na_value=na_value)
+def na_val(dtype):
+    if dtype.storage == "pyarrow_numpy":
+        return np.nan
+    else:
+        return pd.NA
 
 
 @pytest.fixture
-def dtype2(string_dtype_arguments2):
-    storage, na_value = string_dtype_arguments2
-    return pd.StringDtype(storage=storage, na_value=na_value)
+def dtype(string_storage):
+    """Fixture giving StringDtype from parametrized 'string_storage'"""
+    return pd.StringDtype(storage=string_storage)
 
 
 @pytest.fixture
@@ -46,109 +38,52 @@ def cls(dtype):
     return dtype.construct_array_type()
 
 
-def string_dtype_highest_priority(dtype1, dtype2):
-    if HAS_PYARROW:
-        DTYPE_HIERARCHY = [
-            pd.StringDtype("python", na_value=np.nan),
-            pd.StringDtype("pyarrow", na_value=np.nan),
-            pd.StringDtype("python", na_value=pd.NA),
-            pd.StringDtype("pyarrow", na_value=pd.NA),
-        ]
-    else:
-        DTYPE_HIERARCHY = [
-            pd.StringDtype("python", na_value=np.nan),
-            pd.StringDtype("python", na_value=pd.NA),
-        ]
-
-    h1 = DTYPE_HIERARCHY.index(dtype1)
-    h2 = DTYPE_HIERARCHY.index(dtype2)
-    return DTYPE_HIERARCHY[max(h1, h2)]
-
-
-def test_dtype_constructor():
-    pytest.importorskip("pyarrow")
-
-    with tm.assert_produces_warning(FutureWarning):
-        dtype = pd.StringDtype("pyarrow_numpy")
-    assert dtype == pd.StringDtype("pyarrow", na_value=np.nan)
-
-
-def test_dtype_equality():
-    pytest.importorskip("pyarrow")
-
-    dtype1 = pd.StringDtype("python")
-    dtype2 = pd.StringDtype("pyarrow")
-    dtype3 = pd.StringDtype("pyarrow", na_value=np.nan)
-
-    assert dtype1 == pd.StringDtype("python", na_value=pd.NA)
-    assert dtype1 != dtype2
-    assert dtype1 != dtype3
-
-    assert dtype2 == pd.StringDtype("pyarrow", na_value=pd.NA)
-    assert dtype2 != dtype1
-    assert dtype2 != dtype3
-
-    assert dtype3 == pd.StringDtype("pyarrow", na_value=np.nan)
-    assert dtype3 == pd.StringDtype("pyarrow", na_value=float("nan"))
-    assert dtype3 != dtype1
-    assert dtype3 != dtype2
-
-
 def test_repr(dtype):
     df = pd.DataFrame({"A": pd.array(["a", pd.NA, "b"], dtype=dtype)})
-    if dtype.na_value is np.nan:
+    if dtype.storage == "pyarrow_numpy":
         expected = "     A\n0    a\n1  NaN\n2    b"
     else:
         expected = "      A\n0     a\n1  <NA>\n2     b"
     assert repr(df) == expected
 
-    if dtype.na_value is np.nan:
-        expected = "0      a\n1    NaN\n2      b\nName: A, dtype: str"
+    if dtype.storage == "pyarrow_numpy":
+        expected = "0      a\n1    NaN\n2      b\nName: A, dtype: string"
     else:
         expected = "0       a\n1    <NA>\n2       b\nName: A, dtype: string"
     assert repr(df.A) == expected
 
-    if dtype.storage == "pyarrow" and dtype.na_value is pd.NA:
+    if dtype.storage == "pyarrow":
         arr_name = "ArrowStringArray"
         expected = f"<{arr_name}>\n['a', <NA>, 'b']\nLength: 3, dtype: string"
-    elif dtype.storage == "pyarrow" and dtype.na_value is np.nan:
+    elif dtype.storage == "pyarrow_numpy":
         arr_name = "ArrowStringArrayNumpySemantics"
-        expected = f"<{arr_name}>\n['a', nan, 'b']\nLength: 3, dtype: str"
-    elif dtype.storage == "python" and dtype.na_value is np.nan:
-        arr_name = "StringArrayNumpySemantics"
-        expected = f"<{arr_name}>\n['a', nan, 'b']\nLength: 3, dtype: str"
+        expected = f"<{arr_name}>\n['a', nan, 'b']\nLength: 3, dtype: string"
     else:
         arr_name = "StringArray"
         expected = f"<{arr_name}>\n['a', <NA>, 'b']\nLength: 3, dtype: string"
     assert repr(df.A.array) == expected
 
 
-def test_dtype_repr(dtype):
-    if dtype.storage == "pyarrow":
-        if dtype.na_value is pd.NA:
-            assert repr(dtype) == "string[pyarrow]"
-        else:
-            assert repr(dtype) == "<StringDtype(na_value=nan)>"
-    elif dtype.na_value is pd.NA:
-        assert repr(dtype) == "string[python]"
-    else:
-        assert repr(dtype) == "<StringDtype(storage='python', na_value=nan)>"
-
-
 def test_none_to_nan(cls, dtype):
     a = cls._from_sequence(["a", None, "b"], dtype=dtype)
     assert a[1] is not None
-    assert a[1] is a.dtype.na_value
+    assert a[1] is na_val(a.dtype)
 
 
 def test_setitem_validates(cls, dtype):
     arr = cls._from_sequence(["a", "b"], dtype=dtype)
 
-    msg = "Invalid value '10' for dtype 'str"
+    if cls is pd.arrays.StringArray:
+        msg = "Cannot set non-string value '10' into a StringArray."
+    else:
+        msg = "Scalar must be NA or str"
     with pytest.raises(TypeError, match=msg):
         arr[0] = 10
 
-    msg = "Invalid value for dtype 'str"
+    if cls is pd.arrays.StringArray:
+        msg = "Must provide strings."
+    else:
+        msg = "Scalar must be NA or str"
     with pytest.raises(TypeError, match=msg):
         arr[:] = np.array([1, 2])
 
@@ -214,8 +149,8 @@ def test_add(dtype):
     tm.assert_series_equal(result, expected)
 
 
-def test_add_2d(dtype, request):
-    if dtype.storage == "pyarrow":
+def test_add_2d(dtype, request, arrow_string_storage):
+    if dtype.storage in arrow_string_storage:
         reason = "Failed: DID NOT RAISE <class 'ValueError'>"
         mark = pytest.mark.xfail(raises=None, reason=reason)
         request.applymarker(mark)
@@ -289,7 +224,7 @@ def test_comparison_methods_scalar(comparison_op, dtype):
     a = pd.array(["a", None, "c"], dtype=dtype)
     other = "a"
     result = getattr(a, op_name)(other)
-    if dtype.na_value is np.nan:
+    if dtype.storage == "pyarrow_numpy":
         expected = np.array([getattr(item, op_name)(other) for item in a])
         if comparison_op == operator.ne:
             expected[1] = True
@@ -308,7 +243,7 @@ def test_comparison_methods_scalar_pd_na(comparison_op, dtype):
     a = pd.array(["a", None, "c"], dtype=dtype)
     result = getattr(a, op_name)(pd.NA)
 
-    if dtype.na_value is np.nan:
+    if dtype.storage == "pyarrow_numpy":
         if operator.ne == comparison_op:
             expected = np.array([True, True, True])
         else:
@@ -335,7 +270,7 @@ def test_comparison_methods_scalar_not_string(comparison_op, dtype):
 
     result = getattr(a, op_name)(other)
 
-    if dtype.na_value is np.nan:
+    if dtype.storage == "pyarrow_numpy":
         expected_data = {
             "__eq__": [False, False, False],
             "__ne__": [True, True, True],
@@ -351,18 +286,13 @@ def test_comparison_methods_scalar_not_string(comparison_op, dtype):
         tm.assert_extension_array_equal(result, expected)
 
 
-def test_comparison_methods_array(comparison_op, dtype, dtype2):
+def test_comparison_methods_array(comparison_op, dtype):
     op_name = f"__{comparison_op.__name__}__"
 
     a = pd.array(["a", None, "c"], dtype=dtype)
-    other = pd.array([None, None, "c"], dtype=dtype2)
-    result = comparison_op(a, other)
-
-    # ensure operation is commutative
-    result2 = comparison_op(other, a)
-    tm.assert_equal(result, result2)
-
-    if dtype.na_value is np.nan and dtype2.na_value is np.nan:
+    other = [None, None, "c"]
+    result = getattr(a, op_name)(other)
+    if dtype.storage == "pyarrow_numpy":
         if operator.ne == comparison_op:
             expected = np.array([True, True, False])
         else:
@@ -370,56 +300,11 @@ def test_comparison_methods_array(comparison_op, dtype, dtype2):
             expected[-1] = getattr(other[-1], op_name)(a[-1])
         tm.assert_numpy_array_equal(result, expected)
 
-    else:
-        max_dtype = string_dtype_highest_priority(dtype, dtype2)
-        if max_dtype.storage == "python":
-            expected_dtype = "boolean"
-        else:
-            expected_dtype = "bool[pyarrow]"
-
-        expected = np.full(len(a), fill_value=None, dtype="object")
-        expected[-1] = getattr(other[-1], op_name)(a[-1])
-        expected = pd.array(expected, dtype=expected_dtype)
-        tm.assert_extension_array_equal(result, expected)
-
-
-@td.skip_if_no("pyarrow")
-def test_comparison_methods_array_arrow_extension(comparison_op, dtype2):
-    # Test pd.ArrowDtype(pa.string()) against other string arrays
-    import pyarrow as pa
-
-    op_name = f"__{comparison_op.__name__}__"
-    dtype = pd.ArrowDtype(pa.string())
-    a = pd.array(["a", None, "c"], dtype=dtype)
-    other = pd.array([None, None, "c"], dtype=dtype2)
-    result = comparison_op(a, other)
-
-    # ensure operation is commutative
-    result2 = comparison_op(other, a)
-    tm.assert_equal(result, result2)
-
-    expected = pd.array([None, None, True], dtype="bool[pyarrow]")
-    expected[-1] = getattr(other[-1], op_name)(a[-1])
-    tm.assert_extension_array_equal(result, expected)
-
-
-def test_comparison_methods_list(comparison_op, dtype):
-    op_name = f"__{comparison_op.__name__}__"
-
-    a = pd.array(["a", None, "c"], dtype=dtype)
-    other = [None, None, "c"]
-    result = comparison_op(a, other)
-
-    # ensure operation is commutative
-    result2 = comparison_op(other, a)
-    tm.assert_equal(result, result2)
-
-    if dtype.na_value is np.nan:
+        result = getattr(a, op_name)(pd.NA)
         if operator.ne == comparison_op:
-            expected = np.array([True, True, False])
+            expected = np.array([True, True, True])
         else:
             expected = np.array([False, False, False])
-            expected[-1] = getattr(other[-1], op_name)(a[-1])
         tm.assert_numpy_array_equal(result, expected)
 
     else:
@@ -429,12 +314,14 @@ def test_comparison_methods_list(comparison_op, dtype):
         expected = pd.array(expected, dtype=expected_dtype)
         tm.assert_extension_array_equal(result, expected)
 
+        result = getattr(a, op_name)(pd.NA)
+        expected = pd.array([None, None, None], dtype=expected_dtype)
+        tm.assert_extension_array_equal(result, expected)
+
 
 def test_constructor_raises(cls):
     if cls is pd.arrays.StringArray:
         msg = "StringArray requires a sequence of strings or pandas.NA"
-    elif cls is StringArrayNumpySemantics:
-        msg = "StringArrayNumpySemantics requires a sequence of strings or NaN"
     else:
         msg = "Unsupported type '<class 'numpy.ndarray'>' for ArrowExtensionArray"
 
@@ -444,7 +331,7 @@ def test_constructor_raises(cls):
     with pytest.raises(ValueError, match=msg):
         cls(np.array([]))
 
-    if cls is pd.arrays.StringArray or cls is StringArrayNumpySemantics:
+    if cls is pd.arrays.StringArray:
         # GH#45057 np.nan and None do NOT raise, as they are considered valid NAs
         #  for string dtype
         cls(np.array(["a", np.nan], dtype=object))
@@ -485,8 +372,6 @@ def test_from_sequence_no_mutate(copy, cls, dtype):
         import pyarrow as pa
 
         expected = cls(pa.array(na_arr, type=pa.string(), from_pandas=True))
-    elif cls is StringArrayNumpySemantics:
-        expected = cls(nan_arr)
     else:
         expected = cls(na_arr)
 
@@ -501,7 +386,7 @@ def test_astype_int(dtype):
     tm.assert_numpy_array_equal(result, expected)
 
     arr = pd.array(["1", pd.NA, "3"], dtype=dtype)
-    if dtype.na_value is np.nan:
+    if dtype.storage == "pyarrow_numpy":
         err = ValueError
         msg = "cannot convert float NaN to integer"
     else:
@@ -531,6 +416,7 @@ def test_astype_float(dtype, any_float_dtype):
 
 
 @pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.xfail(reason="Not implemented StringArray.sum")
 def test_reduce(skipna, dtype):
     arr = pd.Series(["a", "b", "c"], dtype=dtype)
     result = arr.sum(skipna=skipna)
@@ -538,6 +424,7 @@ def test_reduce(skipna, dtype):
 
 
 @pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.xfail(reason="Not implemented StringArray.sum")
 def test_reduce_missing(skipna, dtype):
     arr = pd.Series([None, "a", None, "b", "c", None], dtype=dtype)
     result = arr.sum(skipna=skipna)
@@ -556,13 +443,13 @@ def test_min_max(method, skipna, dtype):
         expected = "a" if method == "min" else "c"
         assert result == expected
     else:
-        assert result is arr.dtype.na_value
+        assert result is na_val(arr.dtype)
 
 
 @pytest.mark.parametrize("method", ["min", "max"])
 @pytest.mark.parametrize("box", [pd.Series, pd.array])
-def test_min_max_numpy(method, box, dtype, request):
-    if dtype.storage == "pyarrow" and box is pd.array:
+def test_min_max_numpy(method, box, dtype, request, arrow_string_storage):
+    if dtype.storage in arrow_string_storage and box is pd.array:
         if box is pd.array:
             reason = "'<=' not supported between instances of 'str' and 'NoneType'"
         else:
@@ -576,7 +463,7 @@ def test_min_max_numpy(method, box, dtype, request):
     assert result == expected
 
 
-def test_fillna_args(dtype):
+def test_fillna_args(dtype, arrow_string_storage):
     # GH 37987
 
     arr = pd.array(["a", pd.NA], dtype=dtype)
@@ -589,7 +476,10 @@ def test_fillna_args(dtype):
     expected = pd.array(["a", "b"], dtype=dtype)
     tm.assert_extension_array_equal(res, expected)
 
-    msg = "Invalid value '1' for dtype 'str"
+    if dtype.storage in arrow_string_storage:
+        msg = "Invalid value '1' for dtype string"
+    else:
+        msg = "Cannot set non-string value '1' into a StringArray."
     with pytest.raises(TypeError, match=msg):
         arr.fillna(value=1)
 
@@ -602,7 +492,7 @@ def test_arrow_array(dtype):
     data = pd.array(["a", "b", "c"], dtype=dtype)
     arr = pa.array(data)
     expected = pa.array(list(data), type=pa.large_string(), from_pandas=True)
-    if dtype.storage == "pyarrow" and pa_version_under12p0:
+    if dtype.storage in ("pyarrow", "pyarrow_numpy") and pa_version_under12p0:
         expected = pa.chunked_array(expected)
     if dtype.storage == "python":
         expected = pc.cast(expected, pa.string())
@@ -610,9 +500,16 @@ def test_arrow_array(dtype):
 
 
 @pytest.mark.filterwarnings("ignore:Passing a BlockManager:DeprecationWarning")
-def test_arrow_roundtrip(dtype, string_storage, using_infer_string):
+def test_arrow_roundtrip(dtype, string_storage2, request, using_infer_string):
     # roundtrip possible from arrow 1.0.0
     pa = pytest.importorskip("pyarrow")
+
+    if using_infer_string and string_storage2 != "pyarrow_numpy":
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="infer_string takes precedence over string storage"
+            )
+        )
 
     data = pd.array(["a", "b", None], dtype=dtype)
     df = pd.DataFrame({"a": data})
@@ -621,41 +518,28 @@ def test_arrow_roundtrip(dtype, string_storage, using_infer_string):
         assert table.field("a").type == "string"
     else:
         assert table.field("a").type == "large_string"
-    with pd.option_context("string_storage", string_storage):
+    with pd.option_context("string_storage", string_storage2):
         result = table.to_pandas()
-    if dtype.na_value is np.nan and not using_infer_string:
-        assert result["a"].dtype == "object"
-    else:
-        assert isinstance(result["a"].dtype, pd.StringDtype)
-        expected = df.astype(pd.StringDtype(string_storage, na_value=dtype.na_value))
-        if using_infer_string:
-            expected.columns = expected.columns.astype(
-                pd.StringDtype(string_storage, na_value=np.nan)
-            )
-        tm.assert_frame_equal(result, expected)
-        # ensure the missing value is represented by NA and not np.nan or None
-        assert result.loc[2, "a"] is result["a"].dtype.na_value
-
-
-@pytest.mark.filterwarnings("ignore:Passing a BlockManager:DeprecationWarning")
-def test_arrow_from_string(using_infer_string):
-    # not roundtrip,  but starting with pyarrow table without pandas metadata
-    pa = pytest.importorskip("pyarrow")
-    table = pa.table({"a": pa.array(["a", "b", None], type=pa.string())})
-
-    result = table.to_pandas()
-
-    if using_infer_string and not pa_version_under19p0:
-        expected = pd.DataFrame({"a": ["a", "b", None]}, dtype="str")
-    else:
-        expected = pd.DataFrame({"a": ["a", "b", None]}, dtype="object")
+    assert isinstance(result["a"].dtype, pd.StringDtype)
+    expected = df.astype(f"string[{string_storage2}]")
     tm.assert_frame_equal(result, expected)
+    # ensure the missing value is represented by NA and not np.nan or None
+    assert result.loc[2, "a"] is na_val(result["a"].dtype)
 
 
 @pytest.mark.filterwarnings("ignore:Passing a BlockManager:DeprecationWarning")
-def test_arrow_load_from_zero_chunks(dtype, string_storage, using_infer_string):
+def test_arrow_load_from_zero_chunks(
+    dtype, string_storage2, request, using_infer_string
+):
     # GH-41040
     pa = pytest.importorskip("pyarrow")
+
+    if using_infer_string and string_storage2 != "pyarrow_numpy":
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="infer_string takes precedence over string storage"
+            )
+        )
 
     data = pd.array([], dtype=dtype)
     df = pd.DataFrame({"a": data})
@@ -666,26 +550,18 @@ def test_arrow_load_from_zero_chunks(dtype, string_storage, using_infer_string):
         assert table.field("a").type == "large_string"
     # Instantiate the same table with no chunks at all
     table = pa.table([pa.chunked_array([], type=pa.string())], schema=table.schema)
-    with pd.option_context("string_storage", string_storage):
+    with pd.option_context("string_storage", string_storage2):
         result = table.to_pandas()
-
-    if dtype.na_value is np.nan and not using_string_dtype():
-        assert result["a"].dtype == "object"
-    else:
-        assert isinstance(result["a"].dtype, pd.StringDtype)
-        expected = df.astype(pd.StringDtype(string_storage, na_value=dtype.na_value))
-        if using_infer_string:
-            expected.columns = expected.columns.astype(
-                pd.StringDtype(string_storage, na_value=np.nan)
-            )
-        tm.assert_frame_equal(result, expected)
+    assert isinstance(result["a"].dtype, pd.StringDtype)
+    expected = df.astype(f"string[{string_storage2}]")
+    tm.assert_frame_equal(result, expected)
 
 
 def test_value_counts_na(dtype):
-    if dtype.na_value is np.nan:
-        exp_dtype = "int64"
-    elif dtype.storage == "pyarrow":
+    if getattr(dtype, "storage", "") == "pyarrow":
         exp_dtype = "int64[pyarrow]"
+    elif getattr(dtype, "storage", "") == "pyarrow_numpy":
+        exp_dtype = "int64"
     else:
         exp_dtype = "Int64"
     arr = pd.array(["a", "b", "a", pd.NA], dtype=dtype)
@@ -699,10 +575,10 @@ def test_value_counts_na(dtype):
 
 
 def test_value_counts_with_normalize(dtype):
-    if dtype.na_value is np.nan:
-        exp_dtype = np.float64
-    elif dtype.storage == "pyarrow":
+    if getattr(dtype, "storage", "") == "pyarrow":
         exp_dtype = "double[pyarrow]"
+    elif getattr(dtype, "storage", "") == "pyarrow_numpy":
+        exp_dtype = np.float64
     else:
         exp_dtype = "Float64"
     ser = pd.Series(["a", "b", "a", pd.NA], dtype=dtype)
@@ -736,23 +612,10 @@ def test_use_inf_as_na(values, expected, dtype):
             tm.assert_frame_equal(result, expected)
 
 
-def test_value_counts_sort_false(dtype):
-    if dtype.na_value is np.nan:
-        exp_dtype = "int64"
-    elif dtype.storage == "pyarrow":
-        exp_dtype = "int64[pyarrow]"
-    else:
-        exp_dtype = "Int64"
-    ser = pd.Series(["a", "b", "c", "b"], dtype=dtype)
-    result = ser.value_counts(sort=False)
-    expected = pd.Series([1, 2, 1], index=ser[:3], dtype=exp_dtype, name="count")
-    tm.assert_series_equal(result, expected)
-
-
-def test_memory_usage(dtype):
+def test_memory_usage(dtype, arrow_string_storage):
     # GH 33963
 
-    if dtype.storage == "pyarrow":
+    if dtype.storage in arrow_string_storage:
         pytest.skip(f"not applicable for {dtype.storage}")
 
     series = pd.Series(["a", "b", "c"], dtype=dtype)
@@ -772,7 +635,7 @@ def test_astype_from_float_dtype(float_dtype, dtype):
 def test_to_numpy_returns_pdna_default(dtype):
     arr = pd.array(["a", pd.NA, "b"], dtype=dtype)
     result = np.array(arr)
-    expected = np.array(["a", dtype.na_value, "b"], dtype=object)
+    expected = np.array(["a", na_val(dtype), "b"], dtype=object)
     tm.assert_numpy_array_equal(result, expected)
 
 
@@ -803,35 +666,6 @@ def test_isin(dtype, fixed_now_ts):
     expected = pd.Series([True, False, False])
     tm.assert_series_equal(result, expected)
 
-    result = s.isin([fixed_now_ts])
-    expected = pd.Series([False, False, False])
-    tm.assert_series_equal(result, expected)
-
-
-def test_isin_string_array(dtype, dtype2):
-    s = pd.Series(["a", "b", None], dtype=dtype)
-
-    result = s.isin(pd.array(["a", "c"], dtype=dtype2))
-    expected = pd.Series([True, False, False])
-    tm.assert_series_equal(result, expected)
-
-    result = s.isin(pd.array(["a", None], dtype=dtype2))
-    expected = pd.Series([True, False, True])
-    tm.assert_series_equal(result, expected)
-
-
-def test_isin_arrow_string_array(dtype):
-    pa = pytest.importorskip("pyarrow")
-    s = pd.Series(["a", "b", None], dtype=dtype)
-
-    result = s.isin(pd.array(["a", "c"], dtype=pd.ArrowDtype(pa.string())))
-    expected = pd.Series([True, False, False])
-    tm.assert_series_equal(result, expected)
-
-    result = s.isin(pd.array(["a", None], dtype=pd.ArrowDtype(pa.string())))
-    expected = pd.Series([True, False, True])
-    tm.assert_series_equal(result, expected)
-
 
 def test_setitem_scalar_with_mask_validation(dtype):
     # https://github.com/pandas-dev/pandas/issues/47628
@@ -841,11 +675,14 @@ def test_setitem_scalar_with_mask_validation(dtype):
     mask = np.array([False, True, False])
 
     ser[mask] = None
-    assert ser.array[1] is ser.dtype.na_value
+    assert ser.array[1] is na_val(ser.dtype)
 
     # for other non-string we should also raise an error
     ser = pd.Series(["a", "b", "c"], dtype=dtype)
-    msg = "Invalid value '1' for dtype 'str"
+    if type(ser.array) is pd.arrays.StringArray:
+        msg = "Cannot set non-string value"
+    else:
+        msg = "Scalar must be NA or str"
     with pytest.raises(TypeError, match=msg):
         ser[mask] = 1
 
@@ -863,31 +700,4 @@ def test_tolist(dtype):
     arr = pd.array(vals, dtype=dtype)
     result = arr.tolist()
     expected = vals
-    tm.assert_equal(result, expected)
-
-
-@pytest.mark.parametrize("box", [pd.Series, pd.array])
-def test_numpy_array_ufunc(dtype, box):
-    arr = box(["a", "bb", "ccc"], dtype=dtype)
-
-    # custom ufunc that works with string (object) input -> returning numeric
-    str_len_ufunc = np.frompyfunc(lambda x: len(x), 1, 1)
-    result = str_len_ufunc(arr)
-    expected_cls = pd.Series if box is pd.Series else np.array
-    # TODO we should infer int64 dtype here?
-    expected = expected_cls([1, 2, 3], dtype=object)
-    tm.assert_equal(result, expected)
-
-    # custom ufunc returning strings
-    str_multiply_ufunc = np.frompyfunc(lambda x: x * 2, 1, 1)
-    result = str_multiply_ufunc(arr)
-    expected = box(["aa", "bbbb", "cccccc"], dtype=dtype)
-    if dtype.storage == "pyarrow":
-        # TODO ArrowStringArray should also preserve the class / dtype
-        if box is pd.array:
-            expected = np.array(["aa", "bbbb", "cccccc"], dtype=object)
-        else:
-            # not specifying the dtype because the exact dtype is not yet preserved
-            expected = pd.Series(["aa", "bbbb", "cccccc"])
-
     tm.assert_equal(result, expected)

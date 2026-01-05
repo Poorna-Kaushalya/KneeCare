@@ -1882,6 +1882,12 @@ class PeriodIndexResampler(DatetimeIndexResampler):
 
     @property
     def _resampler_for_grouping(self):
+        warnings.warn(
+            "Resampling a groupby with a PeriodIndex is deprecated. "
+            "Cast to DatetimeIndex before resampling instead.",
+            FutureWarning,
+            stacklevel=find_stack_level(),
+        )
         return PeriodIndexResamplerGroupby
 
     def _get_binner_for_time(self):
@@ -2231,7 +2237,15 @@ class TimeGrouper(Grouper):
                 gpr_index=ax,
             )
         elif isinstance(ax, PeriodIndex) or kind == "period":
-            if not isinstance(ax, PeriodIndex):
+            if isinstance(ax, PeriodIndex):
+                # GH#53481
+                warnings.warn(
+                    "Resampling with a PeriodIndex is deprecated. "
+                    "Cast index to DatetimeIndex before resampling instead.",
+                    FutureWarning,
+                    stacklevel=find_stack_level(),
+                )
+            else:
                 warnings.warn(
                     "Resampling with kind='period' is deprecated.  "
                     "Use datetime paths instead.",
@@ -2899,7 +2913,7 @@ def _apply(
     new_message = _apply_groupings_depr.format("DataFrameGroupBy", "resample")
     with rewrite_warning(
         target_message=target_message,
-        target_category=FutureWarning,
+        target_category=DeprecationWarning,
         new_message=new_message,
     ):
         result = grouped.apply(how, *args, include_groups=include_groups, **kwargs)

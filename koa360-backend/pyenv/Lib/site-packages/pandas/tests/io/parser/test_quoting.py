@@ -8,10 +8,7 @@ from io import StringIO
 
 import pytest
 
-from pandas.compat import (
-    PY311,
-    PY314,
-)
+from pandas.compat import PY311
 from pandas.errors import ParserError
 
 from pandas import DataFrame
@@ -24,24 +21,15 @@ xfail_pyarrow = pytest.mark.usefixtures("pyarrow_xfail")
 skip_pyarrow = pytest.mark.usefixtures("pyarrow_skip")
 
 
-if PY314:
-    # TODO: write a regex that works with all new possitibilities here
-    MSG1 = ""
-    MSG2 = r"[\s\S]*"
-else:
-    MSG1 = "a(n)? 1-character string"
-    MSG2 = "string( or None)?"
-
-
 @pytest.mark.parametrize(
     "kwargs,msg",
     [
-        ({"quotechar": "foo"}, f'"quotechar" must be {MSG1}'),
+        ({"quotechar": "foo"}, '"quotechar" must be a(n)? 1-character string'),
         (
             {"quotechar": None, "quoting": csv.QUOTE_MINIMAL},
             "quotechar must be set if quoting enabled",
         ),
-        ({"quotechar": 2}, f'"quotechar" must be {MSG2}, not int'),
+        ({"quotechar": 2}, '"quotechar" must be string( or None)?, not int'),
     ],
 )
 @skip_pyarrow  # ParserError: CSV parse error: Empty CSV file or block
@@ -100,12 +88,8 @@ def test_null_quote_char(all_parsers, quoting, quote_char):
 
     if quoting != csv.QUOTE_NONE:
         # Sanity checking.
-        if not PY314:
-            msg = "1-character string"
-        else:
-            msg = "unicode character or None"
         msg = (
-            f'"quotechar" must be a {msg}'
+            '"quotechar" must be a 1-character string'
             if PY311 and all_parsers.engine == "python" and quote_char == ""
             else "quotechar must be set if quoting enabled"
         )

@@ -8,10 +8,7 @@ import warnings
 
 import numpy as np
 
-from pandas._libs import (
-    lib,
-    missing as libmissing,
-)
+from pandas._libs import lib
 from pandas.util._exceptions import find_stack_level
 from pandas.util._validators import check_dtype_backend
 
@@ -238,7 +235,7 @@ def to_numeric(
                 coerce_numeric=coerce_numeric,
                 convert_to_masked_nullable=dtype_backend is not lib.no_default
                 or isinstance(values_dtype, StringDtype)
-                and values_dtype.na_value is libmissing.NA,
+                and not values_dtype.storage == "pyarrow_numpy",
             )
         except (ValueError, TypeError):
             if errors == "raise":
@@ -253,7 +250,7 @@ def to_numeric(
         dtype_backend is not lib.no_default
         and new_mask is None
         or isinstance(values_dtype, StringDtype)
-        and values_dtype.na_value is libmissing.NA
+        and not values_dtype.storage == "pyarrow_numpy"
     ):
         new_mask = np.zeros(values.shape, dtype=np.bool_)
 

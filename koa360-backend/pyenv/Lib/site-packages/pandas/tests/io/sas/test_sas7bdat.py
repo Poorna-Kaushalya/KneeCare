@@ -248,13 +248,11 @@ def test_zero_variables(datapath):
         pd.read_sas(fname)
 
 
-@pytest.mark.parametrize("encoding", [None, "utf8"])
-def test_zero_rows(datapath, encoding):
+def test_zero_rows(datapath):
     # GH 18198
     fname = datapath("io", "sas", "data", "zero_rows.sas7bdat")
-    result = pd.read_sas(fname, encoding=encoding)
-    str_value = b"a" if encoding is None else "a"
-    expected = pd.DataFrame([{"char_field": str_value, "num_field": 1.0}]).iloc[:0]
+    result = pd.read_sas(fname)
+    expected = pd.DataFrame([{"char_field": "a", "num_field": 1.0}]).iloc[:0]
     tm.assert_frame_equal(result, expected)
 
 
@@ -410,7 +408,7 @@ def test_0x40_control_byte(datapath):
     fname = datapath("io", "sas", "data", "0x40controlbyte.sas7bdat")
     df = pd.read_sas(fname, encoding="ascii")
     fname = datapath("io", "sas", "data", "0x40controlbyte.csv")
-    df0 = pd.read_csv(fname, dtype="str")
+    df0 = pd.read_csv(fname, dtype="object")
     tm.assert_frame_equal(df, df0)
 
 

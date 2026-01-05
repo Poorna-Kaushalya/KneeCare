@@ -1232,7 +1232,7 @@ class _GenericArrayFormatter:
                 return self.na_rep
             elif isinstance(x, PandasObject):
                 return str(x)
-            elif isinstance(x, StringDtype) and x.na_value is NA:
+            elif isinstance(x, StringDtype):
                 return repr(x)
             else:
                 # object dtype

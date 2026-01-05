@@ -49,8 +49,7 @@ from pandas.core.series import Series
 @contextmanager
 def set_numba_data(index: Index):
     numba_data = index._data
-    if numba_data.dtype in (object, "string"):
-        numba_data = np.asarray(numba_data)
+    if numba_data.dtype == object:
         if not lib.is_string_array(numba_data):
             raise ValueError(
                 "The numba engine only supports using string or numeric column names"

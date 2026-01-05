@@ -1804,7 +1804,7 @@ def test_parse_timezone(all_parsers):
 )
 def test_invalid_parse_delimited_date(all_parsers, date_string):
     parser = all_parsers
-    expected = DataFrame({0: [date_string]}, dtype="str")
+    expected = DataFrame({0: [date_string]}, dtype="object")
     result = parser.read_csv(
         StringIO(date_string),
         header=None,
@@ -2083,7 +2083,7 @@ def test_dayfirst_warnings():
 
     # first in DD/MM/YYYY, second in MM/DD/YYYY
     input = "date\n31/12/2014\n03/30/2011"
-    expected = Index(["31/12/2014", "03/30/2011"], dtype="str", name="date")
+    expected = Index(["31/12/2014", "03/30/2011"], dtype="object", name="date")
 
     # A. use dayfirst=True
     res5 = read_csv(
@@ -2209,7 +2209,7 @@ def test_parse_dot_separated_dates(all_parsers):
     if parser.engine == "pyarrow":
         expected_index = Index(
             ["27.03.2003 14:55:00.000", "03.08.2003 15:20:00.000"],
-            dtype="str",
+            dtype="object",
             name="a",
         )
         warn = None

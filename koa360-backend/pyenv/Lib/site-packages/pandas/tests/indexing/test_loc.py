@@ -1,6 +1,5 @@
 """ test label based indexing with loc """
 from collections import namedtuple
-import contextlib
 from datetime import (
     date,
     datetime,
@@ -13,7 +12,7 @@ from dateutil.tz import gettz
 import numpy as np
 import pytest
 
-from pandas._config import using_string_dtype
+from pandas._config import using_pyarrow_string_dtype
 
 from pandas._libs import index as libindex
 from pandas.compat.numpy import np_version_gt2
@@ -64,16 +63,11 @@ def test_not_change_nan_loc(series, new_series, expected_ser):
 
 
 class TestLoc:
-    def test_none_values_on_string_columns(self, using_infer_string):
+    def test_none_values_on_string_columns(self):
         # Issue #32218
-        df = DataFrame(["1", "2", None], columns=["a"], dtype=object)
-        assert df.loc[2, "a"] is None
-
         df = DataFrame(["1", "2", None], columns=["a"], dtype="str")
-        if using_infer_string:
-            assert np.isnan(df.loc[2, "a"])
-        else:
-            assert df.loc[2, "a"] is None
+
+        assert df.loc[2, "a"] is None
 
     @pytest.mark.parametrize("kind", ["series", "frame"])
     def test_loc_getitem_int(self, kind, request):
@@ -648,9 +642,7 @@ class TestLocBaseIndependent:
         expected["x"] = expected["x"].astype(np.int64)
         tm.assert_frame_equal(df, expected)
 
-    # incompatible dtype warning
-    @pytest.mark.xfail(using_string_dtype(), reason="TODO(infer_string)")
-    def test_loc_setitem_consistency_slice_column_len(self, using_infer_string):
+    def test_loc_setitem_consistency_slice_column_len(self):
         # .loc[:,column] setting with slice == len of the column
         # GH10408
         levels = [
@@ -674,24 +666,13 @@ class TestLocBaseIndependent:
         ]
         df = DataFrame(values, index=mi, columns=cols)
 
-        ctx = contextlib.nullcontext()
-        if using_infer_string:
-            ctx = pytest.raises(TypeError, match="Invalid value")
-
-        with ctx:
-            df.loc[:, ("Respondent", "StartDate")] = to_datetime(
-                df.loc[:, ("Respondent", "StartDate")]
-            )
-        with ctx:
-            df.loc[:, ("Respondent", "EndDate")] = to_datetime(
-                df.loc[:, ("Respondent", "EndDate")]
-            )
-
-        if using_infer_string:
-            # infer-objects won't infer stuff anymore
-            return
-
-        df = df.infer_objects()
+        df.loc[:, ("Respondent", "StartDate")] = to_datetime(
+            df.loc[:, ("Respondent", "StartDate")]
+        )
+        df.loc[:, ("Respondent", "EndDate")] = to_datetime(
+            df.loc[:, ("Respondent", "EndDate")]
+        )
+        df = df.infer_objects(copy=False)
 
         # Adding a new key
         df.loc[:, ("Respondent", "Duration")] = (
@@ -755,13 +736,9 @@ class TestLocBaseIndependent:
 
         tm.assert_frame_equal(df, expected)
 
-    @pytest.mark.filterwarnings("ignore:Setting a value on a view:FutureWarning")
-    @pytest.mark.parametrize("has_ref", [True, False])
-    def test_loc_setitem_frame_with_reindex(self, has_ref):
+    def test_loc_setitem_frame_with_reindex(self):
         # GH#6254 setting issue
         df = DataFrame(index=[3, 5, 4], columns=["A"], dtype=float)
-        if has_ref:
-            view = df[:]  # noqa: F841
         df.loc[[4, 3, 5], "A"] = np.array([1, 2, 3], dtype="int64")
 
         # setting integer values into a float dataframe with loc is inplace,
@@ -792,9 +769,7 @@ class TestLocBaseIndependent:
         expected = DataFrame({"A": [3.0, 2.0, 1.0], "B": "string"}, index=[1, 2, 3])
         tm.assert_frame_equal(df, expected)
 
-    @pytest.mark.filterwarnings("ignore:Setting a value on a view:FutureWarning")
-    @pytest.mark.parametrize("has_ref", [True, False])
-    def test_loc_setitem_empty_frame(self, has_ref):
+    def test_loc_setitem_empty_frame(self):
         # GH#6252 setting with an empty frame
         keys1 = ["@" + str(i) for i in range(5)]
         val1 = np.arange(5, dtype="int64")
@@ -805,8 +780,6 @@ class TestLocBaseIndependent:
         index = list(set(keys1).union(keys2))
         df = DataFrame(index=index)
         df["A"] = np.nan
-        if has_ref:
-            view = df[:]  # noqa: F841
         df.loc[keys1, "A"] = val1
 
         df["B"] = np.nan
@@ -816,21 +789,17 @@ class TestLocBaseIndependent:
         #  is inplace, so that dtype is retained
         sera = Series(val1, index=keys1, dtype=np.float64)
         serb = Series(val2, index=keys2)
-        expected = DataFrame({"A": sera, "B": serb}, columns=Index(["A", "B"])).reindex(
-            index=index
-        )
+        expected = DataFrame(
+            {"A": sera, "B": serb}, columns=Index(["A", "B"], dtype=object)
+        ).reindex(index=index)
         tm.assert_frame_equal(df, expected)
 
-    @pytest.mark.filterwarnings("ignore:Setting a value on a view:FutureWarning")
-    @pytest.mark.parametrize("has_ref", [True, False])
-    def test_loc_setitem_frame(self, has_ref):
+    def test_loc_setitem_frame(self):
         df = DataFrame(
             np.random.default_rng(2).standard_normal((4, 4)),
             index=list("abcd"),
             columns=list("ABCD"),
         )
-        if has_ref:
-            view = df[:]  # noqa: F841
 
         result = df.iloc[0, 0]
 
@@ -1020,7 +989,7 @@ class TestLocBaseIndependent:
             to_datetime(42).tz_localize("UTC"),
             to_datetime(666).tz_localize("UTC"),
         ]
-        expected = Series(vals, index=Index(["foo", "bar"]))
+        expected = Series(vals, index=Index(["foo", "bar"], dtype=object))
 
         ser = Series(dtype=object)
         indexer_sl(ser)["foo"] = vals[0]
@@ -1293,23 +1262,20 @@ class TestLocBaseIndependent:
 
         tm.assert_series_equal(result, expected)
 
-    def test_loc_setitem_str_to_small_float_conversion_type(self, using_infer_string):
+    @pytest.mark.xfail(using_pyarrow_string_dtype(), reason="can't set int into string")
+    def test_loc_setitem_str_to_small_float_conversion_type(self):
         # GH#20388
 
         col_data = [str(np.random.default_rng(2).random() * 1e-12) for _ in range(5)]
         result = DataFrame(col_data, columns=["A"])
-        expected = DataFrame(col_data, columns=["A"])
+        expected = DataFrame(col_data, columns=["A"], dtype=object)
         tm.assert_frame_equal(result, expected)
 
         # assigning with loc/iloc attempts to set the values inplace, which
         #  in this case is successful
-        if using_infer_string:
-            with pytest.raises(TypeError, match="Invalid value"):
-                result.loc[result.index, "A"] = [float(x) for x in col_data]
-        else:
-            result.loc[result.index, "A"] = [float(x) for x in col_data]
-            expected = DataFrame(col_data, columns=["A"], dtype=float).astype(object)
-            tm.assert_frame_equal(result, expected)
+        result.loc[result.index, "A"] = [float(x) for x in col_data]
+        expected = DataFrame(col_data, columns=["A"], dtype=float).astype(object)
+        tm.assert_frame_equal(result, expected)
 
         # assigning the entire column using __setitem__ swaps in the new array
         # GH#???
@@ -1493,7 +1459,7 @@ class TestLocBaseIndependent:
 
         result = df["Alpha"]
         expected = Series(categories, index=df.index, name="Alpha").astype(
-            object if not using_infer_string else "str"
+            object if not using_infer_string else "string[pyarrow_numpy]"
         )
         tm.assert_series_equal(result, expected)
 
@@ -1668,7 +1634,7 @@ class TestLocBaseIndependent:
         df.loc[df.index[::2], "str"] = np.nan
         expected = Series(
             [np.nan, "qux", np.nan, "qux", np.nan],
-            dtype=object if not using_infer_string else "str",
+            dtype=object if not using_infer_string else "string[pyarrow_numpy]",
         ).values
         tm.assert_almost_equal(df["str"].values, expected)
 
@@ -2062,11 +2028,15 @@ class TestLocSetitemWithExpansion:
         # partially set with an empty object series
         ser = Series(dtype=object)
         ser.loc["foo"] = 1
-        tm.assert_series_equal(ser, Series([1], index=Index(["foo"])))
+        tm.assert_series_equal(ser, Series([1], index=Index(["foo"], dtype=object)))
         ser.loc["bar"] = 3
-        tm.assert_series_equal(ser, Series([1, 3], index=Index(["foo", "bar"])))
+        tm.assert_series_equal(
+            ser, Series([1, 3], index=Index(["foo", "bar"], dtype=object))
+        )
         ser.loc[3] = 4
-        tm.assert_series_equal(ser, Series([1, 3, 4], index=Index(["foo", "bar", 3])))
+        tm.assert_series_equal(
+            ser, Series([1, 3, 4], index=Index(["foo", "bar", 3], dtype=object))
+        )
 
     def test_loc_setitem_incremental_with_dst(self):
         # GH#20724
@@ -2088,26 +2058,18 @@ class TestLocSetitemWithExpansion:
         ],
         ids=["self", "to_datetime64", "to_pydatetime", "np.datetime64"],
     )
-    def test_loc_setitem_datetime_keys_cast(self, conv, using_infer_string):
-        # GH#9516, GH#51363 changed in 3.0 to not cast on Index.insert
+    def test_loc_setitem_datetime_keys_cast(self, conv):
+        # GH#9516
         dt1 = Timestamp("20130101 09:00:00")
         dt2 = Timestamp("20130101 10:00:00")
         df = DataFrame()
         df.loc[conv(dt1), "one"] = 100
         df.loc[conv(dt2), "one"] = 200
 
-        # the dtype constructed by Index([..]) does not yet follow the unit
-        # of the input on 2.3.x -> so checking this is datetime64, but then
-        # specifying the exact dtype in the expected result
-        if using_infer_string:
-            assert df.index.dtype.kind == "M"
-            exp_dtype = df.index.dtype
-        else:
-            exp_dtype = "datetime64[ns]"
         expected = DataFrame(
             {"one": [100.0, 200.0]},
-            index=Index([dt1, dt2], dtype=exp_dtype),
-            columns=Index(["one"]),
+            index=[dt1, dt2],
+            columns=Index(["one"], dtype=object),
         )
         tm.assert_frame_equal(df, expected)
 
@@ -2170,8 +2132,7 @@ class TestLocSetitemWithExpansion:
         tm.assert_index_equal(result, expected)
 
     @pytest.mark.filterwarnings("ignore:indexing past lexsort depth")
-    @pytest.mark.parametrize("has_ref", [True, False])
-    def test_loc_setitem_with_expansion_nonunique_index(self, index, has_ref):
+    def test_loc_setitem_with_expansion_nonunique_index(self, index):
         # GH#40096
         if not len(index):
             pytest.skip("Not relevant for empty Index")
@@ -2197,15 +2158,11 @@ class TestLocSetitemWithExpansion:
 
         # Add new row, but no new columns
         df = orig.copy()
-        if has_ref:
-            view = df[:]
         df.loc[key, 0] = N
         tm.assert_frame_equal(df, expected)
 
         # add new row on a Series
         ser = orig.copy()[0]
-        if has_ref:
-            view = ser[:]
         ser.loc[key] = N
         # the series machinery lets us preserve int dtype instead of float
         expected = expected[0].astype(np.int64)
@@ -2213,8 +2170,6 @@ class TestLocSetitemWithExpansion:
 
         # add new row and new column
         df = orig.copy()
-        if has_ref:
-            view = df[:]  # noqa: F841
         df.loc[key, 1] = N
         expected = DataFrame(
             {0: list(arr) + [np.nan], 1: [np.nan] * N + [float(N)]},

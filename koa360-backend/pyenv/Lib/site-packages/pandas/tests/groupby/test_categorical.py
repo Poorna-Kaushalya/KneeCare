@@ -32,14 +32,6 @@ def cartesian_product_for_groupers(result, args, names, fill_value=np.nan):
         return a
 
     index = MultiIndex.from_product(map(f, args), names=names)
-    if isinstance(fill_value, dict):
-        # fill_value is a dict mapping column names to fill values
-        # -> reindex column by column (reindex itself does not support this)
-        res = {}
-        for col in result.columns:
-            res[col] = result[col].reindex(index, fill_value=fill_value[col])
-        return DataFrame(res, index=index).sort_index()
-
     return result.reindex(index, fill_value=fill_value).sort_index()
 
 
@@ -75,7 +67,6 @@ _results_for_groupbys_with_missing_categories = {
 }
 
 
-@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_apply_use_categorical_name(df):
     cats = qcut(df.C, 4)
 
@@ -134,11 +125,11 @@ def test_basic(using_infer_string):  # TODO: split this test
         return x.drop_duplicates("person_name").iloc[0]
 
     msg = "DataFrameGroupBy.apply operated on the grouping columns"
-    with tm.assert_produces_warning(FutureWarning, match=msg):
+    with tm.assert_produces_warning(DeprecationWarning, match=msg):
         result = g.apply(f)
     expected = x.iloc[[0, 1]].copy()
     expected.index = Index([1, 2], name="person_id")
-    dtype = "str" if using_infer_string else object
+    dtype = "string[pyarrow_numpy]" if using_infer_string else object
     expected["person_name"] = expected["person_name"].astype(dtype)
     tm.assert_frame_equal(result, expected)
 
@@ -342,13 +333,12 @@ def test_apply(ordered):
     idx = MultiIndex.from_arrays([missing, dense], names=["missing", "dense"])
     expected = Series(1, index=idx)
     msg = "DataFrameGroupBy.apply operated on the grouping columns"
-    with tm.assert_produces_warning(FutureWarning, match=msg):
+    with tm.assert_produces_warning(DeprecationWarning, match=msg):
         result = grouped.apply(lambda x: 1)
     tm.assert_series_equal(result, expected)
 
 
-@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-def test_observed(observed, using_infer_string):
+def test_observed(observed):
     # multiple groupers, don't re-expand the output space
     # of the grouper
     # gh-14942 (implement)
@@ -383,17 +373,10 @@ def test_observed(observed, using_infer_string):
     result = gb.sum()
     if not observed:
         expected = cartesian_product_for_groupers(
-            expected,
-            [cat1, cat2],
-            list("AB"),
-            fill_value={"values": 0, "C": ""} if using_infer_string else 0,
+            expected, [cat1, cat2], list("AB"), fill_value=0
         )
 
     tm.assert_frame_equal(result, expected)
-
-    result = gb["C"].sum()
-    expected = expected["C"]
-    tm.assert_series_equal(result, expected)
 
     # https://github.com/pandas-dev/pandas/issues/8138
     d = {
@@ -1569,7 +1552,6 @@ def test_dataframe_groupby_on_2_categoricals_when_observed_is_false(
         assert (res.loc[unobserved_cats] == expected).all().all()
 
 
-@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_series_groupby_categorical_aggregation_getitem():
     # GH 8870
     d = {"foo": [10, 8, 4, 1], "bar": [10, 20, 30, 40], "baz": ["d", "c", "d", "c"]}
@@ -2068,7 +2050,7 @@ def test_category_order_apply(as_index, sort, observed, method, index_kind, orde
         df["a2"] = df["a"]
         df = df.set_index(keys)
     gb = df.groupby(keys, as_index=as_index, sort=sort, observed=observed)
-    warn = FutureWarning if method == "apply" and index_kind == "range" else None
+    warn = DeprecationWarning if method == "apply" and index_kind == "range" else None
     msg = "DataFrameGroupBy.apply operated on the grouping columns"
     with tm.assert_produces_warning(warn, match=msg):
         op_result = getattr(gb, method)(lambda x: x.sum(numeric_only=True))

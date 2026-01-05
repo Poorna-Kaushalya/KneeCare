@@ -73,7 +73,7 @@ def groupby_with_truncated_bingrouper(frame_for_truncated_bingrouper):
 
 
 class TestGroupBy:
-    def test_groupby_with_timegrouper(self, using_infer_string):
+    def test_groupby_with_timegrouper(self):
         # GH 4161
         # TimeGrouper requires a sorted index
         # also verifies that the resultant index has the correct name
@@ -107,13 +107,11 @@ class TestGroupBy:
                 unit=df.index.unit,
             )
             expected = DataFrame(
-                {"Buyer": "" if using_infer_string else 0, "Quantity": 0},
+                {"Buyer": 0, "Quantity": 0},
                 index=exp_dti,
             )
             # Cast to object to avoid implicit cast when setting entry to "CarlCarlCarl"
             expected = expected.astype({"Buyer": object})
-            if using_infer_string:
-                expected = expected.astype({"Buyer": "str"})
             expected.iloc[0, 0] = "CarlCarlCarl"
             expected.iloc[6, 0] = "CarlCarl"
             expected.iloc[18, 0] = "Joe"
@@ -480,10 +478,10 @@ class TestGroupBy:
             return Series([x["value"].sum()], ("sum",))
 
         msg = "DataFrameGroupBy.apply operated on the grouping columns"
-        with tm.assert_produces_warning(FutureWarning, match=msg):
+        with tm.assert_produces_warning(DeprecationWarning, match=msg):
             expected = df.groupby(Grouper(key="date")).apply(sumfunc_series)
         msg = "DataFrameGroupBy.apply operated on the grouping columns"
-        with tm.assert_produces_warning(FutureWarning, match=msg):
+        with tm.assert_produces_warning(DeprecationWarning, match=msg):
             result = df_dt.groupby(Grouper(freq="ME", key="date")).apply(sumfunc_series)
         tm.assert_frame_equal(
             result.reset_index(drop=True), expected.reset_index(drop=True)
@@ -501,9 +499,9 @@ class TestGroupBy:
             return x.value.sum()
 
         msg = "DataFrameGroupBy.apply operated on the grouping columns"
-        with tm.assert_produces_warning(FutureWarning, match=msg):
+        with tm.assert_produces_warning(DeprecationWarning, match=msg):
             expected = df.groupby(Grouper(key="date")).apply(sumfunc_value)
-        with tm.assert_produces_warning(FutureWarning, match=msg):
+        with tm.assert_produces_warning(DeprecationWarning, match=msg):
             result = df_dt.groupby(Grouper(freq="ME", key="date")).apply(sumfunc_value)
         tm.assert_series_equal(
             result.reset_index(drop=True), expected.reset_index(drop=True)
@@ -931,7 +929,7 @@ class TestGroupBy:
 
         # function that returns a Series
         msg = "DataFrameGroupBy.apply operated on the grouping columns"
-        with tm.assert_produces_warning(FutureWarning, match=msg):
+        with tm.assert_produces_warning(DeprecationWarning, match=msg):
             res = gb.apply(lambda x: x["Quantity"] * 2)
 
         dti = Index([Timestamp("2013-12-31")], dtype=df["Date"].dtype, name="Date")
