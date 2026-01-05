@@ -195,16 +195,11 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
                 {result ? (
                   <div className="mt-2 space-y-2">
                     <div
-                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-extrabold ${badgeClass(
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-extrabold ${badgeClass(
                         result.label
                       )}`}
                     >
                       <span>{result.label}</span>
-                      {typeof result.confidence === "number" ? (
-                        <span className="text-[11px] opacity-80">
-                          {(result.confidence * 100).toFixed(1)}%
-                        </span>
-                      ) : null}
                     </div>
 
                   </div>
