@@ -1,5 +1,3 @@
-# koa360-backend/python/predict_vag_severity.py
-
 import sys, json, os
 import numpy as np
 import pandas as pd

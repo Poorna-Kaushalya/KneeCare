@@ -1,0 +1,33 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.venv/
+venv/
+env/
+pyenv/
+koa360-backend/pyenv/
+
+# --- Node ---
+node_modules/
+koa360-backend/node_modules/
+koa360-dashboard/node_modules/
+
+# --- Build / dist ---
+dist/
+build/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Uploads / runtime ---
+koa360-backend/uploads/
+koa360-backend/uploads/xrays/
+
+# --- Secrets ---
+.env
+koa360-backend/.env
+koa360-dashboard/.env

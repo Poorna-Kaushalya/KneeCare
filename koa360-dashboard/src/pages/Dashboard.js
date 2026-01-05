@@ -14,7 +14,7 @@ import PatientPanel from "../components/dashboard/PatientPanel";
 import EmptyState from "../components/dashboard/EmptyState";
 
 import PredictionButtons from "../components/dashboard/Buttons";
-import XRayPredictCard from "../components/PredicForms/XRayPredictCard"; // ✅ correct path
+import XRayPredictCard from "../components/PredicForms/XRayPredictCard";
 
 // Popup Picker Modal
 function PatientPickerModal({
@@ -509,7 +509,7 @@ function Dashboard({ logout }) {
         />
       )}
 
-      {/* ✅ X-ray Predict Modal */}
+      {/* X-ray Predict Modal */}
       <XRayPredictCard
         open={showXrayModal}
         onClose={() => setShowXrayModal(false)}
