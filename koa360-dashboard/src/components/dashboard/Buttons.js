@@ -32,7 +32,8 @@ export default function PredictionButtons({
   patientId,
   deviceId,
   disabled,
-  onXrayClick, // ✅ new prop
+  onXrayClick,
+  onFusionClick, // ✅ NEW
 }) {
   const navigate = useNavigate();
 
@@ -66,11 +67,12 @@ export default function PredictionButtons({
           disabled={disabled}
         />
 
+        {/* ✅ FUSION opens popup */}
         <PredictionCard
           image={fusionBg}
           title="Fusion"
           subtitle="AI Model"
-          onClick={() => go("/koa-predict/combined")}
+          onClick={() => (onFusionClick ? onFusionClick() : go("/koa-predict/combined"))}
           disabled={disabled}
         />
 

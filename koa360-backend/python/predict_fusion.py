@@ -15,7 +15,7 @@ from tensorflow.keras.applications.densenet import preprocess_input as densenet_
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_DIR = os.path.join(BASE_DIR, "..", "models")
-XRAY_MODEL_PATH = os.path.join(MODEL_DIR, "densenet121_best.keras")
+XRAY_MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetB0_001.keras")
 TABULAR_MODEL_PATH = os.path.join(MODEL_DIR, "xgboost.pkl")
 
 # ✅ NEW: saved from training notebook
