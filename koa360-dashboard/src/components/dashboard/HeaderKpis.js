@@ -14,7 +14,7 @@ export default function HeaderKpis({
   severity,
 }) {
   const chip =
-    "bg-white border border-slate-200 rounded-full px-3 py-2 shadow-sm flex items-center gap-2";
+    "bg-white border border-slate-200 rounded-full px-3 py-1 shadow-sm flex items-center gap-2";
 
   return (
     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4 relative top-16">

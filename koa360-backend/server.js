@@ -17,7 +17,7 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:admin123@cluster
 mongoose.connect(MONGO_URI)
   .then(() => console.log(" MongoDB Connected"))
   .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err.message);
+    console.error(" MongoDB Connection Error:", err.message);
   });
 
 // --- Import Routes ---

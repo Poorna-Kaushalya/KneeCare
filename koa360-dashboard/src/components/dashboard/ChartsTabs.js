@@ -67,9 +67,9 @@ export default function ChartsTabs({
   );
 
   return (
-    <div className={`${card} p-4 md:p-12 relative top-16`}>
+    <div className={`${card} p-0 md:p-6 relative`}>
       {/* Tabs */}
-      <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex flex-wrap gap-4 mb-3">
         <TabButton id="severity" icon={faHeartbeat} label="Progress" />
         <TabButton id="motion" icon={faArrowsRotate} label="Motion" />
         <TabButton id="angle" icon={faAngleRight} label="Angle" />
