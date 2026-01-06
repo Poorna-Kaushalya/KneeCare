@@ -1,0 +1,105 @@
+feature,perm_importance,perm_std
+pain_score,0.5195,0.03394480814498734
+cs,0.008500000000000008,0.0070887234393789186
+platelets,0.008000000000000007,0.0024494897427831805
+rf,0.007500000000000007,0.004609772228646447
+crp,0.003500000000000003,0.002291287847477922
+fbs,0.003500000000000003,0.004500000000000004
+esr,0.003500000000000003,0.002291287847477922
+weight,0.0030000000000000027,0.004582575694955844
+wbc,0.0025000000000000022,0.0025000000000000022
+physical_activity_level_Moderate,0.0020000000000000018,0.003316624790355403
+occupation_Yes,0.0010000000000000009,0.0020000000000000018
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Vitamin D deficiency, Family history of osteoarthritis",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Hypertension - High Blood Pressure, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Vitamin D deficiency,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Sedentary or low-activity lifestyle, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Sedentary or low-activity lifestyle, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Previous knee injury (e.g., ACL tear, meniscus injury, or fracture), Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Hypertension, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Hypertension - High Blood Pressure, Vitamin D deficiency",0.0,0.0
+age,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Family history of osteoarthritis, Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Family history of osteoarthritis, Sedentary or low-activity lifestyle",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Family history of osteoarthritis",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Vitamin D deficiency, Sedentary or low-activity lifestyle, Obesity or overweight",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Diabetes mellitus, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Diabetes mellitus, Hypertension, Family history of osteoarthritis",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Diabetes mellitus, Hypertension - High Blood Pressure, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Diabetes mellitus, Hypertension - High Blood Pressure, Previous knee injury (e.g., ACL tear, meniscus injury, or fracture), Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Diabetes mellitus, Hypertension - High Blood Pressure, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 2 = Medication",0.0,0.0
+what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification,0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 1 = Physiotherapy",0.0,0.0
+does_the_patient_has_vitamin_d_deficiency_Yes,0.0,0.0
+does_the_patient_has_hypertension_Yes,0.0,0.0
+does_the_patient_has_diabetes_Yes,0.0,0.0
+does_the_patient_has_obesity_Yes,0.0,0.0
+what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_3 = Injection,0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_2 = Medication, 3 = Injection",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_2 = Medication, ",0.0,0.0
+what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_2 = Medication,0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_1 = Physiotherapy, 2 = Medication, 3 = Injection, 4 = Surgery",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_1 = Physiotherapy, 2 = Medication, 3 = Injection",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_1 = Physiotherapy, 2 = Medication,",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_1 = Physiotherapy, 2 = Medication",0.0,0.0
+what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_1 = Physiotherapy,0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 3 = Injection",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 2 = Medication, 3 = Injection",0.0,0.0
+does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight,0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 1 = Physiotherapy, 3 = Injection",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 1 = Physiotherapy, 2 = Medication, 3 = Injection",0.0,0.0
+"what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition_0 = Lifestyle modification, 1 = Physiotherapy, 2 = Medication",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Obesity or overweight, Diabetes mellitus, Family history of osteoarthritis, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_None of the above,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+do_you_have_a_family_history_of_osteoarthritis_Not sure,0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Walking long distances, Standing long periods",0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Walking long distances, Squatting, Standing long periods",0.0,0.0
+do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Walking long distances,0.0,0.0
+do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Standing long periods,0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Climbing stairs, Walking long distances, Standing long periods",0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Climbing stairs, Walking long distances, Squatting, Standing long periods",0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Climbing stairs, Walking long distances, Squatting",0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Climbing stairs, Walking long distances",0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Climbing stairs, Standing long periods",0.0,0.0
+"do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)_Climbing stairs, Squatting, Standing long periods",0.0,0.0
+do_you_experience_swelling_in_your_knees_Yes,0.0,0.0
+"have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)_Yes",0.0,0.0
+do_you_currently_experience_knee_pain_Yes,0.0,0.0
+physical_activity_level_Low,0.0,0.0
+gender_Male,0.0,0.0
+bmi,0.0,0.0
+fbc,0.0,0.003162277660168382
+cholesterol,0.0,0.0038729833462074204
+do_you_have_a_family_history_of_osteoarthritis_Yes,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Family history of osteoarthritis, Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Family history of osteoarthritis, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure, Sedentary or low-activity lifestyle, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure, Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+height,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure, Family history of osteoarthritis",0.0,0.0
+does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Hypertension - High Blood Pressure,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Family history of osteoarthritis, Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Family history of osteoarthritis, Hypertension, Sedentary or low-activity lifestyle",0.0,0.0
+does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Family history of osteoarthritis,0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Sedentary or low-activity lifestyle, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Previous knee injury (e.g., ACL tear, meniscus injury, or fracture), Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Hypertension - High Blood Pressure, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Hypertension - High Blood Pressure, Vitamin D deficiency",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Hypertension - High Blood Pressure, Previous knee injury (e.g., ACL tear, meniscus injury, or fracture), Family history of osteoarthritis",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Hypertension - High Blood Pressure, Family history of osteoarthritis, Vitamin D deficiency, Rheumatoid arthritis or autoimmune disease",0.0,0.0
+"does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis_Diabetes mellitus, Hypertension - High Blood Pressure, Family history of osteoarthritis, Vitamin D deficiency",0.0,0.0
+does_the_patient_has_rheumatoid_arthritis_Yes,0.0,0.0
+living_environment_Urban,-0.0010000000000000009,0.0020000000000000018
