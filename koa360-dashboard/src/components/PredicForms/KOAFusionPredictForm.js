@@ -268,22 +268,4 @@ function Select({ label, name, value, onChange, options }) {
   );
 }
 
-function ResultBox({ title, label, probs, highlight }) {
-  return (
-    <div className={`rounded-2xl p-4 ${highlight ? "border-slate-900 bg-white" : "bg-white"}`}>
-      <div className="text-sm font-bold text-slate-700">{title}</div>
-      <div className="mt-2 text-2xl font-extrabold text-slate-900">{label}</div>
 
-      {Array.isArray(probs) && (
-        <div className="mt-3 text-xs text-slate-600">
-          {probs.map((p, i) => (
-            <div key={i} className="flex justify-between">
-              <span>Class {i}</span>
-              <span>{Number(p).toFixed(4)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

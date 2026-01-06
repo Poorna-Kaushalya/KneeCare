@@ -16,7 +16,7 @@ import EmptyState from "../components/dashboard/EmptyState";
 import PredictionButtons from "../components/dashboard/Buttons";
 import XRayPredictCard from "../components/PredicForms/XRayPredictCard";
 import KOAFusionPredictPage from "../components/dashboard/KOAFusionPredictPage";
-
+import KOAClinicalPredictCard from "../components/PredicForms/KOAClinicalPredictCard";
 
 // Popup Picker Modal
 function PatientPickerModal({
@@ -162,6 +162,7 @@ function Dashboard({ logout }) {
 
   const [showXrayModal, setShowXrayModal] = useState(false);
   const [showFusionModal, setShowFusionModal] = useState(false);
+  const [showClinicalModal, setShowClinicalModal] = useState(false);
 
 
   const rangeOptions = useMemo(
@@ -446,6 +447,7 @@ function Dashboard({ logout }) {
                     disabled={!selectedPatientId}
                     onXrayClick={() => setShowXrayModal(true)}
                     onFusionClick={() => setShowFusionModal(true)}
+                    onClinicalClick={() => setShowClinicalModal(true)}
                   />
 
 
@@ -526,6 +528,11 @@ function Dashboard({ logout }) {
         onClose={() => setShowFusionModal(false)}
         patientId={selectedPatientId}
         deviceId={selectedPatientDetails?.device_id}
+      />
+
+      <KOAClinicalPredictCard
+        open={showClinicalModal}
+        onClose={() => setShowClinicalModal(false)}
       />
     </div>
   );
