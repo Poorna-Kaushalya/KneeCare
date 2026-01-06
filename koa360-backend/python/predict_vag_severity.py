@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import joblib
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend root
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
 BUNDLE_PATH = os.path.join(BASE_DIR, "models", "svm_vag_bundle.pkl")
 
 bundle = joblib.load(BUNDLE_PATH)

@@ -21,7 +21,7 @@ function PredictionCard({ image, title, subtitle, onClick, disabled }) {
       </div>
 
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-white text-center">
-        <div className="mt-0 font-extrabold text-lg drop-shadow">{title}</div>
+        <div className="font-extrabold text-lg drop-shadow">{title}</div>
         <div className="text-sm opacity-90 drop-shadow">{subtitle}</div>
       </div>
     </div>
@@ -33,7 +33,8 @@ export default function PredictionButtons({
   deviceId,
   disabled,
   onXrayClick,
-  onFusionClick, // ✅ NEW
+  onFusionClick,
+  onClinicalClick, // ✅ NEW
 }) {
   const navigate = useNavigate();
 
@@ -51,11 +52,12 @@ export default function PredictionButtons({
   return (
     <div className="mt-16 mb-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* ✅ Clinical opens popup */}
         <PredictionCard
           image={clinicalBg}
           title="Clinical"
           subtitle="Data Prediction"
-          onClick={() => go("/koa-predict/clinical")}
+          onClick={() => (onClinicalClick ? onClinicalClick() : go("/koa-predict/clinical"))}
           disabled={disabled}
         />
 
@@ -67,7 +69,6 @@ export default function PredictionButtons({
           disabled={disabled}
         />
 
-        {/* ✅ FUSION opens popup */}
         <PredictionCard
           image={fusionBg}
           title="Fusion"
