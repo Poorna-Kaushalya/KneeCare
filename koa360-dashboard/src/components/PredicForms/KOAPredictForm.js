@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 
-/** Stable (prevents eslint deps warnings) */
+/** Required fields per tab */
 const REQUIRED_BY_TAB = {
   0: [
     "age",
@@ -27,6 +27,43 @@ const REQUIRED_BY_TAB = {
   ],
   2: ["fbs", "wbc", "platelets", "cs", "cholesterol", "crp", "esr", "rf", "fbc"],
 };
+
+/** ✅ Display label mapping (Normal / Osteoarthritis) */
+function displayDiagnosis(pred) {
+  const v = String(pred ?? "").trim().toUpperCase();
+
+  // If backend returns 0/1
+  if (v === "0") return "Normal";
+  if (v === "1") return "Osteoarthritis";
+
+  // If backend returns KL grade
+  if (v === "KL0") return "Normal";
+  if (["KL1", "KL2", "KL3", "KL4"].includes(v)) return "Osteoarthritis";
+
+  // If backend returns 0..4
+  if (["2", "3", "4"].includes(v)) return "Osteoarthritis";
+  if (v === "1") return "Osteoarthritis";
+
+  return String(pred ?? "");
+}
+
+/** Optional severity name if you ever want it */
+function displaySeverity(pred) {
+  const v = String(pred ?? "").trim().toUpperCase();
+  const map = {
+    "0": "Normal",
+    "1": "Doubtful",
+    "2": "Mild",
+    "3": "Moderate",
+    "4": "Severe",
+    KL0: "Normal",
+    KL1: "Doubtful",
+    KL2: "Mild",
+    KL3: "Moderate",
+    KL4: "Severe",
+  };
+  return map[v] || String(pred ?? "");
+}
 
 export default function KOAPredictForm() {
   const API_URL = "http://localhost:5000/api/predict";
@@ -219,7 +256,18 @@ export default function KOAPredictForm() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Prediction failed");
-      setResult(data);
+
+      // ✅ normalize prediction key
+      // backend might return: {prediction: 1} OR {pred: 1} OR {result: 1}
+      const rawPred =
+        data?.prediction ?? data?.pred ?? data?.result ?? data?.class ?? data?.label;
+
+      setResult({
+        ...data,
+        _rawPred: rawPred,
+        diagnosis: displayDiagnosis(rawPred),
+        severity: displaySeverity(rawPred),
+      });
     } catch (err) {
       setError(err?.message || "Something went wrong");
     } finally {
@@ -400,7 +448,6 @@ export default function KOAPredictForm() {
               )}
             </div>
 
-            {/* keep form compact (remove extra bottom whitespace) */}
             <div className="h-0" />
           </form>
 
@@ -413,21 +460,23 @@ export default function KOAPredictForm() {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                   <div>
                     <h3 className="text-blue-900 text-xl font-bold">Analysis Complete</h3>
-                    <p className="text-blue-700">
-                      The model indicates:{" "}
-                      <span className="font-extrabold">{result.prediction}</span>
-                    </p>
-                  </div>
 
-                  <div className="text-center bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
-                    <div className="text-3xl font-black text-blue-600">
-                      {result.confidence == null
-                        ? "--"
-                        : `${(Number(result.confidence) * 100).toFixed(1)}%`}
-                    </div>
-                    <div className="text-xs uppercase tracking-widest font-bold text-gray-400">
-                      Confidence
-                    </div>
+                    {/* ✅ show Normal / Osteoarthritis */}
+                    <p className="text-blue-700">
+                      Diagnosis:{" "}
+                      <span className="font-extrabold">{result.diagnosis}</span>
+                    </p>
+
+                    {/* (optional) show severity mapping too */}
+                    {/* <p className="text-blue-700">
+                      Severity:{" "}
+                      <span className="font-extrabold">{result.severity}</span>
+                    </p> */}
+
+                    {/* Debug: raw predicted label */}
+                    {/* <p className="text-xs text-blue-500 mt-1">
+                      Raw prediction: {String(result._rawPred)}
+                    </p> */}
                   </div>
                 </div>
               )}

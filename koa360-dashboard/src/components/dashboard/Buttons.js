@@ -71,8 +71,8 @@ export default function PredictionButtons({
 
         <PredictionCard
           image={fusionBg}
-          title="Fusion"
-          subtitle="AI Model"
+          title="Severity Level"
+          subtitle="Prediction"
           onClick={() => (onFusionClick ? onFusionClick() : go("/koa-predict/combined"))}
           disabled={disabled}
         />
