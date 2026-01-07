@@ -1,5 +1,3 @@
-// backend/models/AvgSensorData.js
-
 const mongoose = require("mongoose");
 
 const AvgSensorDataSchema = new mongoose.Schema(

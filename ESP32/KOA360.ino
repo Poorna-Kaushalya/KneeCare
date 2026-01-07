@@ -17,13 +17,13 @@ MPU6050 mpuUpper(Wire);
 MPU6050 mpuLower(Wire);
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
-// LM393 microphone / piezo (MD0220 module)
-const int MIC_AO_PIN = 34;   // Analog out from LM393 -> GPIO 34
-const int MIC_DO_PIN = 25;   // Digital out (optional) -> GPIO 25
+// LM393 microphone / piezo 
+const int MIC_AO_PIN = 34;   
+const int MIC_DO_PIN = 25; 
 
 // ==================== Timing ==============================
 unsigned long lastSend = 0;
-const unsigned long sendInterval = 1000; // 1 second
+const unsigned long sendInterval = 1000; 
 
 // ==================== Knee Angle Function =================
 float calculateKneeAngle(float ax1, float ay1, float az1,
@@ -40,7 +40,7 @@ float calculateKneeAngle(float ax1, float ay1, float az1,
   if (dot > 1) dot = 1;
   if (dot < -1) dot = -1;
 
-  return acos(dot) * 180.0 / PI;   // in degrees
+  return acos(dot) * 180.0 / PI;  
 }
 
 // ==================== WiFi Connection =====================
@@ -68,12 +68,11 @@ void setup() {
   Wire.begin();
 
   // LM393 pins
-  pinMode(MIC_AO_PIN, INPUT);   // Analog input
-  pinMode(MIC_DO_PIN, INPUT);   // Digital input (trigger)
+  pinMode(MIC_AO_PIN, INPUT);   
+  pinMode(MIC_DO_PIN, INPUT);   
 
   // Optional: set full-scale ADC range on ESP32
-  analogSetPinAttenuation(MIC_AO_PIN, ADC_11db); // for 0–3.3 V range
-
+  analogSetPinAttenuation(MIC_AO_PIN, ADC_11db); 
   connectWiFi();
 
   // Initialize MPU6050 sensors
@@ -101,7 +100,6 @@ void setup() {
 void loop() {
   unsigned long now = millis();
   if (now - lastSend < sendInterval) {
-    // Still within interval; you can do other tasks here
     return;
   }
   lastSend = now;
@@ -138,9 +136,9 @@ void loop() {
   double objectTemp  = mlx.readObjectTempC();
 
   // ---- LM393 Vibration (Piezo) ----
-  int   micRaw      = analogRead(MIC_AO_PIN);               // 0–4095
-  float micVoltage  = micRaw * (3.3 / 4095.0);              // in volts
-  int   micDigital  = digitalRead(MIC_DO_PIN);              // 0 or 1 (threshold)
+  int   micRaw      = analogRead(MIC_AO_PIN);              
+  float micVoltage  = micRaw * (3.3 / 4095.0);             
+  int   micDigital  = digitalRead(MIC_DO_PIN);              
 
   // Serial debug
   Serial.print("LM393 Raw: ");

@@ -48,15 +48,14 @@ export default function KOAFusionPredictForm() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  // ✅ State (BMI auto)
   const [form, setForm] = useState({
     age: "",
     gender: "",
-    height: "", // cm
-    weight: "", // kg
-    bmi: "", // auto
+    height: "", 
+    weight: "", 
+    bmi: "", 
 
-    occupation: "", // Yes/No
+    occupation: "", 
     physical_activity_level: "",
 
     pain_score: "",
@@ -86,14 +85,12 @@ export default function KOAFusionPredictForm() {
       "",
   });
 
-  //  Auto-calc BMI whenever height/weight change
   useEffect(() => {
     const bmi = calcBMI(form.height, form.weight);
     setForm((p) => {
       if ((p.bmi ?? "") === bmi) return p;
       return { ...p, bmi };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.height, form.weight]);
 
   const onChange = (e) => {
