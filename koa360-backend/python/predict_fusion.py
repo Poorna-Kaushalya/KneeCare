@@ -59,9 +59,7 @@ NUMERIC_COLS = [
     "cs", "cholesterol", "crp", "esr", "rf", "bmi"
 ]
 
-# =========================
-# HELPERS
-# =========================
+
 def safe_float(x, default=np.nan):
     try:
         if x is None:
@@ -100,9 +98,7 @@ def build_raw_df(tabular: dict) -> pd.DataFrame:
 
     return pd.DataFrame([row], columns=RAW_COLS)
 
-# =========================
-# MAIN
-# =========================
+
 def main():
     raw = sys.stdin.read()
     data = json.loads(raw)

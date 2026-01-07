@@ -25,12 +25,12 @@ function toDatasetFormat(feats, sampleRateHz) {
       ((Number(feats.zero_crossing_rate || 0) / fs) / 1000).toFixed(6)
     ),
 
-    // Dataset mean_frequency ≈ 40–45 (scale FFT mean freq)
+    // Dataset mean_frequency
     mean_frequency: Number(
       (Number(feats.mean_frequency || 0) * 384).toFixed(3)
     ),
 
-    // Keep same misspelling as your CSV column: knee_tempurarture
+    // knee_tempurarture
     knee_tempurarture:
       feats.temperature === null || feats.temperature === undefined
         ? null
@@ -218,10 +218,8 @@ router.get("/api/features", async (req, res) => {
     // Choose signal series
     let series;
     if (signal === "knee") {
-      // knee_angle (already in degrees or radians depending on firmware)
       series = rows.map((r) => Number(r.knee_angle || 0));
     } else {
-      // If IMU raw accel is in g, set g2ms2 to 9.80665 to convert to m/s^2
       const g2ms2 = g2ms2Raw ? Number(g2ms2Raw) : 1;
       series = rows.map((r) => {
         const ux = Number(r?.upper?.ax || 0),
@@ -276,10 +274,8 @@ router.get("/api/features", async (req, res) => {
       windowEnd,
       sampleRateHz: sampleRate,
 
-      // original features (unchanged)
       ...featsWithTemp,
 
-      // new optional block (does not break old clients)
       dataset_aligned: datasetAligned,
     });
   } catch (e) {
