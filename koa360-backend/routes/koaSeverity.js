@@ -1,5 +1,3 @@
-// koa360-backend/routes/koaSeverity.js
-
 const express = require("express");
 const path = require("path");
 const { spawn } = require("child_process");
@@ -13,7 +11,8 @@ router.get("/api/koa-severity", async (req, res) => {
     const days = Number(req.query.days || 14);
     const source = String(req.query.source || "piezo").toLowerCase();
 
-    if (!deviceId) return res.status(400).json({ error: "deviceId is required" });
+    if (!deviceId) 
+      return res.status(400).json({ error: "deviceId is required" });
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -50,34 +49,50 @@ router.get("/api/koa-severity", async (req, res) => {
     for (const r of rows) {
       let v = null;
 
-      if (source === "piezo") {
-        // choose one: voltage or raw. (Voltage is usually smoother)
-        v = r?.avg_piezo?.voltage ?? r?.avg_piezo?.raw;
-      } else if (source === "upper_acc") {
-        const ax = r?.avg_upper?.ax, ay = r?.avg_upper?.ay, az = r?.avg_upper?.az;
-        if ([ax, ay, az].every((n) => typeof n === "number" && Number.isFinite(n))) {
-          v = Math.sqrt(ax * ax + ay * ay + az * az);
-        }
-      } else if (source === "lower_acc") {
-        const ax = r?.avg_lower?.ax, ay = r?.avg_lower?.ay, az = r?.avg_lower?.az;
-        if ([ax, ay, az].every((n) => typeof n === "number" && Number.isFinite(n))) {
-          v = Math.sqrt(ax * ax + ay * ay + az * az);
-        }
-      } else if (source === "upper_gyro") {
-        const gx = r?.avg_upper?.gx, gy = r?.avg_upper?.gy, gz = r?.avg_upper?.gz;
-        if ([gx, gy, gz].every((n) => typeof n === "number" && Number.isFinite(n))) {
-          v = Math.sqrt(gx * gx + gy * gy + gz * gz);
-        }
-      } else if (source === "lower_gyro") {
-        const gx = r?.avg_lower?.gx, gy = r?.avg_lower?.gy, gz = r?.avg_lower?.gz;
-        if ([gx, gy, gz].every((n) => typeof n === "number" && Number.isFinite(n))) {
-          v = Math.sqrt(gx * gx + gy * gy + gz * gz);
-        }
-      } else if (source === "knee_angle") {
-        v = r?.avg_knee_angle;
+      switch (source) {
+        case "piezo":
+          v = r?.avg_piezo?.voltage ?? r?.avg_piezo?.raw;
+          break;
+        case "upper_acc":
+          {
+            const { ax, ay, az } = r?.avg_upper ?? {};
+            if ([ax, ay, az].every((n) => typeof n === "number" && Number.isFinite(n))) {
+              v = Math.sqrt(ax * ax + ay * ay + az * az);
+            }
+          }
+          break;
+        case "lower_acc":
+          {
+            const { ax, ay, az } = r?.avg_lower ?? {};
+            if ([ax, ay, az].every((n) => typeof n === "number" && Number.isFinite(n))) {
+              v = Math.sqrt(ax * ax + ay * ay + az * az);
+            }
+          }
+          break;
+        case "upper_gyro":
+          {
+            const { gx, gy, gz } = r?.avg_upper ?? {};
+            if ([gx, gy, gz].every((n) => typeof n === "number" && Number.isFinite(n))) {
+              v = Math.sqrt(gx * gx + gy * gy + gz * gz);
+            }
+          }
+          break;
+        case "lower_gyro":
+          {
+            const { gx, gy, gz } = r?.avg_lower ?? {};
+            if ([gx, gy, gz].every((n) => typeof n === "number" && Number.isFinite(n))) {
+              v = Math.sqrt(gx * gx + gy * gy + gz * gz);
+            }
+          }
+          break;
+        case "knee_angle":
+          v = r?.avg_knee_angle;
+          break;
       }
 
-      if (typeof v === "number" && Number.isFinite(v)) signal_series.push(v);
+      if (typeof v === "number" && Number.isFinite(v)) {
+        signal_series.push(v);
+      }
     }
 
     if (signal_series.length < 10) {
@@ -88,7 +103,7 @@ router.get("/api/koa-severity", async (req, res) => {
       });
     }
 
-    // ✅ Use python from your venv
+    // Use python executable in your venv
     const pythonExe = path.join(__dirname, "..", "pyenv", "Scripts", "python.exe");
     const scriptPath = path.join(__dirname, "..", "python", "predict_vag_severity.py");
 
@@ -118,8 +133,8 @@ router.get("/api/koa-severity", async (req, res) => {
       const to = rows[rows.length - 1]?.createdAt;
 
       return res.json({
-        severity: data.prediction,                 // ✅ used by frontend card
-        confidence: data.confidence ?? null,       // ✅ used by frontend card
+        severity: data.prediction,
+        confidence: data.confidence ?? null,
         deviceId,
         windowDays: days,
         from,
@@ -127,7 +142,7 @@ router.get("/api/koa-severity", async (req, res) => {
         source,
         records_used: rows.length,
         signal_points_used: signal_series.length,
-        features: data.features_used,              // optional debug
+        features: data.features_used,
       });
     });
   } catch (e) {

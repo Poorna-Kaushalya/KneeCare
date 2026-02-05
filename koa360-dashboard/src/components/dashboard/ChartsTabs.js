@@ -22,12 +22,7 @@ import {
 
 import KOASensorSeverity from "../PredicForms/KOASensorSeverity";
 
-export default function ChartsTabs({
-  activeTab,
-  setActiveTab,
-  data,
-  deviceId,
-}) {
+export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) {
   const card = "bg-white border border-slate-200 rounded-2xl shadow-sm";
   const MAX_KNEE_ANGLE = 120;
 
@@ -60,6 +55,7 @@ export default function ChartsTabs({
           ? "bg-blue-600 text-white border-blue-600"
           : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
       }`}
+      type="button"
     >
       <FontAwesomeIcon icon={icon} />
       {label}
@@ -79,9 +75,7 @@ export default function ChartsTabs({
 
       {/* Content */}
       <div className="h-[300px]">
-        {activeTab === "severity" && (
-          <KOASensorSeverity deviceId={deviceId} />
-        )}
+        {activeTab === "severity" && <KOASensorSeverity deviceId={deviceId} />}
 
         {activeTab === "motion" && (
           <ResponsiveContainer width="100%" height="100%">
@@ -103,11 +97,7 @@ export default function ChartsTabs({
               <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} />
               <YAxis tickFormatter={formatDegrees} />
               <Tooltip labelFormatter={formatTime} />
-              <Area
-                dataKey="avg_knee_angle"
-                stroke="#f97316"
-                fill="#f9731620"
-              />
+              <Area dataKey="avg_knee_angle" stroke="#f97316" fill="#f9731620" />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -134,12 +124,9 @@ export default function ChartsTabs({
               <YAxis />
               <Tooltip labelFormatter={formatTime} />
               <Legend />
-              <Line dataKey="avg_piezo.raw" stroke="#ff7300" dot={false} />
-              <Line
-                dataKey="avg_piezo.voltage"
-                stroke="#8884d8"
-                dot={false}
-              />
+              {/* Assuming you want to show mic RMS instead of piezo */}
+              <Line dataKey="avg_microphone.rms" stroke="#ff7300" dot={false} />
+              <Line dataKey="avg_microphone.peak" stroke="#8884d8" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         )}

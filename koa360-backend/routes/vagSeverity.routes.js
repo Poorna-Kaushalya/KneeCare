@@ -9,14 +9,18 @@ router.get("/api/vag/severity/:deviceId", async (req, res) => {
   try {
     const { deviceId } = req.params;
     const days = Number(req.query.days || 14);
-    const source = (req.query.source || "piezo").toLowerCase();
+    const source = (req.query.source || "mic").toLowerCase(); // Default changed to mic
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const rows = await AvgSensorData.find(
       { device_id: deviceId, createdAt: { $gte: since } },
       {
-        "avg_piezo.voltage": 1,
+        "avg_microphone.amplitude": 1,
+        "avg_microphone.peak_frequency": 1,
+        "avg_microphone.noise_level": 1,
+        "avg_microphone.sample_rate_hz": 1,
+
         "avg_upper.ax": 1, "avg_upper.ay": 1, "avg_upper.az": 1,
         "avg_upper.gx": 1, "avg_upper.gy": 1, "avg_upper.gz": 1,
         "avg_lower.ax": 1, "avg_lower.ay": 1, "avg_lower.az": 1,
@@ -40,8 +44,9 @@ router.get("/api/vag/severity/:deviceId", async (req, res) => {
     for (const r of rows) {
       let v = null;
 
-      if (source === "piezo") {
-        v = r?.avg_piezo?.voltage;
+      if (source === "mic") {
+        // Use amplitude from INMP441 microphone data
+        v = r?.avg_microphone?.amplitude;
       } else if (source === "upper_acc") {
         const ax = r?.avg_upper?.ax, ay = r?.avg_upper?.ay, az = r?.avg_upper?.az;
         if ([ax, ay, az].every(n => typeof n === "number" && Number.isFinite(n))) {
