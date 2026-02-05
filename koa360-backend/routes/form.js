@@ -215,10 +215,13 @@ router.get("/api/features", async (req, res) => {
       });
     }
 
-    // Choose signal series
+    // Choose signal series based on requested type
     let series;
     if (signal === "knee") {
       series = rows.map((r) => Number(r.knee_angle || 0));
+    } else if (signal === "microphone") {
+      // Use microphone RMS amplitude time series
+      series = rows.map((r) => Number(r.microphone?.rms || 0));
     } else {
       const g2ms2 = g2ms2Raw ? Number(g2ms2Raw) : 1;
       series = rows.map((r) => {
@@ -254,7 +257,7 @@ router.get("/api/features", async (req, res) => {
     const sampleRate = Math.max(1, Math.round(rows.length / seconds));
 
     // to match your dataset entropy scale, force kaggle_raw
-    const feats = featuresFromSignal(series, sampleRate, "kaggle_raw");
+    const feats = featuresFromSignal(series, sampleRate, entropy);
 
     const featsWithTemp = {
       ...feats,

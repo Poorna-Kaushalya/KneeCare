@@ -4,7 +4,7 @@ const AvgSensorData = require("../models/AvgSensorData");
 
 const router = express.Router();
 
-// Save raw sensor data (includes piezo)
+/* ================= SAVE RAW SENSOR DATA ================= */
 router.post("/api/sensor-data", async (req, res) => {
   try {
     const newData = new RawSensorData(req.body);
@@ -16,11 +16,12 @@ router.post("/api/sensor-data", async (req, res) => {
   }
 });
 
-// Check device connection status
+/* ================= DEVICE STATUS ================= */
 router.get("/api/device-status", async (req, res) => {
   try {
     const recentData = await RawSensorData.findOne({}, {}, { sort: { createdAt: -1 } });
-    const connected = recentData && new Date() - recentData.createdAt < 10000;
+    const connected =
+      recentData && new Date() - recentData.createdAt < 10000; // 10s
     res.json({ connected });
   } catch (err) {
     console.error("device-status error:", err.message);
@@ -28,10 +29,12 @@ router.get("/api/device-status", async (req, res) => {
   }
 });
 
-// Get latest 10 average records
+/* ================= GET LAST 10 AVG RECORDS ================= */
 router.get("/api/sensor-data", async (req, res) => {
   try {
-    const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
+    const data = await AvgSensorData.find()
+      .sort({ createdAt: -1 })
+      .limit(10);
     res.json(data);
   } catch (err) {
     console.error("get avg sensor-data error:", err.message);
@@ -39,7 +42,7 @@ router.get("/api/sensor-data", async (req, res) => {
   }
 });
 
-// Calculate 5-min averages every 5 minutes
+/* ================= 5-MIN AVERAGING JOB ================= */
 setInterval(async () => {
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -50,60 +53,46 @@ setInterval(async () => {
     if (!rawData.length) return;
 
     const device_id = rawData[0].device_id;
+    const count = rawData.length;
 
     let sum_upper = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
     let sum_lower = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
     let sum_angle = 0;
     let sum_temp = { ambient: 0, object: 0 };
-
-    let sum_piezo = { raw: 0, voltage: 0, trigger: 0 };
-    let piezoCount = 0;
+    let sum_mic = { rms: 0, peak: 0, energy: 0 };
+    let micCount = 0;
 
     rawData.forEach((d) => {
-      // Upper sensor sums
       if (d.upper) {
-        sum_upper.ax += d.upper.ax || 0;
-        sum_upper.ay += d.upper.ay || 0;
-        sum_upper.az += d.upper.az || 0;
-        sum_upper.gx += d.upper.gx || 0;
-        sum_upper.gy += d.upper.gy || 0;
-        sum_upper.gz += d.upper.gz || 0;
-        sum_upper.temp += d.upper.temp || 0;
+        Object.keys(sum_upper).forEach(
+          (k) => (sum_upper[k] += d.upper[k] || 0)
+        );
       }
 
-      // Lower sensor sums
       if (d.lower) {
-        sum_lower.ax += d.lower.ax || 0;
-        sum_lower.ay += d.lower.ay || 0;
-        sum_lower.az += d.lower.az || 0;
-        sum_lower.gx += d.lower.gx || 0;
-        sum_lower.gy += d.lower.gy || 0;
-        sum_lower.gz += d.lower.gz || 0;
-        sum_lower.temp += d.lower.temp || 0;
+        Object.keys(sum_lower).forEach(
+          (k) => (sum_lower[k] += d.lower[k] || 0)
+        );
       }
 
-      // Knee angle
       sum_angle += d.knee_angle || 0;
 
-      // Temperature sensor 
       if (d.temperature) {
         sum_temp.ambient += d.temperature.ambient || 0;
         sum_temp.object += d.temperature.object || 0;
       }
 
-      // Piezo (VAG) sensor
-      if (d.piezo) {
-        sum_piezo.raw += d.piezo.raw || 0;
-        sum_piezo.voltage += d.piezo.voltage || 0;
-        sum_piezo.trigger += d.piezo.trigger || 0;
-        piezoCount++;
+      if (d.microphone) {
+        sum_mic.rms += d.microphone.rms || 0;
+        sum_mic.peak += d.microphone.peak || 0;
+        sum_mic.energy += d.microphone.energy || 0;
+        micCount++;
       }
     });
 
-    const count = rawData.length;
-
     const avgData = new AvgSensorData({
       device_id,
+
       avg_upper: {
         ax: sum_upper.ax / count,
         ay: sum_upper.ay / count,
@@ -113,6 +102,7 @@ setInterval(async () => {
         gz: sum_upper.gz / count,
         temp: sum_upper.temp / count,
       },
+
       avg_lower: {
         ax: sum_lower.ax / count,
         ay: sum_lower.ay / count,
@@ -122,52 +112,53 @@ setInterval(async () => {
         gz: sum_lower.gz / count,
         temp: sum_lower.temp / count,
       },
+
       avg_knee_angle: sum_angle / count,
+
       avg_temperature: {
         ambient: sum_temp.ambient / count,
         object: sum_temp.object / count,
       },
 
-      avg_piezo: piezoCount > 0
-        ? {
-          raw: sum_piezo.raw / piezoCount,     
-          voltage: sum_piezo.voltage / piezoCount,  
-          trigger_rate: sum_piezo.trigger / piezoCount,
-        }
-        : undefined,
+      avg_microphone:
+        micCount > 0
+          ? {
+              rms: sum_mic.rms / micCount,
+              peak: sum_mic.peak / micCount,
+              energy: sum_mic.energy / micCount,
+            }
+          : undefined,
     });
 
     await avgData.save();
-    await RawSensorData.deleteMany({ _id: { $in: rawData.map((d) => d._id) } });
-    console.log(`✅ Saved 5-min average & deleted ${rawData.length} raw entries`);
+    await RawSensorData.deleteMany({
+      _id: { $in: rawData.map((d) => d._id) },
+    });
+
+    console.log(`✅ 5-min AVG saved (${count} samples)`);
   } catch (err) {
     console.error("5-min average error:", err.message);
   }
 }, 5 * 60 * 1000);
 
-// Get average records filtered by device ID and configurable time range
+/* ================= FILTERED AVG DATA ================= */
 router.get("/api/sensor-datas", async (req, res) => {
   try {
     const { deviceId, range } = req.query;
-
     if (!deviceId) {
-      return res.status(400).json({ error: "Missing deviceId query parameter." });
+      return res.status(400).json({ error: "Missing deviceId" });
     }
 
-    // Default to 7 days
     const days = parseInt(range, 10) || 7;
-    
-    // Calculate the start date
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000); 
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const data = await AvgSensorData.find({
       device_id: deviceId,
-      createdAt: { $gte: startDate }
-    })
-      .sort({ createdAt: 1 });
+      createdAt: { $gte: startDate },
+    }).sort({ createdAt: 1 });
 
-    if (!data || data.length === 0) {
-      return res.status(404).json({ error: `No sensor data found for device ID: ${deviceId} in the last ${days} day(s).` });
+    if (!data.length) {
+      return res.status(404).json({ error: "No data found" });
     }
 
     res.json(data);

@@ -14,7 +14,7 @@ function FormEntry({ logout }) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const timerRef = useRef(null);
 
-  // computed features
+  // computed features including INMP441 mic features
   const [features, setFeatures] = useState({
     windowStart: "",
     windowEnd: "",
@@ -25,6 +25,8 @@ function FormEntry({ logout }) {
     spectral_entropy: "",
     zero_crossing_rate: "",
     temperature: "",
+    noise_floor: "",
+    signal_to_noise_ratio: "",
   });
 
   // clinical form (notes removed)
@@ -59,6 +61,8 @@ function FormEntry({ logout }) {
       spectral_entropy: "",
       zero_crossing_rate: "",
       temperature: "",
+      noise_floor: "",
+      signal_to_noise_ratio: "",
     });
 
   // stable fetch to satisfy eslint deps
@@ -82,6 +86,8 @@ function FormEntry({ logout }) {
         spectral_entropy: d.spectral_entropy ?? "",
         zero_crossing_rate: d.zero_crossing_rate ?? "",
         temperature: d.temperature ?? "",
+        noise_floor: d.noise_floor ?? "",
+        signal_to_noise_ratio: d.signal_to_noise_ratio ?? "",
       });
     } catch (err) {
       console.error("Failed to fetch features:", err);
@@ -147,6 +153,8 @@ function FormEntry({ logout }) {
         zero_crossing_rate: features.zero_crossing_rate,
         mean_frequency: features.mean_frequency,
         temperature: features.temperature,
+        noise_floor: features.noise_floor,
+        signal_to_noise_ratio: features.signal_to_noise_ratio,
         knee_condition: form.knee_condition,
         severity_level: form.severity_level,
         treatment_advised: form.treatment_advised,
@@ -367,6 +375,8 @@ function FormEntry({ logout }) {
                 <InfoRow label="Spectral Entropy (0–1)" value={features.spectral_entropy} />
                 <InfoRow label="Zero Crossing Rate (/s)" value={features.zero_crossing_rate} />
                 <InfoRow label="Temperature (°C)" value={features.temperature ?? "N/A"} />
+                <InfoRow label="Noise Floor" value={features.noise_floor ?? "N/A"} />
+                <InfoRow label="SNR (dB)" value={features.signal_to_noise_ratio ?? "N/A"} />
               </div>
             </fieldset>
 
@@ -464,12 +474,12 @@ function Select({ label, value, onChange, options, disabled, className }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={className || "w-full border rounded-lg px-3 py-2"}
+        className={className}
         disabled={disabled}
       >
-        {options.map(([val, text]) => (
+        {options.map(([val, label]) => (
           <option key={val} value={val}>
-            {text}
+            {label}
           </option>
         ))}
       </select>
@@ -477,53 +487,52 @@ function Select({ label, value, onChange, options, disabled, className }) {
   );
 }
 
-/** Circular progress ring */
-function CircleProgress({
-  value = 0,
-  size = 112,
-  stroke = 10,
-  color = "text-blue-600",
-  bg = "text-gray-200",
-  label,
-}) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const dash = (Math.max(0, Math.min(100, value)) / 100) * c;
+function CircleProgress({ value, size, stroke, color, bg, label }) {
+  const center = size / 2;
+  const radius = center - stroke / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (circumference * value) / 100;
 
   return (
-    <div
-      className="relative inline-block"
-      style={{ width: size, height: size }}
+    <svg
+      width={size}
+      height={size}
+      className="inline-block"
       role="img"
-      aria-label={`Collection progress ${Math.round(value)} percent`}
+      aria-label={`Progress: ${value}%`}
     >
-      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          className={bg}
-          strokeWidth={stroke}
-          stroke="currentColor"
-          opacity="0.28"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          className={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c - dash}
-          stroke="currentColor"
-          style={{ transition: "stroke-dashoffset 300ms ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center">{label}</div>
-    </div>
+      <circle
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        stroke={bg}
+        fill="none"
+        r={radius}
+        cx={center}
+        cy={center}
+      />
+      <circle
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        stroke={color}
+        fill="none"
+        r={radius}
+        cx={center}
+        cy={center}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+      />
+      <foreignObject
+        x="0"
+        y="0"
+        width={size}
+        height={size}
+        className="pointer-events-none"
+      >
+        <div className="w-full h-full flex items-center justify-center">
+          {label}
+        </div>
+      </foreignObject>
+    </svg>
   );
 }
 
