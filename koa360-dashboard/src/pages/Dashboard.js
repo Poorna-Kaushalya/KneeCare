@@ -17,6 +17,8 @@ import XRayPredictCard from "../components/PredicForms/XRayPredictCard";
 import KOAFusionPredictPage from "../components/dashboard/KOAFusionPredictPage";
 import KOAClinicalPredictCard from "../components/PredicForms/KOAClinicalPredictCard";
 
+import MedicalDataUpdateModal from "../components/dashboard/MedicalDataUpdateModal";
+
 function PatientPickerModal({
   show,
   onClose,
@@ -153,7 +155,7 @@ function Dashboard({ logout }) {
   const [showDeleteFlow, setShowDeleteFlow] = useState(false);
   const [patientForDeleteFlow, setPatientForDeleteFlow] = useState(null);
 
-  const [dataRange, setDataRange] = useState(7); // (kept if you use it elsewhere)
+  const [dataRange] = useState(7);
   const [activeTab, setActiveTab] = useState("motion");
 
   const [showPatientPicker, setShowPatientPicker] = useState(true);
@@ -162,14 +164,7 @@ function Dashboard({ logout }) {
   const [showFusionModal, setShowFusionModal] = useState(false);
   const [showClinicalModal, setShowClinicalModal] = useState(false);
 
-  // Optional: kept because you had it; remove if unused anywhere else
-  const rangeOptions = useMemo(
-    () => [
-      { label: "Last 3 Days", value: 3 },
-      { label: "Last Week", value: 7 },
-    ],
-    []
-  );
+  const [showMedicalModal, setShowMedicalModal] = useState(false);
 
   const isPatientMatch = useCallback(
     (patient) => {
@@ -268,8 +263,6 @@ function Dashboard({ logout }) {
         });
 
         setData(enriched);
-
-        // ✅ Removed: step counting + env temp extraction (setSteps / setEnvTemp)
       } catch (err) {
         if (err.response?.status === 401) logout();
         console.error("Sensor data fetch error:", err);
@@ -277,6 +270,24 @@ function Dashboard({ logout }) {
       }
     },
     [patients, dataRange, logout]
+  );
+
+  // ✅ VERY IMPORTANT: after medical save, update BOTH states
+  const handleMedicalSaved = useCallback(
+    async (updatedPatient) => {
+      // 1) Update right panel immediately
+      setSelectedPatientDetails(updatedPatient);
+
+      // 2) Update sidebar list without needing refresh
+      setPatients((prev) =>
+        prev.map((p) => (p.id === updatedPatient.id ? { ...p, ...updatedPatient } : p))
+      );
+
+      // 3) Optional: re-fetch from backend to guarantee consistency
+      await fetchPatients();
+      if (selectedPatientId) await fetchPatientDetails(selectedPatientId);
+    },
+    [fetchPatients, fetchPatientDetails, selectedPatientId]
   );
 
   useEffect(() => {
@@ -312,7 +323,6 @@ function Dashboard({ logout }) {
     setSelectedPatientId(null);
     setSelectedPatientDetails(null);
     setData([]);
-    // ✅ Removed: setSteps(0), setEnvTemp(0)
   };
 
   const handleAddPatientSuccess = () => {
@@ -432,6 +442,8 @@ function Dashboard({ logout }) {
                       selectedPatientDetails &&
                       handleEditPatient(selectedPatientDetails, "medication")
                     }
+                    // ✅ Add this button inside PatientPanel and call this prop
+                    onEditMedical={() => setShowMedicalModal(true)}
                   />
                 </aside>
               </div>
@@ -491,6 +503,14 @@ function Dashboard({ logout }) {
       <KOAClinicalPredictCard
         open={showClinicalModal}
         onClose={() => setShowClinicalModal(false)}
+      />
+
+      {/* ✅ Medical update modal */}
+      <MedicalDataUpdateModal
+        open={showMedicalModal}
+        onClose={() => setShowMedicalModal(false)}
+        details={selectedPatientDetails}
+        onSaved={handleMedicalSaved}
       />
     </div>
   );

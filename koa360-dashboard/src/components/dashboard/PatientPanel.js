@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import api from "../../api/api"; 
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEdit,
@@ -60,11 +62,17 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
 
   const setField = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const numOrUndef = (v) => (v === "" ? undefined : Number(v));
-  const boolOrUndef = (v) => {
+  // safer conversions
+  const numOrNull = (v) => {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const boolOrNull = (v) => {
     if (v === "true") return true;
     if (v === "false") return false;
-    return undefined;
+    return null;
   };
 
   const onSave = async () => {
@@ -78,37 +86,33 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
       }
 
       const payload = {
-        heightCm: numOrUndef(form.heightCm),
-        weightKg: numOrUndef(form.weightKg),
-        previousKneeInjury: boolOrUndef(form.previousKneeInjury),
-        crp: numOrUndef(form.crp),
-        esr: numOrUndef(form.esr),
-        rf: numOrUndef(form.rf),
-        cholesterol: numOrUndef(form.cholesterol),
-        wbc: numOrUndef(form.wbc),
-        platelets: numOrUndef(form.platelets),
-        fbs: numOrUndef(form.fbs),
-        sugar: numOrUndef(form.sugar),
-        fbcValue: numOrUndef(form.fbcValue),
+        heightCm: numOrNull(form.heightCm),
+        weightKg: numOrNull(form.weightKg),
+        previousKneeInjury: boolOrNull(form.previousKneeInjury),
+
+        crp: numOrNull(form.crp),
+        esr: numOrNull(form.esr),
+        rf: numOrNull(form.rf),
+        cholesterol: numOrNull(form.cholesterol),
+
+        wbc: numOrNull(form.wbc),
+        platelets: numOrNull(form.platelets),
+        fbs: numOrNull(form.fbs),
+        sugar: numOrNull(form.sugar),
+        fbcValue: numOrNull(form.fbcValue),
       };
 
-      const res = await fetch(`/api/patients/${details.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await api.put(`/api/patients/${details.id}`, payload);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data?.error || "Failed to update medical data.");
-        return;
-      }
-
-      onSaved?.(data); 
-      onClose();
+      onSaved?.(res.data); // update UI
+      onClose?.();
     } catch (e) {
-      setError(e?.message || "Something went wrong.");
+      const msg =
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to update medical data.";
+      setError(msg);
     } finally {
       setSaving(false);
     }
@@ -128,14 +132,12 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Card */}
       <div className="relative w-[95%] max-w-3xl rounded-2xl bg-white shadow-xl border border-slate-200">
         <div className="p-4 md:p-5 border-b border-slate-200 flex items-center justify-between">
           <div>
@@ -143,13 +145,15 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
               Update Medical Data
             </h3>
             <p className="text-xs text-slate-500">
-              {details?.name} (ID: <span className="font-bold">{details?.id}</span>)
+              {details?.name} (ID:{" "}
+              <span className="font-bold">{details?.id}</span>)
             </p>
           </div>
 
           <button
             onClick={onClose}
             className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-extrabold hover:bg-slate-50"
+            type="button"
           >
             Close
           </button>
@@ -183,7 +187,9 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
                 </label>
                 <select
                   value={form.previousKneeInjury}
-                  onChange={(e) => setField("previousKneeInjury", e.target.value)}
+                  onChange={(e) =>
+                    setField("previousKneeInjury", e.target.value)
+                  }
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                 >
                   <option value="">N/A</option>
@@ -211,18 +217,10 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-5 gap-3">
               <Input label="WBC" value={form.wbc} onChange={(v) => setField("wbc", v)} />
-              <Input
-                label="Platelets"
-                value={form.platelets}
-                onChange={(v) => setField("platelets", v)}
-              />
+              <Input label="Platelets" value={form.platelets} onChange={(v) => setField("platelets", v)} />
               <Input label="FBS" value={form.fbs} onChange={(v) => setField("fbs", v)} />
               <Input label="Sugar" value={form.sugar} onChange={(v) => setField("sugar", v)} />
-              <Input
-                label="FBC"
-                value={form.fbcValue}
-                onChange={(v) => setField("fbcValue", v)}
-              />
+              <Input label="FBC" value={form.fbcValue} onChange={(v) => setField("fbcValue", v)} />
             </div>
           </div>
         </div>
@@ -232,13 +230,16 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-extrabold hover:bg-slate-50"
             disabled={saving}
+            type="button"
           >
             Cancel
           </button>
+
           <button
             onClick={onSave}
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold disabled:opacity-60"
             disabled={saving}
+            type="button"
           >
             {saving ? "Saving..." : "Save Updates"}
           </button>
@@ -248,20 +249,20 @@ function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
   );
 }
 
+/*  Patient Panel */
 export default function PatientPanel({
   selectedPatientDetails,
   selectedPatient,
   onEditMedication,
+  onMedicalSaved,
 }) {
   const [showReport, setShowReport] = useState(false);
   const [showMedicalUpdate, setShowMedicalUpdate] = useState(false);
-
   const [localDetails, setLocalDetails] = useState(null);
 
   const incoming = selectedPatientDetails || selectedPatient || null;
   const details = localDetails || incoming;
 
-  // reset localDetails when switching patients
   useEffect(() => {
     setLocalDetails(null);
   }, [incoming?.id]);
@@ -307,11 +308,11 @@ export default function PatientPanel({
           </div>
 
           <div className="flex items-center gap-2">
-            {/*  NEW UPDATE BUTTON */}
             <button
               onClick={() => setShowMedicalUpdate(true)}
               className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition flex items-center gap-2"
               title="Update Medical Data"
+              type="button"
             >
               <FontAwesomeIcon icon={faEdit} />
               Update
@@ -328,14 +329,10 @@ export default function PatientPanel({
           </div>
         </div>
 
-        {/* Anthropometrics */}
         <div className="mt-4">
           <div className="mt-2">
-            <InfoRow
-              icon={faWeightScale}
-              label="Weight (kg)"
-              value={show(details?.weightKg)}
-            />
+            <InfoRow icon={faWeightScale} label="Weight (kg)" value={show(details?.weightKg)} />
+
             <InfoRow
               icon={faTriangleExclamation}
               label="Previous Knee Injury"
@@ -346,14 +343,12 @@ export default function PatientPanel({
                   ? "No"
                   : "N/A"
               }
-              iconClass="text-slate-500"
             />
           </div>
         </div>
 
         <div className="my-4 border-t border-slate-200" />
 
-        {/* Lab Values */}
         <div>
           <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wide">
             Lab Values
@@ -363,20 +358,12 @@ export default function PatientPanel({
             <InfoRow icon={faVial} label="CRP" value={show(details?.crp)} />
             <InfoRow icon={faVial} label="ESR" value={show(details?.esr)} />
             <InfoRow icon={faVial} label="RF" value={show(details?.rf)} />
-            <InfoRow
-              icon={faVial}
-              label="Cholesterol"
-              value={show(details?.cholesterol)}
-            />
+            <InfoRow icon={faVial} label="Cholesterol" value={show(details?.cholesterol)} />
 
             <div className="my-3 border-t border-slate-200" />
 
             <InfoRow icon={faDroplet} label="WBC" value={show(details?.wbc)} />
-            <InfoRow
-              icon={faDroplet}
-              label="Platelets"
-              value={show(details?.platelets)}
-            />
+            <InfoRow icon={faDroplet} label="Platelets" value={show(details?.platelets)} />
             <InfoRow icon={faDroplet} label="FBS" value={show(details?.fbs)} />
             <InfoRow icon={faDroplet} label="Sugar" value={show(details?.sugar)} />
             <InfoRow icon={faDroplet} label="FBC" value={show(details?.fbcValue)} />
@@ -395,6 +382,7 @@ export default function PatientPanel({
             onClick={onEditMedication}
             className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition flex items-center gap-2"
             title="Update Medication"
+            type="button"
           >
             <FontAwesomeIcon icon={faEdit} />
             Update
@@ -402,7 +390,7 @@ export default function PatientPanel({
         </div>
 
         <div className="mt-2">
-          {details.medicationList?.length > 0 ? (
+          {details?.medicationList?.length > 0 ? (
             <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
               {details.medicationList.map((med, idx) => (
                 <li key={idx}>{med}</li>
@@ -416,12 +404,15 @@ export default function PatientPanel({
         </div>
       </div>
 
-      {/* Medical Update Modal */}
+      {/*  Medical Update Modal */}
       <MedicalDataUpdateModal
         open={showMedicalUpdate}
         details={details}
         onClose={() => setShowMedicalUpdate(false)}
-        onSaved={(updated) => setLocalDetails(updated)}
+        onSaved={(updated) => {
+          setLocalDetails(updated);
+          onMedicalSaved?.(updated);
+        }}
       />
 
       {/* Report Modal */}

@@ -6,13 +6,12 @@ import Register from "./components/Register";
 import Dashboard from "./pages/Dashboard";
 import FormEntry from "./pages/FormEntry";
 import KOApredict1 from "./components/PredicForms/KOAPredictForm";
-import KOAFusionPredictPage from "../src/components/dashboard/KOAFusionPredictPage";
+import KOAFusionPredictPage from "./components/dashboard/KOAFusionPredictPage";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [role, setRole] = useState(localStorage.getItem("role") || null);
 
-  // Save token & role to localStorage
   useEffect(() => {
     if (token) {
       localStorage.setItem("token", token);
@@ -30,18 +29,15 @@ function App() {
 
   return (
     <Routes>
-
+      {/* Home Page (First Load) */}
       <Route
         path="/"
         element={
-          token ? (
-            <Navigate to="/Home" />
-          ) : (
-            <Home />
-          )
+          token ? <Navigate to="/dashboard" /> : <Home />
         }
       />
 
+      {/* Dashboard (Protected) */}
       <Route
         path="/dashboard"
         element={
@@ -53,7 +49,7 @@ function App() {
         }
       />
 
-      {/* 3. Login Route (Redirects if logged in) */}
+      {/* Login */}
       <Route
         path="/login"
         element={
@@ -65,13 +61,15 @@ function App() {
         }
       />
 
-      {/* 4. Register Route (Redirects if logged in) */}
+      {/* Register */}
       <Route
         path="/register"
-        element={token ? <Navigate to="/dashboard" /> : <Register />}
+        element={
+          token ? <Navigate to="/dashboard" /> : <Register />
+        }
       />
 
-      {/* 5. Form Route (Protected) */}
+      {/* Form */}
       <Route
         path="/form"
         element={
@@ -81,10 +79,7 @@ function App() {
 
       <Route path="/koa-predict" element={<KOApredict1 />} />
       <Route path="/koa-predict/combined" element={<KOAFusionPredictPage />} />
-
     </Routes>
-
-
   );
 }
 
