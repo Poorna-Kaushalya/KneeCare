@@ -3,7 +3,6 @@ import {
   faShoePrints,
   faCloudSun,
   faHeartbeat,
-  faCircleDot,
 } from "@fortawesome/free-solid-svg-icons";
 
 const severityTone = (sev) => {

@@ -29,11 +29,16 @@ const upload = multer({
   },
 });
 
-const PYTHON_EXE = process.env.PYTHON_EXE || "python";
+// ✅ Always use python from venv
+const PYTHON_EXE =
+  process.platform === "win32"
+    ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
+    : "python3";
 
-const MODEL_PATH =
-  "C:\\Users\\msi\\Documents\\GitHub\\KneeCare\\koa360-backend\\models\\best.pt";
+// ✅ Make model path portable (put model in koa360-backend/models/)
+const MODEL_PATH = path.join(__dirname, "..", "models", "best.pt");
 
+// Python script
 const PY_SCRIPT = path.join(__dirname, "..", "python", "predict_xray.py");
 
 router.post("/api/predict/xray", upload.single("image"), (req, res) => {
@@ -45,9 +50,24 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
       });
     }
 
-    const imgPath = req.file.path;
+    // Ensure model exists
+    if (!fs.existsSync(MODEL_PATH)) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(500).json({
+        ok: false,
+        error: "Model file not found",
+        modelPath: MODEL_PATH,
+      });
+    }
 
-    const py = spawn(PYTHON_EXE, [PY_SCRIPT, MODEL_PATH, imgPath], {
+    const imgPath = path.resolve(req.file.path);
+    const modelPathAbs = path.resolve(MODEL_PATH);
+    const scriptAbs = path.resolve(PY_SCRIPT);
+
+    const cwd = path.join(__dirname, "..");
+
+    const py = spawn(PYTHON_EXE, [scriptAbs, modelPathAbs, imgPath], {
+      cwd,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -57,17 +77,31 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
     py.stdout.on("data", (d) => (stdout += d.toString()));
     py.stderr.on("data", (d) => (stderr += d.toString()));
 
+    py.on("error", (spawnErr) => {
+      try { fs.unlinkSync(imgPath); } catch (_) {}
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to start Python process",
+        details: spawnErr.message,
+        pythonExe: PYTHON_EXE,
+        scriptPath: scriptAbs,
+      });
+    });
+
     py.on("close", (code) => {
       // cleanup uploaded file
-      try {
-        fs.unlinkSync(imgPath);
-      } catch (_) {}
+      try { fs.unlinkSync(imgPath); } catch (_) {}
 
       if (code !== 0) {
         return res.status(500).json({
           ok: false,
           error: "Python process failed",
-          details: stderr || stdout,
+          exitCode: code,
+          stderr: stderr || null,
+          stdout: stdout || null,
+          pythonExe: PYTHON_EXE,
+          scriptPath: scriptAbs,
+          modelPath: modelPathAbs,
         });
       }
 
