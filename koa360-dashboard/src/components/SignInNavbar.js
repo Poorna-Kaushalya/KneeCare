@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink } from "react-router-dom";
 import {
   FiMenu,
   FiX,
@@ -9,14 +8,6 @@ import {
 } from "react-icons/fi";
 
 function SignInNavbar({ logout }) {
-  const links = [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "Patients", path: "/patients" },
-    { label: "Appointments", path: "/appointments" },
-    { label: "Reports", path: "/reports" },
-    { label: "Sensor Form", path: "/form" },
-    { label: "KOA Predict", path: "/koa-predict" },
-  ];
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -71,10 +62,6 @@ function SignInNavbar({ logout }) {
     minute: "2-digit",
   });
 
-  const linkBase =
-    "font-semibold px-2 py-1 rounded-lg transition-all duration-300";
-  const activeCls = "bg-blue-600 text-white shadow-lg";
-  const idleCls = "text-blue-700 hover:bg-blue-100 hover:text-blue-900";
 
   return (
     <div className="fixed w-full z-50">

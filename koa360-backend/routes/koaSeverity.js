@@ -11,8 +11,9 @@ router.get("/api/koa-severity", async (req, res) => {
     const days = Number(req.query.days || 14);
     const source = String(req.query.source || "piezo").toLowerCase();
 
-    if (!deviceId) 
+    if (!deviceId) {
       return res.status(400).json({ error: "deviceId is required" });
+    }
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -23,11 +24,19 @@ router.get("/api/koa-severity", async (req, res) => {
         "avg_piezo.voltage": 1,
         "avg_piezo.trigger_rate": 1,
 
-        "avg_upper.ax": 1, "avg_upper.ay": 1, "avg_upper.az": 1,
-        "avg_upper.gx": 1, "avg_upper.gy": 1, "avg_upper.gz": 1,
+        "avg_upper.ax": 1,
+        "avg_upper.ay": 1,
+        "avg_upper.az": 1,
+        "avg_upper.gx": 1,
+        "avg_upper.gy": 1,
+        "avg_upper.gz": 1,
 
-        "avg_lower.ax": 1, "avg_lower.ay": 1, "avg_lower.az": 1,
-        "avg_lower.gx": 1, "avg_lower.gy": 1, "avg_lower.gz": 1,
+        "avg_lower.ax": 1,
+        "avg_lower.ay": 1,
+        "avg_lower.az": 1,
+        "avg_lower.gx": 1,
+        "avg_lower.gy": 1,
+        "avg_lower.gz": 1,
 
         avg_knee_angle: 1,
         "avg_temperature.object": 1,
@@ -53,41 +62,61 @@ router.get("/api/koa-severity", async (req, res) => {
         case "piezo":
           v = r?.avg_piezo?.voltage ?? r?.avg_piezo?.raw;
           break;
-        case "upper_acc":
-          {
-            const { ax, ay, az } = r?.avg_upper ?? {};
-            if ([ax, ay, az].every((n) => typeof n === "number" && Number.isFinite(n))) {
-              v = Math.sqrt(ax * ax + ay * ay + az * az);
-            }
+
+        case "upper_acc": {
+          const { ax, ay, az } = r?.avg_upper ?? {};
+          if (
+            [ax, ay, az].every(
+              (n) => typeof n === "number" && Number.isFinite(n)
+            )
+          ) {
+            v = Math.sqrt(ax * ax + ay * ay + az * az);
           }
           break;
-        case "lower_acc":
-          {
-            const { ax, ay, az } = r?.avg_lower ?? {};
-            if ([ax, ay, az].every((n) => typeof n === "number" && Number.isFinite(n))) {
-              v = Math.sqrt(ax * ax + ay * ay + az * az);
-            }
+        }
+
+        case "lower_acc": {
+          const { ax, ay, az } = r?.avg_lower ?? {};
+          if (
+            [ax, ay, az].every(
+              (n) => typeof n === "number" && Number.isFinite(n)
+            )
+          ) {
+            v = Math.sqrt(ax * ax + ay * ay + az * az);
           }
           break;
-        case "upper_gyro":
-          {
-            const { gx, gy, gz } = r?.avg_upper ?? {};
-            if ([gx, gy, gz].every((n) => typeof n === "number" && Number.isFinite(n))) {
-              v = Math.sqrt(gx * gx + gy * gy + gz * gz);
-            }
+        }
+
+        case "upper_gyro": {
+          const { gx, gy, gz } = r?.avg_upper ?? {};
+          if (
+            [gx, gy, gz].every(
+              (n) => typeof n === "number" && Number.isFinite(n)
+            )
+          ) {
+            v = Math.sqrt(gx * gx + gy * gy + gz * gz);
           }
           break;
-        case "lower_gyro":
-          {
-            const { gx, gy, gz } = r?.avg_lower ?? {};
-            if ([gx, gy, gz].every((n) => typeof n === "number" && Number.isFinite(n))) {
-              v = Math.sqrt(gx * gx + gy * gy + gz * gz);
-            }
+        }
+
+        case "lower_gyro": {
+          const { gx, gy, gz } = r?.avg_lower ?? {};
+          if (
+            [gx, gy, gz].every(
+              (n) => typeof n === "number" && Number.isFinite(n)
+            )
+          ) {
+            v = Math.sqrt(gx * gx + gy * gy + gz * gz);
           }
           break;
+        }
+
         case "knee_angle":
           v = r?.avg_knee_angle;
           break;
+
+        default:
+          v = r?.avg_piezo?.voltage ?? r?.avg_piezo?.raw;
       }
 
       if (typeof v === "number" && Number.isFinite(v)) {
@@ -97,36 +126,73 @@ router.get("/api/koa-severity", async (req, res) => {
 
     if (signal_series.length < 10) {
       return res.status(400).json({
-        error: "Not enough signal points to compute FFT features (need at least ~10).",
+        error:
+          "Not enough signal points to compute FFT features (need at least ~10).",
         records_used: rows.length,
         signal_points_used: signal_series.length,
       });
     }
 
-    // Use python executable in your venv
-    const pythonExe = path.join(__dirname, "..", "pyenv", "Scripts", "python.exe");
-    const scriptPath = path.join(__dirname, "..", "python", "predict_vag_severity.py");
+    // ✅ Always use python inside venv (Windows-safe)
+    const pythonExe =
+      process.platform === "win32"
+        ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
+        : "python3";
 
-    const py = spawn(pythonExe, [scriptPath], {
-      cwd: path.join(__dirname, ".."), // backend root
-    });
+    const scriptPath = path.join(
+      __dirname,
+      "..",
+      "python",
+      "predict_vag_severity.py"
+    );
 
+    // Optional: helpful for debugging / relative paths inside python
+    const cwd = path.join(__dirname, "..");
+
+    const py = spawn(pythonExe, [scriptPath], { cwd });
+
+    // Send input to python
     py.stdin.write(JSON.stringify({ signal_series, knee_temp_series }));
     py.stdin.end();
 
     let out = "";
     let err = "";
+
     py.stdout.on("data", (d) => (out += d.toString()));
     py.stderr.on("data", (d) => (err += d.toString()));
 
-    py.on("close", () => {
-      if (err) return res.status(500).json({ error: err });
+    py.on("error", (spawnErr) => {
+      return res.status(500).json({
+        error: "Failed to start Python process",
+        details: spawnErr.message,
+        pythonExe,
+        scriptPath,
+      });
+    });
+
+    py.on("close", (code) => {
+      // ✅ If python crashed, return full debug info
+      if (code !== 0) {
+        return res.status(500).json({
+          error: "Python process failed",
+          exitCode: code,
+          stderr: err || null,
+          stdout: out || null,
+          pythonExe,
+          scriptPath,
+          cwd,
+        });
+      }
 
       let data;
       try {
         data = JSON.parse(out);
       } catch {
-        return res.status(500).json({ error: "Python returned invalid JSON", raw: out });
+        return res.status(500).json({
+          error: "Python returned invalid JSON",
+          raw: out,
+          stderr: err || null,
+        });
       }
 
       const from = rows[0]?.createdAt;
@@ -142,7 +208,7 @@ router.get("/api/koa-severity", async (req, res) => {
         source,
         records_used: rows.length,
         signal_points_used: signal_series.length,
-        features: data.features_used,
+        features: data.features_used ?? null,
       });
     });
   } catch (e) {

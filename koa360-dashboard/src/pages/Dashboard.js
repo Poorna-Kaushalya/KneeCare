@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import api from "../api/api";
 import Navbar2 from "../components/SignInNavbar";
 
@@ -8,7 +8,6 @@ import EditMedicationModal from "../components/EditMedicationModal";
 import DeletePatientFlow from "../components/DeletePatientFlow";
 
 import PatientsSidebar from "../components/dashboard/PatientsSidebar";
-import HeaderKpis from "../components/dashboard/HeaderKpis";
 import ChartsTabs from "../components/dashboard/ChartsTabs";
 import PatientPanel from "../components/dashboard/PatientPanel";
 import EmptyState from "../components/dashboard/EmptyState";
@@ -138,8 +137,6 @@ function PatientPickerModal({
 
 function Dashboard({ logout }) {
   const [data, setData] = useState([]);
-  const [steps, setSteps] = useState(0);
-  const [envTemp, setEnvTemp] = useState(0);
 
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -156,7 +153,7 @@ function Dashboard({ logout }) {
   const [showDeleteFlow, setShowDeleteFlow] = useState(false);
   const [patientForDeleteFlow, setPatientForDeleteFlow] = useState(null);
 
-  const [dataRange, setDataRange] = useState(7);
+  const [dataRange, setDataRange] = useState(7); // (kept if you use it elsewhere)
   const [activeTab, setActiveTab] = useState("motion");
 
   const [showPatientPicker, setShowPatientPicker] = useState(true);
@@ -165,6 +162,7 @@ function Dashboard({ logout }) {
   const [showFusionModal, setShowFusionModal] = useState(false);
   const [showClinicalModal, setShowClinicalModal] = useState(false);
 
+  // Optional: kept because you had it; remove if unused anywhere else
   const rangeOptions = useMemo(
     () => [
       { label: "Last 3 Days", value: 3 },
@@ -218,13 +216,16 @@ function Dashboard({ logout }) {
     async (patientId) => {
       if (!patientId) {
         setData([]);
-        setSteps(0);
-        setEnvTemp(0);
         return;
       }
 
       const patient = patients.find((p) => p.id === patientId);
       const deviceId = patient?.device_id;
+
+      if (!deviceId) {
+        setData([]);
+        return;
+      }
 
       try {
         const res = await api.get(
@@ -239,76 +240,40 @@ function Dashboard({ logout }) {
         const enriched = lastPoints.map((d) => {
           const upperAccelMag = Math.sqrt(
             (d.avg_upper?.ax || 0) ** 2 +
-            (d.avg_upper?.ay || 0) ** 2 +
-            (d.avg_upper?.az || 0) ** 2
+              (d.avg_upper?.ay || 0) ** 2 +
+              (d.avg_upper?.az || 0) ** 2
           );
 
           const lowerAccelMag = Math.sqrt(
             (d.avg_lower?.ax || 0) ** 2 +
-            (d.avg_lower?.ay || 0) ** 2 +
-            (d.avg_lower?.az || 0) ** 2
+              (d.avg_lower?.ay || 0) ** 2 +
+              (d.avg_lower?.az || 0) ** 2
           );
 
           const gyroMag =
             Math.sqrt(
               (d.avg_upper?.gx || 0) ** 2 +
-              (d.avg_upper?.gy || 0) ** 2 +
-              (d.avg_upper?.gz || 0) ** 2
+                (d.avg_upper?.gy || 0) ** 2 +
+                (d.avg_upper?.gz || 0) ** 2
             ) +
             Math.sqrt(
               (d.avg_lower?.gx || 0) ** 2 +
-              (d.avg_lower?.gy || 0) ** 2 +
-              (d.avg_lower?.gz || 0) ** 2
+                (d.avg_lower?.gy || 0) ** 2 +
+                (d.avg_lower?.gz || 0) ** 2
             );
 
-          const totalAccelGyroMag =
-            upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
+          const totalAccelGyroMag = upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
 
           return { ...d, upperAccelMag, lowerAccelMag, totalAccelGyroMag };
         });
 
         setData(enriched);
 
-        // Step count
-        const mags = enriched.map((d) => d.totalAccelGyroMag);
-        let stepCount = 0;
-
-        if (mags.length > 0) {
-          const smooth = mags.map((val, i, arr) => {
-            const windowSize = 5;
-            const start = Math.max(0, i - windowSize + 1);
-            const w = arr.slice(start, i + 1);
-            return w.reduce((sum, v) => sum + v, 0) / w.length;
-          });
-
-          const threshold = 1.5;
-          for (let i = 1; i < smooth.length - 1; i++) {
-            if (
-              smooth[i] > threshold &&
-              smooth[i] > smooth[i - 1] &&
-              smooth[i] > smooth[i + 1]
-            ) {
-              stepCount++;
-            }
-          }
-        }
-
-        setSteps(stepCount);
-
-        if (
-          enriched.length > 0 &&
-          enriched[enriched.length - 1].avg_temperature?.ambient != null
-        ) {
-          setEnvTemp(enriched[enriched.length - 1].avg_temperature.ambient);
-        } else {
-          setEnvTemp(0);
-        }
+        // ✅ Removed: step counting + env temp extraction (setSteps / setEnvTemp)
       } catch (err) {
         if (err.response?.status === 401) logout();
         console.error("Sensor data fetch error:", err);
         setData([]);
-        setSteps(0);
-        setEnvTemp(0);
       }
     },
     [patients, dataRange, logout]
@@ -347,8 +312,7 @@ function Dashboard({ logout }) {
     setSelectedPatientId(null);
     setSelectedPatientDetails(null);
     setData([]);
-    setSteps(0);
-    setEnvTemp(0);
+    // ✅ Removed: setSteps(0), setEnvTemp(0)
   };
 
   const handleAddPatientSuccess = () => {
@@ -396,7 +360,11 @@ function Dashboard({ logout }) {
       <div className="sticky top-0 z-[50] bg-white/90 backdrop-blur border-b border-sky-100">
         <Navbar2 logout={logout} />
       </div>
-      <br /><br /><br />
+
+      <br />
+      <br />
+      <br />
+
       <PatientPickerModal
         show={showPatientPicker && !selectedPatientId}
         onClose={() => setShowPatientPicker(false)}

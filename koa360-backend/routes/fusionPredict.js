@@ -21,31 +21,43 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, 
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
+
+// ✅ Use python from venv
+const PYTHON_EXE =
+  process.platform === "win32"
+    ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
+    : "python3";
+
+// Python script path
+const SCRIPT_PATH = path.join(__dirname, "..", "python", "predict_fusion.py");
 
 // POST /api/fusion/predict
 router.post("/predict", upload.single("xray"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "X-ray image is required (field name: xray)" });
+      return res
+        .status(400)
+        .json({ error: "X-ray image is required (field name: xray)" });
     }
 
     const imagePath = req.file.path;
 
+    // keep tabular (multer gives strings)
     const tabular = { ...req.body };
 
-    // Python script path
-    const scriptPath = path.join(__dirname, "..", "python", "predict_fusion.py");
-
-    const pyExe = "python";
-
     const payload = {
-      image_path: imagePath,
-      tabular: tabular,
+      image_path: path.resolve(imagePath),
+      tabular,
     };
 
-    const py = spawn(pyExe, [scriptPath], { stdio: ["pipe", "pipe", "pipe"] });
+    const cwd = path.join(__dirname, ".."); // backend root
+
+    const py = spawn(PYTHON_EXE, [SCRIPT_PATH], {
+      cwd,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
 
     let out = "";
     let err = "";
@@ -53,21 +65,45 @@ router.post("/predict", upload.single("xray"), async (req, res) => {
     py.stdout.on("data", (d) => (out += d.toString()));
     py.stderr.on("data", (d) => (err += d.toString()));
 
+    py.on("error", (spawnErr) => {
+      try {
+        fs.unlinkSync(imagePath);
+      } catch (_) {}
+
+      return res.status(500).json({
+        error: "Failed to start Python process",
+        details: spawnErr.message,
+        pythonExe: PYTHON_EXE,
+        scriptPath: SCRIPT_PATH,
+      });
+    });
+
     py.on("close", (code) => {
-      // optional: delete uploaded file after prediction
-      try { fs.unlinkSync(imagePath); } catch (_) {}
+      // cleanup uploaded file
+      try {
+        fs.unlinkSync(imagePath);
+      } catch (_) {}
 
       if (code !== 0) {
-        console.error("Python error:", err);
-        return res.status(500).json({ error: "Fusion prediction failed", details: err });
+        return res.status(500).json({
+          error: "Fusion prediction failed",
+          exitCode: code,
+          stderr: err || null,
+          stdout: out || null,
+          pythonExe: PYTHON_EXE,
+          scriptPath: SCRIPT_PATH,
+        });
       }
 
       try {
-        const result = JSON.parse(out);
+        const result = JSON.parse((out || "").trim());
         return res.json(result);
       } catch (e) {
-        console.error("Bad python JSON:", out);
-        return res.status(500).json({ error: "Bad response from model", raw: out });
+        return res.status(500).json({
+          error: "Bad response from model (non-JSON)",
+          raw: out,
+          stderr: err || null,
+        });
       }
     });
 
