@@ -1,5 +1,4 @@
 # KOA360 Backend Setup Script
-
 $pythonVersion = "3.12"
 
 Write-Host "================================="
@@ -8,7 +7,7 @@ Write-Host "================================="
 
 # Remove existing venv
 if (Test-Path "pyenv") {
-    Write-Host "Removing old virtual environment..."
+    Write-Host "Removing old virtual environment."
     Remove-Item -Recurse -Force pyenv
 }
 
