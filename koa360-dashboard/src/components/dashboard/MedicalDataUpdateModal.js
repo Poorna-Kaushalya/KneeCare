@@ -155,7 +155,7 @@ export default function MedicalDataUpdateModal({
             <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wide">
               Anthropometrics
             </div>
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-0">
               <Input label="Height (cm)" value={form.heightCm} onChange={(v) => setField("heightCm", v)} />
               <Input label="Weight (kg)" value={form.weightKg} onChange={(v) => setField("weightKg", v)} />
 

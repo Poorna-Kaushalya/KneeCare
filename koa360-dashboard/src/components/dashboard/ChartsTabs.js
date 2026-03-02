@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
@@ -26,6 +26,13 @@ import KOASensorSeverity from "../PredicForms/KOASensorSeverity";
 export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) {
   const MAX_KNEE_ANGLE = 120;
   const [vagTab, setVagTab] = useState("rms");
+
+  // ✅ NEW: show Vibrations tab first (default)
+  useEffect(() => {
+    // set to "vag" on first render OR when patient/device changes
+    setActiveTab("vag");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceId]);
 
   const formatTime = (timestamp) =>
     new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -104,7 +111,11 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
         onClick={() => setActiveTab(id)}
         type="button"
         className={`px-4 py-2 rounded-full text-sm font-extrabold border transition flex items-center gap-2
-          ${active ? `${activeColor} text-white border-transparent shadow-sm` : "bg-white text-slate-700 border-sky-100 hover:bg-sky-50"}`}
+          ${
+            active
+              ? `${activeColor} text-white border-transparent shadow-sm`
+              : "bg-white text-slate-700 border-sky-100 hover:bg-sky-50"
+          }`}
       >
         <FontAwesomeIcon icon={icon} />
         {label}
@@ -118,9 +129,7 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
       <div className="px-6 pt-5 bg-gradient-to-r from-sky-50 to-emerald-50 border-b border-sky-100">
         <div className="flex items-center justify-between gap-1">
           <div>
-            <div className="text-lg font-extrabold text-slate-900">
-              Sensor Analytics
-            </div>
+            <div className="text-lg font-extrabold text-slate-900">Sensor Analytics</div>
           </div>
 
           <div className="text-xs text-slate-500">
@@ -165,16 +174,7 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
                 <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatDegrees} tick={{ fontSize: 12 }} domain={["dataMin - 5", "dataMax + 5"]} />
                 <Tooltip labelFormatter={formatTime} />
-                <Area
-                  name="Knee Angle"
-                  dataKey="kneeAngle"
-                  stroke="#7c3aed"
-                  strokeWidth={2}
-                  fillOpacity={0.12}
-                  fill="#7c3aed"
-                  dot={false}
-                  type="monotone"
-                />
+                <Area name="Knee Angle" dataKey="kneeAngle" stroke="#7c3aed" strokeWidth={2} fillOpacity={0.12} fill="#7c3aed" dot={false} type="monotone" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -186,16 +186,7 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
                 <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatTemp} tick={{ fontSize: 12 }} domain={["dataMin - 1", "dataMax + 1"]} />
                 <Tooltip labelFormatter={formatTime} />
-                <Area
-                  name="Knee Temp (Object)"
-                  dataKey="tempObject"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  fillOpacity={0.14}
-                  fill="#f59e0b"
-                  dot={false}
-                  type="monotone"
-                />
+                <Area name="Knee Temp (Object)" dataKey="tempObject" stroke="#f59e0b" strokeWidth={2} fillOpacity={0.14} fill="#f59e0b" dot={false} type="monotone" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -220,10 +211,11 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
                     key={t.id}
                     onClick={() => setVagTab(t.id)}
                     type="button"
-                    className={`px-3 py-1 rounded-full text-xs font-extrabold border transition ${vagTab === t.id
+                    className={`px-3 py-1 rounded-full text-xs font-extrabold border transition ${
+                      vagTab === t.id
                         ? "bg-teal-600 text-white border-teal-600"
                         : "bg-white text-slate-700 border-sky-100 hover:bg-sky-50"
-                      }`}
+                    }`}
                   >
                     {t.label}
                   </button>
@@ -287,7 +279,7 @@ function MetricCard({ title, value, tint = "sky" }) {
   return (
     <div className={`rounded-xl border p-3 ${map[tint] || map.sky}`}>
       <div className="text-xs font-semibold opacity-80">{title}</div>
-      <div className="text-lg text-center  font-extrabold mt-0.5">{value}</div>
+      <div className="text-lg text-center font-extrabold mt-0.5">{value}</div>
     </div>
   );
 }

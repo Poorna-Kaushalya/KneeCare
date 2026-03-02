@@ -279,7 +279,7 @@ export default function PatientPanel({
   const show = (v) => (v === undefined || v === null || v === "" ? "N/A" : v);
 
   const InfoRow = ({ icon, iconClass = "text-slate-500", label, value }) => (
-    <div className="flex items-center justify-between py-1.5">
+    <div className="flex items-center justify-between px-3 py-1.5  border border-slate-300">
       <div className="flex items-center gap-2 min-w-0">
         <FontAwesomeIcon icon={icon} className={iconClass} />
         <span className="text-slate-600 text-sm font-medium">{label}</span>
@@ -299,7 +299,7 @@ export default function PatientPanel({
   }
 
   return (
-    <div className="space-y-6 mt-2">
+    <div className="space-y-2 mt-2">
       <div className={`${card} p-4 md:p-5`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -329,8 +329,8 @@ export default function PatientPanel({
           </div>
         </div>
 
-        <div className="mt-4">
-          <div className="mt-2">
+        <div className="mt-2">
+          <div className="mt-0">
             <InfoRow icon={faWeightScale} label="Weight (kg)" value={show(details?.weightKg)} />
 
             <InfoRow
@@ -347,7 +347,7 @@ export default function PatientPanel({
           </div>
         </div>
 
-        <div className="my-4 border-t border-slate-200" />
+        <div className="my-2 border-t border-slate-200" />
 
         <div>
           <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wide">
@@ -355,13 +355,10 @@ export default function PatientPanel({
           </div>
 
           <div className="mt-2">
-            <InfoRow icon={faVial} label="CRP" value={show(details?.crp)} />
-            <InfoRow icon={faVial} label="ESR" value={show(details?.esr)} />
-            <InfoRow icon={faVial} label="RF" value={show(details?.rf)} />
-            <InfoRow icon={faVial} label="Cholesterol" value={show(details?.cholesterol)} />
-
-            <div className="my-3 border-t border-slate-200" />
-
+            <InfoRow icon={faDroplet} label="CRP" value={show(details?.crp)} />
+            <InfoRow icon={faDroplet} label="ESR" value={show(details?.esr)} />
+            <InfoRow icon={faDroplet} label="RF" value={show(details?.rf)} />
+            <InfoRow icon={faDroplet} label="Cholesterol" value={show(details?.cholesterol)} />
             <InfoRow icon={faDroplet} label="WBC" value={show(details?.wbc)} />
             <InfoRow icon={faDroplet} label="Platelets" value={show(details?.platelets)} />
             <InfoRow icon={faDroplet} label="FBS" value={show(details?.fbs)} />

@@ -80,7 +80,7 @@ export default function PredictionButtons({
   };
 
   return (
-    <div className="mb-1 relative -mt-2">
+    <div className="mb-1 relative mt-1">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1">
         <ActionCard
           kind="clinical"
