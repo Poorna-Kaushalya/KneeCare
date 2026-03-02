@@ -27,9 +27,8 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
   const MAX_KNEE_ANGLE = 120;
   const [vagTab, setVagTab] = useState("rms");
 
-  // ✅ NEW: show Vibrations tab first (default)
+  // ✅ Show Vibrations tab first whenever device changes
   useEffect(() => {
-    // set to "vag" on first render OR when patient/device changes
     setActiveTab("vag");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId]);
@@ -73,8 +72,12 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
           ? row.lowerAccelMag
           : Math.sqrt(axL * axL + ayL * ayL + azL * azL);
 
+      // ✅ temps
       const tempObject = Number(row?.avg_temperature?.object ?? row?.temperature?.object ?? 0);
       const tempAmbient = Number(row?.avg_temperature?.ambient ?? row?.temperature?.ambient ?? 0);
+
+      // ✅ knee surface temperature (your DB field)
+      const kneeTemp = Number(row?.avg_knee_tempurarture ?? row?.knee_tempurarture ?? 0);
 
       const kneeAngle = Number(row?.avg_knee_angle ?? row?.knee_angle ?? 0);
 
@@ -89,8 +92,13 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
         upperAccelMag,
         lowerAccelMag,
         kneeAngle,
+
+        // temp series
         tempObject,
         tempAmbient,
+        kneeTemp,
+
+        // vibration series
         micAlignedRms,
         micAlignedPeakFreq,
         micAlignedEntropy,
@@ -174,20 +182,47 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
                 <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatDegrees} tick={{ fontSize: 12 }} domain={["dataMin - 5", "dataMax + 5"]} />
                 <Tooltip labelFormatter={formatTime} />
-                <Area name="Knee Angle" dataKey="kneeAngle" stroke="#7c3aed" strokeWidth={2} fillOpacity={0.12} fill="#7c3aed" dot={false} type="monotone" />
+                <Area
+                  name="Knee Angle"
+                  dataKey="kneeAngle"
+                  stroke="#7c3aed"
+                  strokeWidth={2}
+                  fillOpacity={0.12}
+                  fill="#7c3aed"
+                  dot={false}
+                  type="monotone"
+                />
               </AreaChart>
             </ResponsiveContainer>
           )}
 
+          {/* ✅ UPDATED TEMP TAB: shows Knee Temp + Ambient Temp */}
           {activeTab === "temp" && (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.25} />
                 <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatTemp} tick={{ fontSize: 12 }} domain={["dataMin - 1", "dataMax + 1"]} />
                 <Tooltip labelFormatter={formatTime} />
-                <Area name="Knee Temp (Object)" dataKey="tempObject" stroke="#f59e0b" strokeWidth={2} fillOpacity={0.14} fill="#f59e0b" dot={false} type="monotone" />
-              </AreaChart>
+                <Legend />
+
+                <Line
+                  name="Knee Temp (Surface)"
+                  dataKey="kneeTemp"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  dot={false}
+                  type="monotone"
+                />
+                <Line
+                  name="Ambient Temp"
+                  dataKey="tempAmbient"
+                  stroke="#0ea5e9"
+                  strokeWidth={2}
+                  dot={false}
+                  type="monotone"
+                />
+              </LineChart>
             </ResponsiveContainer>
           )}
 

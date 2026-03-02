@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../../api/api"; 
+import api from "../../api/api";
 
 export default function XRayPredictCard({ open, onClose, patientId, deviceId }) {
   const [file, setFile] = useState(null);
@@ -52,6 +52,12 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
     return "bg-slate-50 border-slate-200 text-slate-800";
   };
 
+  const fmtPct = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return `${(n * 100).toFixed(1)}%`;
+  };
+
   const onSubmit = async () => {
     try {
       setLoading(true);
@@ -64,9 +70,14 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
       }
 
       const fd = new FormData();
-      fd.append("image", file);
+      fd.append("image", file); // ✅ MUST match upload.single("image")
+      fd.append("patientId", patientId || "");
+      fd.append("deviceId", deviceId || "");
 
-      const res = await api.post("/api/predict/xray", fd);
+      // ✅ IMPORTANT: force multipart for this request
+      const res = await api.post("/api/predict/xray", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       if (!res?.data) {
         setError("Empty response from server.");
@@ -117,7 +128,8 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
               Upload knee X-ray and get KOA severity prediction.
             </p>
             <div className="mt-2 text-[11px] text-slate-500">
-              Patient: <span className="font-extrabold">{patientId || "N/A"}</span>
+              Patient:{" "}
+              <span className="font-extrabold">{patientId || "N/A"}</span>
               {"  "}• Device:{" "}
               <span className="font-extrabold">{deviceId || "N/A"}</span>
             </div>
@@ -147,7 +159,9 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
                 <div className="text-sm font-extrabold text-slate-900">
                   Upload X-ray
                 </div>
-                <div className="text-xs text-slate-500 font-bold">JPG/PNG/WEBP</div>
+                <div className="text-xs text-slate-500 font-bold">
+                  JPG/PNG/WEBP
+                </div>
               </div>
 
               <input
@@ -202,6 +216,12 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
                       <span>{result.label}</span>
                     </div>
 
+                    {result.confidence !== undefined && result.confidence !== null && (
+                      <div className="text-xs text-slate-600">
+                        Confidence:{" "}
+                        <b className="text-slate-800">{fmtPct(result.confidence)}</b>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-2 text-sm text-slate-500">
