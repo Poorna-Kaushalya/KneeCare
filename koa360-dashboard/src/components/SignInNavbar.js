@@ -105,24 +105,15 @@ function SignInNavbar({ logout }) {
 
           {/* Logo */}
           <div className="flex items-center gap-2 text-blue-700 font-extrabold text-xl">
-            &nbsp;&nbsp;KneeCare
+            &nbsp;&nbsp;Doctor's Dashboard
           </div>
 
           {/* Links */}
-          <div className="hidden md:flex gap-6 text-sm">
-            {links.map((l) => (
-              <NavLink
-                key={l.label}
-                to={l.path}
-                className={({ isActive }) =>
-                  `${linkBase} ${isActive ? activeCls : idleCls}`
-                }
-                end
-              >
-                {l.label}
-              </NavLink>
-            ))}
-          </div>
+          <div className="max-w-[1500px] mx-auto px-6 py-1 flex items-center justify-center">
+          <h1 className="text-lg font-extrabold text-sky-700 tracking-wide">
+            Smart Orthopedic Analytics Platform
+          </h1>
+        </div>
 
           {/* Right Icons */}
           <div

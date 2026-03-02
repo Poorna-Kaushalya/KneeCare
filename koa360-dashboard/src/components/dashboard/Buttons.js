@@ -1,30 +1,62 @@
 import { useNavigate } from "react-router-dom";
 
-import clinicalBg from "../../images/clinic.jpg";
-import xrayBg from "../../images/xray.jpg";
-import fusionBg from "../../images/fusion.jpg";
-import sensorBg from "../../images/sensor.jpg";
+const tone = {
+  clinical: {
+    ring: "hover:border-sky-200",
+    bar: "bg-sky-500",
+    iconBg: "bg-sky-50",
+    icon: "text-sky-700",
+    badge: "bg-sky-50 text-sky-700 border-sky-100",
+  },
+  xray: {
+    ring: "hover:border-violet-200",
+    bar: "bg-violet-500",
+    iconBg: "bg-violet-50",
+    icon: "text-violet-700",
+    badge: "bg-violet-50 text-violet-700 border-violet-100",
+  },
+  fusion: {
+    ring: "hover:border-emerald-200",
+    bar: "bg-emerald-500",
+    iconBg: "bg-emerald-50",
+    icon: "text-emerald-700",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  },
+  sensor: {
+    ring: "hover:border-amber-200",
+    bar: "bg-amber-500",
+    iconBg: "bg-amber-50",
+    icon: "text-amber-700",
+    badge: "bg-amber-50 text-amber-700 border-amber-100",
+  },
+};
 
-function PredictionCard({ image, title, subtitle, onClick, disabled }) {
+function ActionCard({ kind, badge, onClick, disabled }) {
+  const t = tone[kind];
+
   return (
-    <div
+    <button
+      type="button"
       onClick={!disabled ? onClick : undefined}
-      className={`relative h-20 rounded-2xl shadow-md transition
-        ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02]"}`}
+      disabled={disabled}
+      className={`group w-full rounded-2xl border bg-white p-3 text-left transition shadow-sm
+        ${disabled ? "opacity-50 cursor-not-allowed" : `hover:-translate-y-[1px] hover:shadow-md ${t.ring}`}
+        border-sky-100`}
     >
-      <div className="absolute inset-0 rounded-2xl overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${image})` }}
-        />
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+      <div className="flex items-start gap-3">
+        <div className={`w-1.5 h-7 rounded-full ${t.bar}`} />
 
-      <div className="relative z-10 h-full flex flex-col items-center justify-center text-white text-center">
-        <div className="font-extrabold text-lg drop-shadow">{title}</div>
-        <div className="text-sm opacity-90 drop-shadow">{subtitle}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            {badge && (
+              <span className={`text-[14px] font-extrabold px-2 py-1 rounded-full border ${t.badge}`}>
+                {badge}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -34,53 +66,46 @@ export default function PredictionButtons({
   disabled,
   onXrayClick,
   onFusionClick,
-  onClinicalClick, // ✅ NEW
+  onClinicalClick,
 }) {
   const navigate = useNavigate();
 
   const go = (path) => {
     if (disabled) return;
-
     const qs = new URLSearchParams({
       patientId: patientId || "",
       deviceId: deviceId || "",
     }).toString();
-
     navigate(`${path}?${qs}`);
   };
 
   return (
-    <div className="mt-16 mb-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* ✅ Clinical opens popup */}
-        <PredictionCard
-          image={clinicalBg}
-          title="Clinical"
-          subtitle="Data Prediction"
+    <div className="mb-1 relative -mt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1">
+        <ActionCard
+          kind="clinical"
+          badge="Lab + History"
           onClick={() => (onClinicalClick ? onClinicalClick() : go("/koa-predict/clinical"))}
           disabled={disabled}
         />
 
-        <PredictionCard
-          image={xrayBg}
-          title="X-ray"
-          subtitle="Prediction"
+        <ActionCard
+          kind="xray"
+          badge="Medical Images"
           onClick={() => (onXrayClick ? onXrayClick() : go("/koa-predict/xray"))}
           disabled={disabled}
         />
 
-        <PredictionCard
-          image={fusionBg}
-          title="Severity Level"
-          subtitle="Prediction"
+        <ActionCard
+          kind="fusion"
+          badge="Clinical + X-ray"
           onClick={() => (onFusionClick ? onFusionClick() : go("/koa-predict/combined"))}
           disabled={disabled}
         />
 
-        <PredictionCard
-          image={sensorBg}
-          title="Sensor"
-          subtitle="Prediction"
+        <ActionCard
+          kind="sensor"
+          badge="Wearable Data"
           onClick={() => go("/form")}
           disabled={disabled}
         />

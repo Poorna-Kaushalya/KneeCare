@@ -1,5 +1,16 @@
 const mongoose = require("mongoose");
 
+const MicFeatureSchema = new mongoose.Schema(
+  {
+    rms_amplitude: Number,
+    peak_frequency: Number,
+    spectral_entropy: Number,
+    zero_crossing_rate: Number,
+    mean_frequency: Number,
+  },
+  { _id: false }
+);
+
 const AvgSensorDataSchema = new mongoose.Schema(
   {
     device_id: { type: String, required: true, index: true },
@@ -23,11 +34,16 @@ const AvgSensorDataSchema = new mongoose.Schema(
       object: Number,
     },
 
-    avg_microphone: {   
+    // keep legacy avg mic
+    avg_microphone: {
       rms: Number,
       peak: Number,
       energy: Number,
-    }
+    },
+
+    avg_microphone_features: { type: MicFeatureSchema, required: false },
+    avg_microphone_features_aligned: { type: MicFeatureSchema, required: false },
+    avg_knee_tempurarture: { type: Number, required: false },
   },
   { timestamps: true }
 );

@@ -18,7 +18,6 @@ import XRayPredictCard from "../components/PredicForms/XRayPredictCard";
 import KOAFusionPredictPage from "../components/dashboard/KOAFusionPredictPage";
 import KOAClinicalPredictCard from "../components/PredicForms/KOAClinicalPredictCard";
 
-// Popup Picker Modal
 function PatientPickerModal({
   show,
   onClose,
@@ -39,8 +38,8 @@ function PatientPickerModal({
       />
 
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-          <div className="p-5 border-b bg-slate-50 flex items-start justify-between gap-3">
+        <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl border border-sky-100 overflow-hidden">
+          <div className="p-5 border-b bg-gradient-to-r from-sky-50 to-emerald-50 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-extrabold text-slate-900">
                 Select a Patient
@@ -53,7 +52,7 @@ function PatientPickerModal({
 
             <button
               onClick={onClose}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-white transition font-bold text-sm"
+              className="px-3 py-1.5 rounded-xl border border-sky-100 text-slate-700 hover:bg-white transition font-bold text-sm"
               type="button"
             >
               Close
@@ -63,19 +62,21 @@ function PatientPickerModal({
           <div className="p-5">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
-                <label className="text-xs font-bold text-slate-600">Search</label>
+                <label className="text-xs font-bold text-slate-600">
+                  Search
+                </label>
                 <input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by name, ID, device..."
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300"
+                  className="mt-1 w-full rounded-2xl border border-sky-100 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300"
                 />
               </div>
 
               <div className="sm:self-end">
                 <button
                   onClick={onAdd}
-                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow"
+                  className="w-full sm:w-auto px-4 py-2 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-sm shadow-sm"
                   type="button"
                 >
                   + Add New Patient
@@ -85,7 +86,7 @@ function PatientPickerModal({
 
             <div className="mt-4 max-h-[380px] overflow-y-auto pr-1">
               {filteredPatients.length === 0 ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-6 text-center">
                   <p className="font-bold text-slate-800">No matches found</p>
                   <p className="text-sm text-slate-600">
                     Try another keyword or add a new patient.
@@ -98,7 +99,7 @@ function PatientPickerModal({
                       key={p.id}
                       onClick={() => onSelect(p.id)}
                       type="button"
-                      className="text-left rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-200 transition p-4 shadow-sm"
+                      className="text-left rounded-3xl border border-sky-100 bg-white hover:bg-sky-50/40 hover:border-sky-200 transition p-4 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -114,7 +115,7 @@ function PatientPickerModal({
                           </div>
                         </div>
 
-                        <span className="text-xs font-extrabold px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        <span className="text-xs font-extrabold px-2 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100">
                           Select
                         </span>
                       </div>
@@ -126,7 +127,7 @@ function PatientPickerModal({
 
             <div className="mt-4 text-xs text-slate-500">
               Tip: Selecting a patient will automatically load motion, angle,
-              temperature and VAG charts.
+              temperature and PLOS charts.
             </div>
           </div>
         </div>
@@ -163,7 +164,6 @@ function Dashboard({ logout }) {
   const [showXrayModal, setShowXrayModal] = useState(false);
   const [showFusionModal, setShowFusionModal] = useState(false);
   const [showClinicalModal, setShowClinicalModal] = useState(false);
-
 
   const rangeOptions = useMemo(
     () => [
@@ -261,7 +261,8 @@ function Dashboard({ logout }) {
               (d.avg_lower?.gz || 0) ** 2
             );
 
-          const totalAccelGyroMag = upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
+          const totalAccelGyroMag =
+            upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
 
           return { ...d, upperAccelMag, lowerAccelMag, totalAccelGyroMag };
         });
@@ -391,11 +392,11 @@ function Dashboard({ logout }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      <div className="sticky top-0 z-[50] bg-white border-b">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-emerald-50 text-slate-800">
+      <div className="sticky top-0 z-[50] bg-white/90 backdrop-blur border-b border-sky-100">
         <Navbar2 logout={logout} />
       </div>
-
+      <br /><br /><br />
       <PatientPickerModal
         show={showPatientPicker && !selectedPatientId}
         onClose={() => setShowPatientPicker(false)}
@@ -425,22 +426,12 @@ function Dashboard({ logout }) {
             />
           </aside>
 
-          <main className="lg:col-span-9">
-            <HeaderKpis
-              rangeOptions={rangeOptions}
-              dataRange={dataRange}
-              setDataRange={setDataRange}
-              steps={steps}
-              envTemp={envTemp}
-              severity={selectedPatientDetails?.severityLevel}
-              deviceId={selectedPatientDetails?.device_id}
-            />
-
+          <main className="lg:col-span-9 space-y-4">
             {!selectedPatientId ? (
               <EmptyState />
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                <section className="xl:col-span-8">
+                <section className="xl:col-span-8 space-y-4">
                   <PredictionButtons
                     patientId={selectedPatientId}
                     deviceId={selectedPatientDetails?.device_id}
@@ -449,7 +440,6 @@ function Dashboard({ logout }) {
                     onFusionClick={() => setShowFusionModal(true)}
                     onClinicalClick={() => setShowClinicalModal(true)}
                   />
-
 
                   <ChartsTabs
                     activeTab={activeTab}
