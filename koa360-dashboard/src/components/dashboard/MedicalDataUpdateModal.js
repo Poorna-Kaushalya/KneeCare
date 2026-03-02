@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../api/api";
+import api from "../../api/api";
 
-export default function MedicalDataUpdateModal({ open, onClose, details, onSaved }) {
+export default function MedicalDataUpdateModal({
+  open,
+  onClose,
+  details,
+  onSaved,
+}) {
   const patientId = details?.id;
 
   const initialForm = useMemo(
@@ -42,11 +47,16 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
 
   const setField = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const numOrUndef = (v) => (v === "" ? undefined : Number(v));
-  const boolOrUndef = (v) => {
+  const numOrNull = (v) => {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const boolOrNull = (v) => {
     if (v === "true") return true;
     if (v === "false") return false;
-    return undefined;
+    return null;
   };
 
   const onSave = async () => {
@@ -60,30 +70,37 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
       }
 
       const payload = {
-        heightCm: numOrUndef(form.heightCm),
-        weightKg: numOrUndef(form.weightKg),
-        previousKneeInjury: boolOrUndef(form.previousKneeInjury),
-        crp: numOrUndef(form.crp),
-        esr: numOrUndef(form.esr),
-        rf: numOrUndef(form.rf),
-        cholesterol: numOrUndef(form.cholesterol),
-        wbc: numOrUndef(form.wbc),
-        platelets: numOrUndef(form.platelets),
-        fbs: numOrUndef(form.fbs),
-        sugar: numOrUndef(form.sugar),
-        fbcValue: numOrUndef(form.fbcValue),
+        heightCm: numOrNull(form.heightCm),
+        weightKg: numOrNull(form.weightKg),
+        previousKneeInjury: boolOrNull(form.previousKneeInjury),
+
+        crp: numOrNull(form.crp),
+        esr: numOrNull(form.esr),
+        rf: numOrNull(form.rf),
+        cholesterol: numOrNull(form.cholesterol),
+
+        wbc: numOrNull(form.wbc),
+        platelets: numOrNull(form.platelets),
+        fbs: numOrNull(form.fbs),
+        sugar: numOrNull(form.sugar),
+        fbcValue: numOrNull(form.fbcValue),
       };
 
-      // ✅ IMPORTANT: uses axios baseURL (backend 5000)
-      const res = await api.put(`/api/patients/${patientId}`, payload);
+
+      const res = await api.put(`http://localhost:5000/api/patients/${patientId}`, payload);
 
       onSaved?.(res.data);
-      onClose();
+      onClose?.();
     } catch (err) {
       console.error("Update medical data error:", err);
+
+      const raw = err?.response?.data;
+      const rawText = typeof raw === "string" ? raw.slice(0, 200) : "";
+
       setError(
         err?.response?.data?.error ||
           err?.message ||
+          rawText ||
           "Failed to update medical data."
       );
     } finally {
@@ -114,14 +131,14 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
               Update Medical Data
             </h3>
             <p className="text-xs text-slate-500">
-              {details?.name} (ID:{" "}
-              <span className="font-bold">{patientId}</span>)
+              {details?.name} (ID: <span className="font-bold">{patientId}</span>)
             </p>
           </div>
 
           <button
             onClick={onClose}
             className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-extrabold hover:bg-slate-50"
+            type="button"
           >
             Close
           </button>
@@ -139,16 +156,8 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
               Anthropometrics
             </div>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Input
-                label="Height (cm)"
-                value={form.heightCm}
-                onChange={(v) => setField("heightCm", v)}
-              />
-              <Input
-                label="Weight (kg)"
-                value={form.weightKg}
-                onChange={(v) => setField("weightKg", v)}
-              />
+              <Input label="Height (cm)" value={form.heightCm} onChange={(v) => setField("heightCm", v)} />
+              <Input label="Weight (kg)" value={form.weightKg} onChange={(v) => setField("weightKg", v)} />
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-extrabold text-slate-600">
@@ -156,9 +165,7 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
                 </label>
                 <select
                   value={form.previousKneeInjury}
-                  onChange={(e) =>
-                    setField("previousKneeInjury", e.target.value)
-                  }
+                  onChange={(e) => setField("previousKneeInjury", e.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                 >
                   <option value="">N/A</option>
@@ -173,24 +180,17 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
             <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wide">
               Lab Values
             </div>
+
             <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
               <Input label="CRP" value={form.crp} onChange={(v) => setField("crp", v)} />
               <Input label="ESR" value={form.esr} onChange={(v) => setField("esr", v)} />
               <Input label="RF" value={form.rf} onChange={(v) => setField("rf", v)} />
-              <Input
-                label="Cholesterol"
-                value={form.cholesterol}
-                onChange={(v) => setField("cholesterol", v)}
-              />
+              <Input label="Cholesterol" value={form.cholesterol} onChange={(v) => setField("cholesterol", v)} />
             </div>
 
             <div className="mt-3 grid grid-cols-1 md:grid-cols-5 gap-3">
               <Input label="WBC" value={form.wbc} onChange={(v) => setField("wbc", v)} />
-              <Input
-                label="Platelets"
-                value={form.platelets}
-                onChange={(v) => setField("platelets", v)}
-              />
+              <Input label="Platelets" value={form.platelets} onChange={(v) => setField("platelets", v)} />
               <Input label="FBS" value={form.fbs} onChange={(v) => setField("fbs", v)} />
               <Input label="Sugar" value={form.sugar} onChange={(v) => setField("sugar", v)} />
               <Input label="FBC" value={form.fbcValue} onChange={(v) => setField("fbcValue", v)} />
@@ -203,6 +203,7 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-extrabold hover:bg-slate-50"
             disabled={saving}
+            type="button"
           >
             Cancel
           </button>
@@ -210,6 +211,7 @@ export default function MedicalDataUpdateModal({ open, onClose, details, onSaved
             onClick={onSave}
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold disabled:opacity-60"
             disabled={saving}
+            type="button"
           >
             {saving ? "Saving..." : "Save Updates"}
           </button>
