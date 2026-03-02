@@ -387,7 +387,7 @@ function Dashboard({ logout }) {
       />
 
       <div className="max-w-[1500px] mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <aside className="lg:col-span-3">
             <PatientsSidebar
               patients={patients}
@@ -442,7 +442,7 @@ function Dashboard({ logout }) {
                       selectedPatientDetails &&
                       handleEditPatient(selectedPatientDetails, "medication")
                     }
-                    // ✅ Add this button inside PatientPanel and call this prop
+                    //  Add this button inside PatientPanel and call this prop
                     onEditMedical={() => setShowMedicalModal(true)}
                   />
                 </aside>
