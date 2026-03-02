@@ -1,136 +1,250 @@
-# 🛡️ KneeCare: Smart Prediction for Knee Recovery
+# KneeCare
 
-**A Multi-Modal Deep Learning Framework for Knee Osteoarthritis (KOA) Monitoring.**
-
-KneeCare is a cutting-edge medical platform designed to monitor and predict the progression of Knee Osteoarthritis. By combining **AI-driven X-ray analysis (KL Grading)** with **Real-time IoT Acoustic Sensing (Vibroarthrography)**, it provides physicians with a comprehensive tool for early intervention and personalized recovery plans.
+## Knee Osteoarthritis Prediction and Progression Using Multi-Modal Deep Learning
 
 ---
 
-## 🚀 Key Features
+## Overview
 
-* **Multi-Modal AI Engine:** Integrates radiographic data (X-rays) with biomechanical acoustic signals.
-* **IoT VAG Sensor Integration:** Real-time collection of joint vibration and thermal data via wearable sensors.
-* **Automated KL Grading:** AI-powered classification of OA severity (Stages 0–4).
-* **Explainable AI (XAI):** Generates heatmaps to show clinicians exactly which joint areas are showing signs of decay.
-* **Dynamic Treatment Dashboards:** Visualize recovery trends and automate risk alerts for potential complications.
+KneeCare is a research-driven multimodal decision-support system for the detection, severity grading, and continuous monitoring of Knee Osteoarthritis (KOA).
 
----
+This system integrates:
 
-## 🏗️ System Architecture
+* Radiographic imaging (X-ray / MRI)
+* Structured demographic, clinical, and biomarker data
+* Wearable IoT-based vibration and temperature signals
 
-1. **Data Acquisition:** Patient X-rays and IoT wearable sensor signals.  
-2. **Preprocessing:** Signal denoising and image normalization using Deep Learning.  
-3. **Feature Extraction:** Extracting radiographic features and acoustic spectral signatures.  
-4. **Inference Layer:** Multi-modal fusion model predicts the recovery trajectory.  
-5. **Clinician Interface:** Dashboard for physician review and prescription management.  
+The framework combines deep learning models, machine learning algorithms, and rule-based classification to provide accurate, interpretable, and clinically meaningful decision support.
+
+This implementation is based on the research paper:
+
+**“Knee Osteoarthritis Prediction and Progression Using Multi Modal Deep Learning”**
 
 ---
 
-## 🛠️ Tech Stack
+## Research Objectives
 
-* **Frontend:** React.js, Tailwind CSS, Framer Motion  
-* **Backend:** Node.js / Python (FastAPI/Flask for AI Model serving)  
-* **Animations:** Framer Motion & Intersection Observer  
-* **Icons:** FontAwesome  
-* **AI Models:** CNNs for Imaging + RNN/LSTMs for VAG signals  
+The system is designed to:
+
+1. Predict the presence of KOA using structured clinical and biomarker data.
+2. Automatically detect KOA from knee X-ray and MRI images using deep learning.
+3. Estimate disease severity using the Kellgren–Lawrence (KL) grading scale (KL0–KL4).
+4. Provide a severity-aware treatment management support system.
+5. Enable continuous monitoring using wearable IoT vibration and temperature sensors.
+6. Improve interpretability through explainable and rule-based modeling.
 
 ---
 
-## 📦 Installation & Setup
+## System Architecture
 
-### 1. Clone the Repository
+The system consists of five main components:
+
+### 1. KOA Presence Prediction (Structured Data)
+
+* Data source: Real-world hospital records
+* Preprocessing:
+
+  * Label encoding and one-hot encoding
+  * Z-score normalization
+  * Median imputation
+  * BMI computation
+* Class imbalance handling using SMOTE
+
+Models evaluated:
+
+* Logistic Regression
+* KNN
+* Random Forest
+* Gradient Boosting
+* **XGBoost (Final Model)**
+
+XGBoost achieved approximately 94% test accuracy with strong precision, recall, and F1-score performance.
+
+---
+
+### 2. Imaging-Based KOA Detection
+
+Modalities:
+
+* Knee X-ray
+* MRI
+
+Preprocessing:
+
+* CLAHE (contrast enhancement)
+* Image resizing
+* Data augmentation (rotation, flipping, scaling)
+
+CNN architectures evaluated:
+
+* ResNet50
+* DenseNet
+* EfficientNet
+* MobileNetV3
+* GoogLeNet
+* LeNet-5
+* **YOLOv8 (Final Model)**
+
+YOLOv8 achieved:
+
+* Validation Accuracy ≈ 91%
+* Test Accuracy ≈ 90.83%
+* ROC-AUC ≈ 97%
+
+---
+
+### 3. Multimodal KL Severity Prediction (KL0–KL4)
+
+This module combines:
+
+* Imaging backbone: EfficientNetB0
+* Clinical model: XGBoost
+* Fusion strategy: Late fusion ensemble
+
+The multimodal fusion approach adaptively combines imaging and clinical predictions to improve robustness and generalization.
+
+---
+
+### 4. Treatment Management Support System
+
+A non-prescriptive, severity-aware decision support module:
+
+* KL0–KL1 → Preventive care & lifestyle modification
+* KL2–KL3 → Conservative management & structured rehabilitation
+* Severe cases → Clinician-guided advanced treatment
+
+The system incorporates confidence-aware logic to maintain clinical oversight.
+
+---
+
+### 5. Wearable IoT-Based Continuous Monitoring
+
+Hardware Components:
+
+* MPU6050 – Motion & vibration sensing
+* INMP441 – Acoustic signal capture
+* MLX90614 – Infrared temperature sensor
+* ESP32 – Microcontroller for data transmission
+
+Extracted Features:
+
+* RMS Amplitude
+* Spectral Entropy
+* Zero Crossing Rate
+* Mean Frequency
+* Knee Temperature
+
+Classifiers evaluated:
+
+* Decision Tree
+* Random Forest
+* SVM
+* **Rule-Based Decision Tree (Final Model)**
+
+Performance:
+
+* Training Accuracy: 94.34%
+* Test Accuracy: 92.80%
+
+The rule-based decision tree ensures interpretability and suitability for medical applications.
+
+---
+
+## Key Contributions
+
+* Unified multimodal KOA detection and monitoring framework
+* Integration of imaging, structured clinical data, and IoT signals
+* Explainable AI via rule-based severity classification
+* High-performance clinical and imaging models
+* Continuous real-time wearable monitoring
+* Modular architecture for scalability
+
+---
+
+## Tech Stack
+
+### Frontend
+
+* React.js
+* Tailwind CSS
+* Recharts
+* FontAwesome
+
+### Backend
+
+* Node.js
+* Python (FastAPI / Flask for ML serving)
+
+### AI & ML
+
+* CNN architectures (EfficientNet, YOLOv8)
+* XGBoost
+* Decision Tree (Rule-based)
+* SMOTE for imbalance handling
+
+### IoT
+
+* ESP32 wearable device
+* Real-time TCP data transmission
+
+---
+
+## Installation & Setup
+
+### 1. Clone Repository
+
 ```bash
-git clone https://github.com/YourUsername/KneeCare.git
+git clone https://github.com/Poorna-Kaushalya/KneeCare.git
 cd KneeCare
 ```
 
 ---
 
-### 2. Install Node.js & Python Dependencies
+### 2. Backend Setup (Windows – PowerShell)
 
-**Backend (Node.js + Python ML):**
-```bash
+```powershell
 cd koa360-backend
-npm install                # Install Node.js dependencies
-
-# Create and activate Python virtual environment
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-# Install Python requirements
-pip install -r requirements.txt
-```
-
-**Frontend (React Dashboard):**
-```bash
-cd ../koa360-dashboard
-npm install
-```
-
----
-
-### 3. Upload ESP32 Code
-- Open `ESP32/KOA360.ino` in Arduino IDE or PlatformIO.  
-- Select **ESP32 board** and upload the code to your device.  
-
----
-
-### 4. Start Backend
-```bash
-cd koa360-backend
-node server.js
-```
-
----
-
-### 5. Start Frontend
-```bash
-cd koa360-dashboard
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+.\pyenv\Scripts\Activate.ps1
 npm start
 ```
-Runs the dashboard at `http://localhost:3000`.
 
 ---
 
-### 6. Install VS Code Extensions
-If you saved your extensions list (`extensions.txt`):
-```bash
-cat extensions.txt | xargs -n 1 code --install-extension
-```
+### 3. Frontend Setup
 
----
-
-### 7. Activate Python venv & Install Requirements (if not already done)
-```bash
-cd koa360-backend
-python -m venv venv
-source venv/bin/activate   # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-```
-
----
-
-### ⚡ Quick Start (Frontend Only)
-If you just want to run the dashboard quickly:
 ```bash
 cd koa360-dashboard
-npm install && npm start
+npm install
+npm start
 ```
 
 ---
 
-## 📸 Component Screenshots
+## Evaluation Metrics
 
-![KneeCare Home Screen](Assets/Home.png)
-
-* **Dashboard:** Monitoring KL stages.  
-* **IoT Section:** Real-time VAG signal visualization.  
+* Accuracy
+* Precision
+* Recall
+* F1-Score
+* Confusion Matrix
+* ROC-AUC
+* Learning Curve Analysis
 
 ---
 
-## 📜 Research Credits
+## Future Work
 
-Developed under the **Centre of Excellence for AI (CoEAI)** as a specialized research project in biomechanical health monitoring.
+* Multi-centric large-scale dataset expansion
+* Longitudinal progression modeling
+* Transformer-based multimodal fusion
+* Improved hyperparameter optimization
+* Enhanced real-world deployment validation
+
+---
+
+## Authors
+
+Faculty of Computing
+Sri Lanka Institute of Information Technology (SLIIT)
+Malabe, Sri Lanka
