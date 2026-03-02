@@ -7,7 +7,8 @@ const router = express.Router();
 /* ================= SAVE RAW SENSOR DATA ================= */
 router.post("/api/sensor-data", async (req, res) => {
   try {
-    const newData = new RawSensorData(req.body);
+    const body = req.body || {};
+    const newData = new RawSensorData(body);
     await newData.save();
     res.json({ success: true });
   } catch (err) {
@@ -20,8 +21,7 @@ router.post("/api/sensor-data", async (req, res) => {
 router.get("/api/device-status", async (req, res) => {
   try {
     const recentData = await RawSensorData.findOne({}, {}, { sort: { createdAt: -1 } });
-    const connected =
-      recentData && new Date() - recentData.createdAt < 10000; // 10s
+    const connected = recentData && new Date() - recentData.createdAt < 10000; // 10s
     res.json({ connected });
   } catch (err) {
     console.error("device-status error:", err.message);
@@ -32,9 +32,7 @@ router.get("/api/device-status", async (req, res) => {
 /* ================= GET LAST 10 AVG RECORDS ================= */
 router.get("/api/sensor-data", async (req, res) => {
   try {
-    const data = await AvgSensorData.find()
-      .sort({ createdAt: -1 })
-      .limit(10);
+    const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
     res.json(data);
   } catch (err) {
     console.error("get avg sensor-data error:", err.message);
@@ -58,22 +56,33 @@ setInterval(async () => {
     let sum_upper = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
     let sum_lower = { ax: 0, ay: 0, az: 0, gx: 0, gy: 0, gz: 0, temp: 0 };
     let sum_angle = 0;
+
     let sum_temp = { ambient: 0, object: 0 };
+    let sum_knee_temp = 0;
+    let kneeTempCount = 0;
+
+    // legacy mic
     let sum_mic = { rms: 0, peak: 0, energy: 0 };
     let micCount = 0;
 
-    rawData.forEach((d) => {
-      if (d.upper) {
-        Object.keys(sum_upper).forEach(
-          (k) => (sum_upper[k] += d.upper[k] || 0)
-        );
-      }
+    // new mic features (raw + aligned)
+    const zeroMicFeat = () => ({
+      rms_amplitude: 0,
+      peak_frequency: 0,
+      spectral_entropy: 0,
+      zero_crossing_rate: 0,
+      mean_frequency: 0,
+    });
 
-      if (d.lower) {
-        Object.keys(sum_lower).forEach(
-          (k) => (sum_lower[k] += d.lower[k] || 0)
-        );
-      }
+    let sum_micFeat = zeroMicFeat();
+    let micFeatCount = 0;
+
+    let sum_micFeatAligned = zeroMicFeat();
+    let micFeatAlignedCount = 0;
+
+    rawData.forEach((d) => {
+      if (d.upper) Object.keys(sum_upper).forEach((k) => (sum_upper[k] += d.upper[k] || 0));
+      if (d.lower) Object.keys(sum_lower).forEach((k) => (sum_lower[k] += d.lower[k] || 0));
 
       sum_angle += d.knee_angle || 0;
 
@@ -82,11 +91,26 @@ setInterval(async () => {
         sum_temp.object += d.temperature.object || 0;
       }
 
+      if (typeof d.knee_tempurarture === "number") {
+        sum_knee_temp += d.knee_tempurarture;
+        kneeTempCount++;
+      }
+
       if (d.microphone) {
         sum_mic.rms += d.microphone.rms || 0;
         sum_mic.peak += d.microphone.peak || 0;
         sum_mic.energy += d.microphone.energy || 0;
         micCount++;
+      }
+
+      if (d.microphone_features) {
+        Object.keys(sum_micFeat).forEach((k) => (sum_micFeat[k] += d.microphone_features[k] || 0));
+        micFeatCount++;
+      }
+
+      if (d.microphone_features_aligned) {
+        Object.keys(sum_micFeatAligned).forEach((k) => (sum_micFeatAligned[k] += d.microphone_features_aligned[k] || 0));
+        micFeatAlignedCount++;
       }
     });
 
@@ -120,6 +144,8 @@ setInterval(async () => {
         object: sum_temp.object / count,
       },
 
+      avg_knee_tempurarture: kneeTempCount > 0 ? (sum_knee_temp / kneeTempCount) : undefined,
+
       avg_microphone:
         micCount > 0
           ? {
@@ -128,9 +154,32 @@ setInterval(async () => {
               energy: sum_mic.energy / micCount,
             }
           : undefined,
+
+      avg_microphone_features:
+        micFeatCount > 0
+          ? {
+              rms_amplitude: sum_micFeat.rms_amplitude / micFeatCount,
+              peak_frequency: sum_micFeat.peak_frequency / micFeatCount,
+              spectral_entropy: sum_micFeat.spectral_entropy / micFeatCount,
+              zero_crossing_rate: sum_micFeat.zero_crossing_rate / micFeatCount,
+              mean_frequency: sum_micFeat.mean_frequency / micFeatCount,
+            }
+          : undefined,
+
+      avg_microphone_features_aligned:
+        micFeatAlignedCount > 0
+          ? {
+              rms_amplitude: sum_micFeatAligned.rms_amplitude / micFeatAlignedCount,
+              peak_frequency: sum_micFeatAligned.peak_frequency / micFeatAlignedCount,
+              spectral_entropy: sum_micFeatAligned.spectral_entropy / micFeatAlignedCount,
+              zero_crossing_rate: sum_micFeatAligned.zero_crossing_rate / micFeatAlignedCount,
+              mean_frequency: sum_micFeatAligned.mean_frequency / micFeatAlignedCount,
+            }
+          : undefined,
     });
 
     await avgData.save();
+
     await RawSensorData.deleteMany({
       _id: { $in: rawData.map((d) => d._id) },
     });
@@ -145,9 +194,7 @@ setInterval(async () => {
 router.get("/api/sensor-datas", async (req, res) => {
   try {
     const { deviceId, range } = req.query;
-    if (!deviceId) {
-      return res.status(400).json({ error: "Missing deviceId" });
-    }
+    if (!deviceId) return res.status(400).json({ error: "Missing deviceId" });
 
     const days = parseInt(range, 10) || 7;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -157,9 +204,7 @@ router.get("/api/sensor-datas", async (req, res) => {
       createdAt: { $gte: startDate },
     }).sort({ createdAt: 1 });
 
-    if (!data.length) {
-      return res.status(404).json({ error: "No data found" });
-    }
+    if (!data.length) return res.status(404).json({ error: "No data found" });
 
     res.json(data);
   } catch (err) {

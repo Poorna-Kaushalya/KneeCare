@@ -35,7 +35,7 @@ function App() {
         path="/"
         element={
           token ? (
-            <Navigate to="/" />
+            <Navigate to="/Home" />
           ) : (
             <Home />
           )
