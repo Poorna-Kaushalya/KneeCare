@@ -39,7 +39,7 @@ function ActionCard({ kind, badge, onClick, disabled }) {
       type="button"
       onClick={!disabled ? onClick : undefined}
       disabled={disabled}
-      className={`group w-full rounded-2xl border bg-white p-3 text-left transition shadow-sm
+      className={`group w-full rounded-xl border border-gray-300 bg-white p-2 text-left transition shadow-sm
         ${disabled ? "opacity-50 cursor-not-allowed" : `hover:-translate-y-[1px] hover:shadow-md ${t.ring}`}
         border-sky-100`}
     >
@@ -50,7 +50,7 @@ function ActionCard({ kind, badge, onClick, disabled }) {
           <div className="flex items-center justify-between gap-2">
             {badge && (
               <span className={`text-[14px] font-extrabold px-2 py-1 rounded-full border ${t.badge}`}>
-                {badge}
+                &nbsp;&nbsp;{badge}&nbsp;
               </span>
             )}
           </div>

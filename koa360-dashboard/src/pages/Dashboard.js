@@ -156,7 +156,7 @@ function Dashboard({ logout }) {
   const [patientForDeleteFlow, setPatientForDeleteFlow] = useState(null);
 
   const [dataRange] = useState(7);
-  const [activeTab, setActiveTab] = useState("motion");
+  const [activeTab, setActiveTab] = useState("vag");
 
   const [showPatientPicker, setShowPatientPicker] = useState(true);
 
@@ -272,18 +272,14 @@ function Dashboard({ logout }) {
     [patients, dataRange, logout]
   );
 
-  // ✅ VERY IMPORTANT: after medical save, update BOTH states
   const handleMedicalSaved = useCallback(
     async (updatedPatient) => {
-      // 1) Update right panel immediately
       setSelectedPatientDetails(updatedPatient);
 
-      // 2) Update sidebar list without needing refresh
       setPatients((prev) =>
         prev.map((p) => (p.id === updatedPatient.id ? { ...p, ...updatedPatient } : p))
       );
 
-      // 3) Optional: re-fetch from backend to guarantee consistency
       await fetchPatients();
       if (selectedPatientId) await fetchPatientDetails(selectedPatientId);
     },
@@ -315,7 +311,7 @@ function Dashboard({ logout }) {
 
   const handlePatientSelect = (patientId) => {
     setSelectedPatientId(patientId);
-    setActiveTab("motion");
+    setActiveTab("vag");
     setShowPatientPicker(false);
   };
 
@@ -386,7 +382,7 @@ function Dashboard({ logout }) {
         onAdd={() => setShowAddPatientModal(true)}
       />
 
-      <div className="max-w-[1500px] mx-auto p-4 md:p-6 lg:p-8">
+      <div className="max-w-full mx-auto p-4 ">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <aside className="lg:col-span-3">
             <PatientsSidebar

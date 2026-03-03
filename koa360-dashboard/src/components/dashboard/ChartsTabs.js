@@ -26,8 +26,8 @@ import KOASensorSeverity from "../PredicForms/KOASensorSeverity";
 export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) {
   const MAX_KNEE_ANGLE = 120;
   const [vagTab, setVagTab] = useState("rms");
+  const [severityLoading, setSeverityLoading] = useState(false);
 
-  // ✅ Show Vibrations tab first whenever device changes
   useEffect(() => {
     setActiveTab("vag");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,11 +72,8 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
           ? row.lowerAccelMag
           : Math.sqrt(axL * axL + ayL * ayL + azL * azL);
 
-      // ✅ temps
       const tempObject = Number(row?.avg_temperature?.object ?? row?.temperature?.object ?? 0);
       const tempAmbient = Number(row?.avg_temperature?.ambient ?? row?.temperature?.ambient ?? 0);
-
-      // ✅ knee surface temperature (your DB field)
       const kneeTemp = Number(row?.avg_knee_tempurarture ?? row?.knee_tempurarture ?? 0);
 
       const kneeAngle = Number(row?.avg_knee_angle ?? row?.knee_angle ?? 0);
@@ -92,13 +89,9 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
         upperAccelMag,
         lowerAccelMag,
         kneeAngle,
-
-        // temp series
         tempObject,
         tempAmbient,
         kneeTemp,
-
-        // vibration series
         micAlignedRms,
         micAlignedPeakFreq,
         micAlignedEntropy,
@@ -111,6 +104,20 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
     if (!chartData.length) return null;
     return chartData[chartData.length - 1];
   }, [chartData]);
+
+  useEffect(() => {
+    if (activeTab !== "severity") return;
+
+    setSeverityLoading(true);
+    const t = setTimeout(() => setSeverityLoading(false), 3500);
+    return () => clearTimeout(t);
+  }, [activeTab, deviceId]);
+
+  useEffect(() => {
+    const onReady = () => setSeverityLoading(false);
+    window.addEventListener("koa_severity_ready", onReady);
+    return () => window.removeEventListener("koa_severity_ready", onReady);
+  }, []);
 
   const TabButton = ({ id, icon, label, activeColor }) => {
     const active = activeTab === id;
@@ -132,13 +139,11 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
   };
 
   return (
-    <div className="rounded-1xl border border-sky-100 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-lg border border-sky-100 bg-white shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-5 bg-gradient-to-r from-sky-50 to-emerald-50 border-b border-sky-100">
+      <div className="px-6 pt-3 bg-gradient-to-r from-sky-100 to-emerald-100 border-b border-sky-100">
         <div className="flex items-center justify-between gap-1">
-          <div>
-            <div className="text-lg font-extrabold text-slate-900">Sensor Analytics</div>
-          </div>
+          <div className="text-lg font-extrabold text-slate-900">Sensor Analytics</div>
 
           <div className="text-xs text-slate-500">
             Last updated:{" "}
@@ -147,7 +152,7 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mt-2 pb-2">
+        <div className="flex flex-wrap gap-3 mt-2 pb-3">
           <TabButton id="severity" icon={faHeartbeat} label="Progress" activeColor="bg-emerald-600" />
           <TabButton id="vag" icon={faWaveSquare} label="Vibrations" activeColor="bg-teal-600" />
           <TabButton id="motion" icon={faArrowsRotate} label="Motion" activeColor="bg-sky-600" />
@@ -158,9 +163,39 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
 
       {/* Content */}
       <div className="px-6 py-6">
-        <div className="h-[320px] md:h-[360px]">
-          {activeTab === "severity" && <KOASensorSeverity deviceId={deviceId} />}
+        <div className="h-[280px] md:h-[325px]">
+          {/* Progress */}
+          {activeTab === "severity" && (
+            <div className="relative h-full">
+              <div className={severityLoading ? "opacity-0 pointer-events-none" : "opacity-100"}>
+                <KOASensorSeverity deviceId={deviceId} />
+              </div>
 
+              {severityLoading && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-sky-50">
+                  <div className="text-center px-6">
+                    <div className="flex items-center justify-center gap-3">
+                      <Spinner />
+                      <div className="text-lg font-extrabold text-slate-900">
+                        Waiting for prediction...
+                      </div>
+                    </div>
+                    <div className="mt-2 text-sm text-slate-600">
+                      Please wait while we calculate KOA sensor severity.
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <PulseDot delay="0ms" />
+                      <PulseDot delay="150ms" />
+                      <PulseDot delay="300ms" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Motion */}
           {activeTab === "motion" && (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -175,6 +210,7 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
             </ResponsiveContainer>
           )}
 
+          {/* Angle */}
           {activeTab === "angle" && (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -196,7 +232,7 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
             </ResponsiveContainer>
           )}
 
-          {/* ✅ UPDATED TEMP TAB: shows Knee Temp + Ambient Temp */}
+          {/* Temperature */}
           {activeTab === "temp" && (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -205,65 +241,54 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
                 <YAxis tickFormatter={formatTemp} tick={{ fontSize: 12 }} domain={["dataMin - 1", "dataMax + 1"]} />
                 <Tooltip labelFormatter={formatTime} />
                 <Legend />
-
-                <Line
-                  name="Knee Temp (Surface)"
-                  dataKey="kneeTemp"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  dot={false}
-                  type="monotone"
-                />
-                <Line
-                  name="Ambient Temp"
-                  dataKey="tempAmbient"
-                  stroke="#0ea5e9"
-                  strokeWidth={2}
-                  dot={false}
-                  type="monotone"
-                />
+                <Line name="Knee Temp (Surface)" dataKey="kneeTemp" stroke="#f97316" strokeWidth={2} dot={false} type="monotone" />
+                <Line name="Ambient Temp" dataKey="tempAmbient" stroke="#0ea5e9" strokeWidth={2} dot={false} type="monotone" />
               </LineChart>
             </ResponsiveContainer>
           )}
 
+          {/*  Vibrations  */}
           {activeTab === "vag" && (
             <div className="h-full flex flex-col gap-3">
+              {/* clickable metric cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 relative -mt-3">
-                <MetricCard title="RMS Amplitude" value={latest?.micAlignedRms?.toFixed?.(4) ?? "-"} tint="sky" />
-                <MetricCard title="Peak Frequency" value={`${latest?.micAlignedPeakFreq?.toFixed?.(2) ?? "-"} Hz`} tint="teal" />
-                <MetricCard title="Spectral Entropy" value={latest?.micAlignedEntropy?.toFixed?.(2) ?? "-"} tint="violet" />
-                <MetricCard title="Mean Frequency" value={`${latest?.micAlignedMeanFreq?.toFixed?.(2) ?? "-"} Hz`} tint="emerald" />
+                <MetricButton
+                  active={vagTab === "rms"}
+                  onClick={() => setVagTab("rms")}
+                  title="RMS Amplitude"
+                  value={latest?.micAlignedRms?.toFixed?.(4) ?? "-"}
+                  tint="sky"
+                />
+                <MetricButton
+                  active={vagTab === "peak"}
+                  onClick={() => setVagTab("peak")}
+                  title="Peak Frequency"
+                  value={`${latest?.micAlignedPeakFreq?.toFixed?.(2) ?? "-"} Hz`}
+                  tint="teal"
+                />
+                <MetricButton
+                  active={vagTab === "entropy"}
+                  onClick={() => setVagTab("entropy")}
+                  title="Spectral Entropy"
+                  value={latest?.micAlignedEntropy?.toFixed?.(2) ?? "-"}
+                  tint="violet"
+                />
+                <MetricButton
+                  active={vagTab === "mean"}
+                  onClick={() => setVagTab("mean")}
+                  title="Mean Frequency"
+                  value={`${latest?.micAlignedMeanFreq?.toFixed?.(2) ?? "-"} Hz`}
+                  tint="emerald"
+                />
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: "rms", label: "RMS" },
-                  { id: "peak", label: "Peak Freq" },
-                  { id: "entropy", label: "Entropy" },
-                  { id: "mean", label: "Mean Freq" },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setVagTab(t.id)}
-                    type="button"
-                    className={`px-3 py-1 rounded-full text-xs font-extrabold border transition ${
-                      vagTab === t.id
-                        ? "bg-teal-600 text-white border-teal-600"
-                        : "bg-white text-slate-700 border-sky-100 hover:bg-sky-50"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
+              {/* chart */}
               <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.75} />
                     <XAxis dataKey="createdAt" tickFormatter={formatMonthDay} tick={{ fontSize: 12 }} />
                     <Tooltip labelFormatter={formatTime} />
-                    <Legend />
 
                     {vagTab === "rms" && (
                       <>
@@ -303,7 +328,8 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
   );
 }
 
-function MetricCard({ title, value, tint = "sky" }) {
+/*  Metric Cards become buttons */
+function MetricButton({ title, value, tint = "sky", active, onClick }) {
   const map = {
     sky: "bg-sky-50 border-sky-100 text-sky-800",
     teal: "bg-teal-50 border-teal-100 text-teal-800",
@@ -312,9 +338,32 @@ function MetricCard({ title, value, tint = "sky" }) {
   };
 
   return (
-    <div className={`rounded-xl border p-3 ${map[tint] || map.sky}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border p-2 text-left transition w-full
+        ${map[tint] || map.sky}
+        ${active ? "ring-2 ring-slate-900/10 shadow-sm scale-[1.01]" : "hover:shadow-sm hover:scale-[1.01]"}`}
+      title={`Show chart: ${title}`}
+    >
       <div className="text-xs font-semibold opacity-80">{title}</div>
       <div className="text-lg text-center font-extrabold mt-0.5">{value}</div>
-    </div>
+    </button>
+  );
+}
+
+/* Loading components */
+function Spinner() {
+  return (
+    <div className="w-8 h-8 rounded-full border-4 border-sky-200 border-t-sky-600 animate-spin" />
+  );
+}
+
+function PulseDot({ delay = "0ms" }) {
+  return (
+    <span
+      className="w-2.5 h-2.5 rounded-full bg-sky-600 animate-bounce inline-block"
+      style={{ animationDelay: delay }}
+    />
   );
 }
