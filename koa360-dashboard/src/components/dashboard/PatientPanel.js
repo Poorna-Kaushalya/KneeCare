@@ -282,9 +282,9 @@ export default function PatientPanel({
     <div className="flex items-center justify-between px-3 py-1.5  border border-slate-300">
       <div className="flex items-center gap-2 min-w-0">
         <FontAwesomeIcon icon={icon} className={iconClass} />
-        <span className="text-slate-600 text-sm font-medium">{label}</span>
+        <span className="text-slate-600 text-xs font-medium">{label}</span>
       </div>
-      <span className="text-slate-900 text-sm font-extrabold truncate max-w-[55%] text-right">
+      <span className="text-slate-900 text-xs font-extrabold truncate max-w-[55%] text-right">
         {value ?? "N/A"}
       </span>
     </div>
@@ -321,7 +321,7 @@ export default function PatientPanel({
             {(!details?.heightCm ||
               !details?.weightKg ||
               (!details?.crp && !details?.esr && !details?.rf)) && (
-              <div className="text-[11px] px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-extrabold flex items-center gap-1">
+              <div className="text-[10px] px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-extrabold flex items-center gap-1">
                 <FontAwesomeIcon icon={faTriangleExclamation} />
                 Incomplete
               </div>
@@ -355,15 +355,15 @@ export default function PatientPanel({
           </div>
 
           <div className="mt-2">
-            <InfoRow icon={faDroplet} label="CRP" value={show(details?.crp)} />
-            <InfoRow icon={faDroplet} label="ESR" value={show(details?.esr)} />
-            <InfoRow icon={faDroplet} label="RF" value={show(details?.rf)} />
+            <InfoRow icon={faDroplet} label="C-Reactive Protein" value={show(details?.crp)} />
+            <InfoRow icon={faDroplet} label="Erythrocyte Sedimentation Rate" value={show(details?.esr)} />
+            <InfoRow icon={faDroplet} label="Rheumatoid Factor" value={show(details?.rf)} />
             <InfoRow icon={faDroplet} label="Cholesterol" value={show(details?.cholesterol)} />
-            <InfoRow icon={faDroplet} label="WBC" value={show(details?.wbc)} />
-            <InfoRow icon={faDroplet} label="Platelets" value={show(details?.platelets)} />
-            <InfoRow icon={faDroplet} label="FBS" value={show(details?.fbs)} />
-            <InfoRow icon={faDroplet} label="Sugar" value={show(details?.sugar)} />
-            <InfoRow icon={faDroplet} label="FBC" value={show(details?.fbcValue)} />
+            <InfoRow icon={faDroplet} label="White Blood Cells" value={show(details?.wbc)} />
+            <InfoRow icon={faDroplet} label="Platelet Count" value={show(details?.platelets)} />
+            <InfoRow icon={faDroplet} label="Fasting Blood Sugar" value={show(details?.fbs)} />
+            <InfoRow icon={faDroplet} label="Blood Glucose" value={show(details?.sugar)} />
+            <InfoRow icon={faDroplet} label="Full Blood Count" value={show(details?.fbcValue)} />
           </div>
         </div>
       </div>
