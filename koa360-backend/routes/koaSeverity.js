@@ -133,7 +133,7 @@ router.get("/api/koa-severity", async (req, res) => {
       });
     }
 
-    // ✅ Always use python inside venv (Windows-safe)
+    //  Always use python inside venv (Windows-safe)
     const pythonExe =
       process.platform === "win32"
         ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
@@ -171,7 +171,7 @@ router.get("/api/koa-severity", async (req, res) => {
     });
 
     py.on("close", (code) => {
-      // ✅ If python crashed, return full debug info
+      //  If python crashed, return full debug info
       if (code !== 0) {
         return res.status(500).json({
           error: "Python process failed",

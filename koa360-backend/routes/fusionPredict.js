@@ -24,7 +24,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// ✅ Use python from venv
+//  Use python from venv
 const PYTHON_EXE =
   process.platform === "win32"
     ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
