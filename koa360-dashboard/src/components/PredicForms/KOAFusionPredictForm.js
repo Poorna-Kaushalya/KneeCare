@@ -1,18 +1,10 @@
-// =======================================================
-// COMPLETE TABS FORM (COPY-PASTE)
-// ✅ Occupation = Yes/No
-// ✅ BMI AUTO-CALCULATED from Height + Weight (cm, kg)
-// ✅ Difficulty Activities = CHECKBOX multi-select
-//    -> stored/sent as comma-separated string
-// =======================================================
-
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/api";
 
 const OPTIONS = {
   gender: ["", "Male", "Female"],
   yesNo: ["", "No", "Yes"],
-  occupation: ["", "No", "Yes"], // ✅ occupation as Yes/No
+  occupation: ["", "No", "Yes"],
   physical_activity_level: ["", "Low", "Moderate", "High"],
   stiffness: ["", "never", "occasionally", "frequently", "always"],
 };
@@ -31,6 +23,20 @@ const TABS = [
   { key: "bio", label: "Biomarkers & Other" },
 ];
 
+const PLAN_ORDER = {
+  Preventive_SelfCare: 1,
+  Physio_Lifestyle: 2,
+  Conservative_Clinical: 3,
+  Surgical_Consult_Referral: 4,
+};
+
+const PLAN_LABELS = {
+  Preventive_SelfCare: "Preventive / Self-care",
+  Physio_Lifestyle: "Physiotherapy + Lifestyle Management",
+  Conservative_Clinical: "Conservative Clinical Management",
+  Surgical_Consult_Referral: "Surgical / Specialist Referral",
+};
+
 function calcBMI(heightCm, weightKg) {
   const h = parseFloat(String(heightCm ?? "").trim());
   const w = parseFloat(String(weightKg ?? "").trim());
@@ -41,9 +47,310 @@ function calcBMI(heightCm, weightKg) {
   return bmi.toFixed(2);
 }
 
+function toFloatSafe(val) {
+  const n = parseFloat(String(val ?? "").replace(/,/g, "").trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function encodeYesNo(val) {
+  return String(val ?? "").trim().toLowerCase() === "yes" ? 1 : 0;
+}
+
+function encodeStiffness(val) {
+  const s = String(val ?? "").trim().toLowerCase();
+  if (s.includes("occasion")) return 1;
+  if (s.includes("frequent")) return 2;
+  if (s.includes("always")) return 3;
+  return 0;
+}
+
+function difficultyCount(val) {
+  const s = String(val ?? "").trim();
+  if (!s) return 0;
+  return s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean).length;
+}
+
+function mapSeverity(kl) {
+  const s = String(kl ?? "").trim().toUpperCase();
+  if (s === "KL0") return 0;
+  if (s === "KL1") return 1;
+  if (s === "KL2") return 2;
+  if (s === "KL3") return 3;
+  if (s === "KL4") return 4;
+  return 0;
+}
+
+function upgrade(currentPlan, minimumPlan) {
+  return PLAN_ORDER[currentPlan] >= PLAN_ORDER[minimumPlan]
+    ? currentPlan
+    : minimumPlan;
+}
+
+function basePlan(severity) {
+  if (severity <= 0) return "Preventive_SelfCare";
+  if (severity === 1 || severity === 2) return "Physio_Lifestyle";
+  if (severity === 3) return "Conservative_Clinical";
+  return "Surgical_Consult_Referral";
+}
+
+function biomarkerFlags({ fbs, cholesterol, esr, crp, rf }) {
+  const fbsVal = toFloatSafe(fbs);
+  const cholVal = toFloatSafe(cholesterol);
+  const esrVal = toFloatSafe(esr);
+  const crpVal = toFloatSafe(crp);
+  const rfVal = toFloatSafe(rf);
+
+  return {
+    high_fbs: fbsVal !== null && fbsVal >= 126 ? 1 : 0,
+    high_cholesterol: cholVal !== null && cholVal >= 240 ? 1 : 0,
+    borderline_cholesterol:
+      cholVal !== null && cholVal >= 200 && cholVal < 240 ? 1 : 0,
+    high_esr: esrVal !== null && esrVal > 20 ? 1 : 0,
+    high_crp: crpVal !== null && crpVal > 5 ? 1 : 0,
+    positive_rf: rfVal !== null && rfVal > 14 ? 1 : 0,
+  };
+}
+
+function determineFollowup(severity, pain, swelling, flags) {
+  if (severity === 4) return 2;
+  if (severity >= 3 && pain >= 7) return 4;
+  if (swelling === 1) return 6;
+  if (flags.high_esr || flags.high_crp) return 6;
+  if (severity === 2 && pain >= 6) return 8;
+  return 12;
+}
+
+function buildLifestyleMessages({
+  bmi,
+  heightM,
+  weightKg,
+  pain,
+  diabetes,
+  hypertension,
+  obesity,
+  cholesterol,
+  difficulty,
+  physicalActivity,
+}) {
+  const messages = [];
+
+  if (bmi !== null && bmi >= 25) {
+    const targetWeight = 24.9 * (heightM ** 2);
+    const loss5 = weightKg * 0.05;
+    const loss10 = weightKg * 0.1;
+
+    messages.push(
+      `Current BMI is ${bmi.toFixed(1)}. Gradual weight reduction may reduce knee joint loading.`
+    );
+    messages.push(
+      `A healthy target weight for this height is around ${targetWeight.toFixed(1)} kg.`
+    );
+    messages.push(
+      `An initial target is to reduce about ${loss5.toFixed(1)}–${loss10.toFixed(
+        1
+      )} kg.`
+    );
+  }
+
+  if (obesity === 1 && bmi === null) {
+    messages.push("Obesity risk is present, so weight management is recommended.");
+  }
+
+  if (pain >= 6) {
+    messages.push(
+      "Use low-impact activities such as walking on flat surfaces, cycling, and supervised strengthening exercises."
+    );
+  }
+
+  if (difficulty >= 2) {
+    messages.push(
+      "Reduce activities that overload the knee and begin gradual physiotherapy-based functional training."
+    );
+  }
+
+  if (String(physicalActivity ?? "").toLowerCase() === "low") {
+    messages.push(
+      "Low physical activity was reported. Begin light daily movement and strengthening gradually."
+    );
+  }
+
+  if (diabetes === 1) {
+    messages.push(
+      "Maintain good blood sugar control with balanced meals and regular monitoring."
+    );
+  }
+
+  if (hypertension === 1) {
+    messages.push(
+      "Follow a low-salt heart-healthy diet and monitor blood pressure regularly."
+    );
+  }
+
+  const chol = toFloatSafe(cholesterol);
+  if (chol !== null) {
+    if (chol >= 240) {
+      messages.push(
+        "Cholesterol is high. Reduce oily and high-fat foods and increase vegetables, fruits, and fiber-rich foods."
+      );
+    } else if (chol >= 200) {
+      messages.push(
+        "Cholesterol is borderline high. Dietary improvement and monitoring are advised."
+      );
+    }
+  }
+
+  messages.push(
+    "Avoid prolonged squatting, repeated stair climbing, and long standing when pain is high."
+  );
+  messages.push(
+    "Use supportive footwear and continue quadriceps-strengthening exercises."
+  );
+  messages.push(
+    "Seek medical review if pain, swelling, or walking difficulty worsens."
+  );
+
+  return messages;
+}
+
+function getFrontendTreatmentRecommendation(form, predLabel) {
+  const severity = mapSeverity(predLabel);
+  const age = parseInt(form.age || "0", 10) || 0;
+  const heightCm = toFloatSafe(form.height);
+  const weightKg = toFloatSafe(form.weight);
+  const heightM = heightCm ? heightCm / 100 : null;
+  const bmi = heightM && weightKg ? weightKg / (heightM * heightM) : null;
+
+  const pain = Math.max(0, Math.min(10, toFloatSafe(form.pain_score) ?? 0));
+  const stiffness = encodeStiffness(form.stiffness);
+  const swelling = encodeYesNo(form.do_you_experience_swelling_in_your_knees);
+  const prevInjury = encodeYesNo(
+    form["have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)"]
+  );
+  const difficulty = difficultyCount(
+    form["do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)"]
+  );
+  const diabetes = encodeYesNo(form.does_the_patient_has_diabetes);
+  const hypertension = encodeYesNo(form.does_the_patient_has_hypertension);
+  const obesity = encodeYesNo(form.does_the_patient_has_obesity);
+
+  const flags = biomarkerFlags({
+    fbs: form.fbs,
+    cholesterol: form.cholesterol,
+    esr: form.esr,
+    crp: form.crp,
+    rf: form.rf,
+  });
+
+  let plan = basePlan(severity);
+  const notes = [`Base plan selected from predicted severity grade ${severity}.`];
+
+  if (severity >= 2 && pain >= 7) {
+    plan = upgrade(plan, "Conservative_Clinical");
+    notes.push("High pain score increased treatment intensity.");
+  }
+
+  if (severity >= 2 && difficulty >= 3) {
+    plan = upgrade(plan, "Conservative_Clinical");
+    notes.push("Multiple functional limitations were identified.");
+  }
+
+  if (severity >= 2 && stiffness >= 2) {
+    plan = upgrade(plan, "Conservative_Clinical");
+    notes.push("Frequent stiffness supports stronger management.");
+  }
+
+  if (swelling === 1 && severity >= 2) {
+    plan = upgrade(plan, "Conservative_Clinical");
+    notes.push("Swelling suggests inflammatory symptom burden.");
+  }
+
+  if (bmi !== null && bmi >= 30) {
+    plan = upgrade(plan, "Conservative_Clinical");
+    notes.push("High BMI increases knee joint loading.");
+  }
+
+  if (prevInjury === 1) {
+    notes.push("Previous knee injury reported.");
+  }
+
+  if (flags.high_fbs) {
+    notes.push("FBS is high; diabetic control should be optimized.");
+  }
+
+  if (flags.high_cholesterol) {
+    notes.push("High cholesterol detected; metabolic risk management is advised.");
+  } else if (flags.borderline_cholesterol) {
+    notes.push("Borderline high cholesterol detected.");
+  }
+
+  if (flags.high_esr || flags.high_crp) {
+    plan = upgrade(plan, "Conservative_Clinical");
+    notes.push("Inflammatory biomarkers are elevated.");
+  }
+
+  if (flags.positive_rf) {
+    notes.push("RF positive — inflammatory arthritis review is recommended.");
+  }
+
+  if (severity === 4) {
+    plan = "Surgical_Consult_Referral";
+    notes.push("Severe grade indicates specialist or surgical evaluation.");
+  }
+
+  if (age >= 65 && severity >= 3) {
+    notes.push("Older age with advanced severity supports closer monitoring.");
+  }
+
+  const otherRisk = String(
+    form[
+      "does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis"
+    ] ?? ""
+  ).trim();
+
+  if (otherRisk) {
+    notes.push(`Other reported risk factors: ${otherRisk}`);
+  }
+
+  const ongoing = String(
+    form[
+      "what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition"
+    ] ?? ""
+  ).trim();
+
+  if (ongoing) {
+    notes.push(`Current or ongoing treatments: ${ongoing}`);
+  }
+
+  const lifestyle_modifications = buildLifestyleMessages({
+    bmi,
+    heightM: heightM ?? 0,
+    weightKg: weightKg ?? 0,
+    pain,
+    diabetes,
+    hypertension,
+    obesity,
+    cholesterol: form.cholesterol,
+    difficulty,
+    physicalActivity: form.physical_activity_level,
+  });
+
+  const followup_weeks = determineFollowup(severity, pain, swelling, flags);
+
+  return {
+    plan,
+    plan_label: PLAN_LABELS[plan],
+    bmi: bmi !== null ? Number(bmi.toFixed(2)) : null,
+    followup_weeks,
+    lifestyle_modifications,
+    notes,
+  };
+}
+
 export default function KOAFusionPredictForm() {
   const [activeTab, setActiveTab] = useState("xray");
-
   const [xray, setXray] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -51,16 +358,13 @@ export default function KOAFusionPredictForm() {
   const [form, setForm] = useState({
     age: "",
     gender: "",
-    height: "", 
-    weight: "", 
-    bmi: "", 
-
-    occupation: "", 
+    height: "",
+    weight: "",
+    bmi: "",
+    occupation: "",
     physical_activity_level: "",
-
     pain_score: "",
     stiffness: "",
-
     fbs: "",
     wbc: "",
     platelets: "",
@@ -93,6 +397,17 @@ export default function KOAFusionPredictForm() {
     });
   }, [form.height, form.weight]);
 
+  const previewUrl = useMemo(() => {
+    if (!xray) return "";
+    return URL.createObjectURL(xray);
+  }, [xray]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
@@ -116,7 +431,6 @@ export default function KOAFusionPredictForm() {
 
   const getSeverityName = (kl) => severityMap[kl] || "Unknown";
 
-  // Optional: completion per tab
   const completion = useMemo(() => {
     const filled = (k) => String(form[k] ?? "").trim() !== "";
     const count = (keys) => keys.reduce((acc, k) => acc + (filled(k) ? 1 : 0), 0);
@@ -185,7 +499,22 @@ export default function KOAFusionPredictForm() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setResult(resp.data);
+      const serverData = resp.data || {};
+      const predLabel =
+        serverData?.fusion?.pred_label ||
+        serverData?.pred_label ||
+        "";
+
+      const frontendTreatment = getFrontendTreatmentRecommendation(form, predLabel);
+
+      setResult({
+        ...serverData,
+        fusion: {
+          ...(serverData.fusion || {}),
+          pred_label: predLabel,
+        },
+        treatment: frontendTreatment,
+      });
     } catch (err) {
       const msg =
         err?.response?.data?.error ||
@@ -211,38 +540,13 @@ export default function KOAFusionPredictForm() {
     setActiveTab(prev);
   };
 
+  const treatment = result?.treatment || null;
+  const predLabel = result?.fusion?.pred_label || "";
+  const severityText = getSeverityName(predLabel);
+
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="rounded-xl ">
-        {/* Header */}
-        <div className="p-5 absolute top-18 right-64 border-b  items-start justify-between gap-8">
-
-          {/* Result badge */}
-          {result && (
-            <div
-              className={`
-                px-4 py-2 rounded-full font-extrabold text-sm shadow border items-center gap-2
-                ${
-                  result?.fusion?.pred_label === "KL0"
-                    ? "bg-green-500 border-green-600"
-                    : result?.fusion?.pred_label === "KL1"
-                    ? "bg-yellow-400 border-yellow-500"
-                    : result?.fusion?.pred_label === "KL2"
-                    ? "bg-orange-400 border-orange-500"
-                    : result?.fusion?.pred_label === "KL3"
-                    ? "bg-orange-600 border-orange-700"
-                    : "bg-red-600 border-red-700"
-                }
-                text-white
-              `}
-            >
-              <span className="uppercase tracking-wide opacity-90">Severity &nbsp;&nbsp;</span>
-              <span>{getSeverityName(result?.fusion?.pred_label)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Tabs */}
+      <div className="rounded-xl bg-white">
         <div className="px-5 pt-4">
           <div className="flex flex-wrap gap-4">
             {TABS.map((t) => (
@@ -250,14 +554,11 @@ export default function KOAFusionPredictForm() {
                 key={t.key}
                 type="button"
                 onClick={() => setActiveTab(t.key)}
-                className={`
-                  px-4 py-2 rounded-full text-sm font-bold border transition
-                  ${
-                    activeTab === t.key
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                  }
-                `}
+                className={`px-4 py-2 rounded-full text-sm font-bold border transition ${
+                  activeTab === t.key
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
               >
                 {t.label}
                 {t.key === "demo" && (
@@ -293,9 +594,7 @@ export default function KOAFusionPredictForm() {
         </div>
 
         <form onSubmit={submit}>
-          {/* Content */}
           <div className="p-5">
-            {/* TAB 1: XRAY */}
             {activeTab === "xray" && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="rounded-2xl border p-4">
@@ -316,7 +615,7 @@ export default function KOAFusionPredictForm() {
                 <div className="rounded-2xl border p-4 flex items-center justify-center bg-slate-50">
                   {xray ? (
                     <img
-                      src={URL.createObjectURL(xray)}
+                      src={previewUrl}
                       alt="X-ray Preview"
                       className="w-full max-w-sm h-52 object-contain rounded-xl border bg-white"
                     />
@@ -327,7 +626,6 @@ export default function KOAFusionPredictForm() {
               </div>
             )}
 
-            {/* TAB 2: DEMOGRAPHICS */}
             {activeTab === "demo" && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Input label="Age" name="age" value={form.age} onChange={onChange} />
@@ -340,10 +638,7 @@ export default function KOAFusionPredictForm() {
                 />
                 <Input label="Height (cm)" name="height" value={form.height} onChange={onChange} />
                 <Input label="Weight (kg)" name="weight" value={form.weight} onChange={onChange} />
-
-                {/* ✅ BMI auto */}
                 <InputReadOnly label="BMI (auto)" name="bmi" value={form.bmi} />
-
                 <Select
                   label="Occupation (Yes/No)"
                   name="occupation"
@@ -351,7 +646,6 @@ export default function KOAFusionPredictForm() {
                   onChange={onChange}
                   options={OPTIONS.occupation}
                 />
-
                 <Select
                   label="Physical Activity"
                   name="physical_activity_level"
@@ -362,7 +656,6 @@ export default function KOAFusionPredictForm() {
               </div>
             )}
 
-            {/* TAB 3: SYMPTOMS & HISTORY */}
             {activeTab === "symp" && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Input label="Pain Score" name="pain_score" value={form.pain_score} onChange={onChange} />
@@ -399,7 +692,6 @@ export default function KOAFusionPredictForm() {
                   options={OPTIONS.yesNo}
                 />
 
-                {/* ✅ UPDATED: Checkbox multi-select */}
                 <DifficultyCheckboxGroup
                   label="Difficulty in performing activities (check all that apply)"
                   name="do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)"
@@ -432,14 +724,12 @@ export default function KOAFusionPredictForm() {
               </div>
             )}
 
-            {/* TAB 4: BIOMARKERS & OTHER */}
             {activeTab === "bio" && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Input label="FBS" name="fbs" value={form.fbs} onChange={onChange} />
                 <Input label="WBC" name="wbc" value={form.wbc} onChange={onChange} />
                 <Input label="Platelets" name="platelets" value={form.platelets} onChange={onChange} />
                 <Input label="CS" name="cs" value={form.cs} onChange={onChange} />
-
                 <Input label="Cholesterol" name="cholesterol" value={form.cholesterol} onChange={onChange} />
                 <Input label="CRP" name="crp" value={form.crp} onChange={onChange} />
                 <Input label="ESR" name="esr" value={form.esr} onChange={onChange} />
@@ -464,7 +754,6 @@ export default function KOAFusionPredictForm() {
             )}
           </div>
 
-          {/* Footer */}
           <div className="p-5 border-t flex items-center justify-between gap-3">
             <button
               type="button"
@@ -495,9 +784,99 @@ export default function KOAFusionPredictForm() {
             </div>
           </div>
         </form>
+
+        {result && (
+          <div className="p-5 border-t bg-slate-50 rounded-b-xl">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="rounded-2xl border bg-white p-5">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                  Predicted Severity
+                </div>
+
+                <div
+                  className={`mt-3 inline-flex px-4 py-2 rounded-full font-extrabold text-sm shadow border text-white ${
+                    predLabel === "KL0"
+                      ? "bg-green-500 border-green-600"
+                      : predLabel === "KL1"
+                      ? "bg-yellow-400 border-yellow-500"
+                      : predLabel === "KL2"
+                      ? "bg-orange-400 border-orange-500"
+                      : predLabel === "KL3"
+                      ? "bg-orange-600 border-orange-700"
+                      : "bg-red-600 border-red-700"
+                  }`}
+                >
+                  {severityText} {predLabel ? `(${predLabel})` : ""}
+                </div>
+
+                {treatment?.plan_label && (
+                  <>
+                    <div className="mt-5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      Recommended Plan
+                    </div>
+                    <div className="mt-2 text-sm font-semibold text-slate-800">
+                      {treatment.plan_label}
+                    </div>
+                  </>
+                )}
+
+                {treatment?.followup_weeks && (
+                  <>
+                    <div className="mt-5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      Follow-up
+                    </div>
+                    <div className="mt-2 text-sm text-slate-800">
+                      Review again in <span className="font-bold">{treatment.followup_weeks} weeks</span>
+                    </div>
+                  </>
+                )}
+
+                {treatment?.bmi && (
+                  <>
+                    <div className="mt-5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      BMI
+                    </div>
+                    <div className="mt-2 text-sm text-slate-800">{treatment.bmi}</div>
+                  </>
+                )}
+              </div>
+
+              <div className="rounded-2xl border bg-white p-5 lg:col-span-2">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+                  Lifestyle Modifications
+                </div>
+
+                {Array.isArray(treatment?.lifestyle_modifications) &&
+                treatment.lifestyle_modifications.length > 0 ? (
+                  <ul className="space-y-2 text-sm text-slate-700 list-disc pl-5">
+                    {treatment.lifestyle_modifications.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-slate-500">No lifestyle advice available.</div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border bg-white p-5 lg:col-span-3">
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+                  Notes
+                </div>
+
+                {Array.isArray(treatment?.notes) && treatment.notes.length > 0 ? (
+                  <ul className="space-y-2 text-sm text-slate-700 list-disc pl-5">
+                    {treatment.notes.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-slate-500">No notes available.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-
     </div>
   );
 }
@@ -553,7 +932,6 @@ function Select({ label, name, value, onChange, options }) {
 }
 
 function DifficultyCheckboxGroup({ label, name, options, value, onChange }) {
-  // value stored as comma-separated string
   const selected = value ? value.split(",").map((v) => v.trim()).filter(Boolean) : [];
 
   const toggle = (opt) => {
