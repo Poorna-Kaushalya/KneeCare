@@ -16,7 +16,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_DIR = os.path.join(BASE_DIR, "..", "models")
 
-XRAY_MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetB0_001.keras")
+XRAY_MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetB0_27_final.keras")
 
 # LOAD FULL PIPELINE (preprocess + xgb)
 TABULAR_PIPELINE_PATH = os.path.join(MODEL_DIR, "koa_grade_xgb_newly.pkl")
