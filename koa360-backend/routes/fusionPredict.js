@@ -44,7 +44,7 @@ router.post("/predict", upload.single("xray"), async (req, res) => {
 
     const imagePath = req.file.path;
 
-    // keep tabular (multer gives strings)
+    // keep tabular 
     const tabular = { ...req.body };
 
     const payload = {

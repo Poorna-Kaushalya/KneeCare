@@ -785,11 +785,12 @@ export default function KOAFusionPredictForm() {
           </div>
         </form>
 
+        <h1 className="text-2xl font-bold text-slate-800 mb-3">Treatment Suggestion Plan </h1>
         {result && (
           <div className="p-5 border-t bg-slate-50 rounded-b-xl">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="rounded-2xl border bg-white p-5">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                <div className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
                   Predicted Severity
                 </div>
 
@@ -811,7 +812,7 @@ export default function KOAFusionPredictForm() {
 
                 {treatment?.plan_label && (
                   <>
-                    <div className="mt-5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    <div className="mt-5 text-xs font-extrabold text-slate-800 uppercase tracking-wide">
                       Recommended Plan
                     </div>
                     <div className="mt-2 text-sm font-semibold text-slate-800">
@@ -822,7 +823,7 @@ export default function KOAFusionPredictForm() {
 
                 {treatment?.followup_weeks && (
                   <>
-                    <div className="mt-5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    <div className="mt-5 text-xs font-extrabold text-slate-800 uppercase tracking-wide">
                       Follow-up
                     </div>
                     <div className="mt-2 text-sm text-slate-800">
@@ -833,7 +834,7 @@ export default function KOAFusionPredictForm() {
 
                 {treatment?.bmi && (
                   <>
-                    <div className="mt-5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    <div className="mt-5 text-xs font-extrabold text-slate-800 uppercase tracking-wide">
                       BMI
                     </div>
                     <div className="mt-2 text-sm text-slate-800">{treatment.bmi}</div>
@@ -842,7 +843,7 @@ export default function KOAFusionPredictForm() {
               </div>
 
               <div className="rounded-2xl border bg-white p-5 lg:col-span-2">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+                <div className="text-xs font-extrabold text-slate-800 uppercase tracking-wide mb-3">
                   Lifestyle Modifications
                 </div>
 
@@ -859,7 +860,7 @@ export default function KOAFusionPredictForm() {
               </div>
 
               <div className="rounded-2xl border bg-white p-5 lg:col-span-3">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+                <div className="text-xs font-extrabold text-slate-800 uppercase tracking-wide mb-3">
                   Notes
                 </div>
 
