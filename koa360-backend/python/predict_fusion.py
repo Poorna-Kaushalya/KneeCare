@@ -7,24 +7,43 @@ import joblib
 from PIL import Image
 
 import tensorflow as tf
-from tensorflow.keras.applications.densenet import preprocess_input as densenet_preprocess
+from tensorflow.keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
+from ultralytics import YOLO
 
 # =========================
 # PATHS
 # =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 MODEL_DIR = os.path.join(BASE_DIR, "..", "models")
 
-XRAY_MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetB0_27_final.keras")
+# Gate model (YOLO classifier)
+GATE_MODEL_PATH = os.path.join(MODEL_DIR, "gate.pt")
 
-# LOAD FULL PIPELINE (preprocess + xgb)
+# X-ray severity model
+XRAY_MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetB0_001.keras")
+
+# Tabular pipeline
 TABULAR_PIPELINE_PATH = os.path.join(MODEL_DIR, "koa_grade_xgb_newly.pkl")
 
 IMG_SIZE = (224, 224)
 CLASS_LABELS = ["KL0", "KL1", "KL2", "KL3", "KL4"]
 
-# RAW columns required (your NOT-REMOVED list)
+# Acceptable X-ray class names from gate model
+XRAY_LABEL_ALIASES = {
+    "xray",
+    "x-ray",
+    "knee_xray",
+    "knee xray",
+    "knee-xray",
+    "knee_x-ray",
+    "knee x-ray",
+    "knee",
+    "knee_x_ray"
+}
+
+# =========================
+# RAW columns required
+# =========================
 RAW_COLS = [
     "age",
     "bmi",
@@ -60,6 +79,9 @@ NUMERIC_COLS = [
 ]
 
 
+# =========================
+# HELPERS
+# =========================
 def safe_float(x, default=np.nan):
     try:
         if x is None:
@@ -68,27 +90,34 @@ def safe_float(x, default=np.nan):
         if s == "":
             return default
         return float(s)
-    except:
+    except Exception:
         return default
+
 
 def safe_str(x):
     if x is None:
         return ""
     return str(x).strip()
 
+
+def normalize_label(label: str) -> str:
+    if label is None:
+        return ""
+    return str(label).strip().lower().replace("__", "_")
+
+
 def preprocess_image(image_path: str) -> np.ndarray:
     img = Image.open(image_path).convert("RGB")
     img = img.resize(IMG_SIZE)
     arr = np.array(img).astype(np.float32)
     arr = np.expand_dims(arr, axis=0)
-    arr = densenet_preprocess(arr)
+
+    # IMPORTANT: use EfficientNet preprocessing
+    arr = efficientnet_preprocess(arr)
     return arr
 
+
 def build_raw_df(tabular: dict) -> pd.DataFrame:
-    """
-    Build a 1-row DataFrame with EXACT RAW columns used during training.
-    Missing filled with NaN (for numeric) or "" (for categorical).
-    """
     row = {}
     for c in RAW_COLS:
         if c in NUMERIC_COLS:
@@ -99,60 +128,188 @@ def build_raw_df(tabular: dict) -> pd.DataFrame:
     return pd.DataFrame([row], columns=RAW_COLS)
 
 
-def main():
-    raw = sys.stdin.read()
-    data = json.loads(raw)
+def run_gate_check(gate_model, image_path: str):
+    """
+    Return structured gate prediction.
+    Works for YOLOv8 classification model.
+    """
+    results = gate_model.predict(
+        source=image_path,
+        verbose=False
+    )
 
-    image_path = data["image_path"]
-    tabular = data.get("tabular", {})
-
-    # Load models
-    xray_model = tf.keras.models.load_model(XRAY_MODEL_PATH, compile=False)
-    tab_pipeline = joblib.load(TABULAR_PIPELINE_PATH)
-
-    # ---- XRAY ----
-    x_img = preprocess_image(image_path)
-    xray_probs = xray_model.predict(x_img, verbose=0)[0].astype(np.float32)
-
-    # ---- TABULAR (PIPELINE DOES EVERYTHING) ----
-    X_tab_raw = build_raw_df(tabular)
-
-    if hasattr(tab_pipeline, "predict_proba"):
-        tab_probs = tab_pipeline.predict_proba(X_tab_raw)[0].astype(np.float32)
-    else:
-        pred_class = int(tab_pipeline.predict(X_tab_raw)[0])
-        tab_probs = np.zeros(len(CLASS_LABELS), dtype=np.float32)
-        tab_probs[pred_class] = 1.0
-
-    # ---- ALIGN ----
-    n = min(len(xray_probs), len(tab_probs), len(CLASS_LABELS))
-    xray_probs = xray_probs[:n]
-    tab_probs = tab_probs[:n]
-    labels = CLASS_LABELS[:n]
-
-    # ---- FUSION ----
-    fused_probs = (xray_probs + tab_probs) / 2.0
-    fused_idx = int(np.argmax(fused_probs))
-
-    result = {
-        "xray": {
-            "pred_index": int(np.argmax(xray_probs)),
-            "pred_label": labels[int(np.argmax(xray_probs))],
-            "probs": [float(p) for p in xray_probs],
-        },
-        "tabular": {
-            "pred_index": int(np.argmax(tab_probs)),
-            "pred_label": labels[int(np.argmax(tab_probs))],
-            "probs": [float(p) for p in tab_probs],
-        },
-        "fusion": {
-            "pred_index": fused_idx,
-            "pred_label": labels[fused_idx],
-            "probs": [float(p) for p in fused_probs],
+    if not results:
+        return {
+            "ok": False,
+            "error": "Gate model returned no result"
         }
+
+    result = results[0]
+
+    if result.probs is None:
+        return {
+            "ok": False,
+            "error": "Gate model does not contain classification probabilities"
+        }
+
+    probs = result.probs.data.cpu().numpy().astype(np.float32)
+    top1_idx = int(result.probs.top1)
+    top1_conf = float(result.probs.top1conf.item())
+
+    # class names
+    names = result.names if hasattr(result, "names") else gate_model.names
+    pred_label = names[top1_idx] if isinstance(names, dict) else str(top1_idx)
+    pred_label_norm = normalize_label(pred_label)
+
+    is_xray = pred_label_norm in XRAY_LABEL_ALIASES
+
+    all_probs = []
+    if isinstance(names, dict):
+        for i in range(len(probs)):
+            all_probs.append({
+                "index": i,
+                "label": str(names.get(i, i)),
+                "prob": float(probs[i])
+            })
+
+    return {
+        "ok": True,
+        "pred_index": top1_idx,
+        "pred_label": pred_label,
+        "pred_label_normalized": pred_label_norm,
+        "confidence": top1_conf,
+        "is_xray": is_xray,
+        "all_probs": all_probs
     }
 
-    print(json.dumps(result))
+
+def main():
+    try:
+        raw = sys.stdin.read()
+        data = json.loads(raw)
+
+        image_path = data["image_path"]
+        tabular = data.get("tabular", {})
+
+        if not os.path.exists(image_path):
+            print(json.dumps({
+                "ok": False,
+                "error": f"Image not found: {image_path}"
+            }))
+            return
+
+        if not os.path.exists(GATE_MODEL_PATH):
+            print(json.dumps({
+                "ok": False,
+                "error": f"Gate model not found: {GATE_MODEL_PATH}"
+            }))
+            return
+
+        if not os.path.exists(XRAY_MODEL_PATH):
+            print(json.dumps({
+                "ok": False,
+                "error": f"X-ray model not found: {XRAY_MODEL_PATH}"
+            }))
+            return
+
+        if not os.path.exists(TABULAR_PIPELINE_PATH):
+            print(json.dumps({
+                "ok": False,
+                "error": f"Tabular pipeline not found: {TABULAR_PIPELINE_PATH}"
+            }))
+            return
+
+        # -------------------------
+        # LOAD MODELS
+        # -------------------------
+        gate_model = YOLO(GATE_MODEL_PATH)
+        xray_model = tf.keras.models.load_model(XRAY_MODEL_PATH, compile=False)
+        tab_pipeline = joblib.load(TABULAR_PIPELINE_PATH)
+
+        # -------------------------
+        # GATE CHECK
+        # -------------------------
+        gate_result = run_gate_check(gate_model, image_path)
+
+        if not gate_result.get("ok", False):
+            print(json.dumps({
+                "ok": False,
+                "error": gate_result.get("error", "Gate prediction failed"),
+                "stage": "gate"
+            }))
+            return
+
+        if not gate_result.get("is_xray", False):
+            print(json.dumps({
+                "ok": False,
+                "stage": "gate",
+                "message": "Wrong image uploaded. Please upload a valid knee X-ray image.",
+                "gate": gate_result
+            }))
+            return
+
+        # -------------------------
+        # XRAY PREDICTION
+        # -------------------------
+        x_img = preprocess_image(image_path)
+        xray_probs = xray_model.predict(x_img, verbose=0)[0].astype(np.float32)
+
+        # -------------------------
+        # TABULAR PREDICTION
+        # -------------------------
+        X_tab_raw = build_raw_df(tabular)
+
+        if hasattr(tab_pipeline, "predict_proba"):
+            tab_probs = tab_pipeline.predict_proba(X_tab_raw)[0].astype(np.float32)
+        else:
+            pred_class = int(tab_pipeline.predict(X_tab_raw)[0])
+            tab_probs = np.zeros(len(CLASS_LABELS), dtype=np.float32)
+            tab_probs[pred_class] = 1.0
+
+        # -------------------------
+        # ALIGN
+        # -------------------------
+        n = min(len(xray_probs), len(tab_probs), len(CLASS_LABELS))
+        xray_probs = xray_probs[:n]
+        tab_probs = tab_probs[:n]
+        labels = CLASS_LABELS[:n]
+
+        # -------------------------
+        # FUSION
+        # -------------------------
+        fused_probs = (xray_probs + tab_probs) / 2.0
+        fused_idx = int(np.argmax(fused_probs))
+
+        result = {
+            "ok": True,
+            "stage": "fusion",
+            "gate": gate_result,
+            "xray": {
+                "pred_index": int(np.argmax(xray_probs)),
+                "pred_label": labels[int(np.argmax(xray_probs))],
+                "probs": [float(p) for p in xray_probs],
+            },
+            "tabular": {
+                "pred_index": int(np.argmax(tab_probs)),
+                "pred_label": labels[int(np.argmax(tab_probs))],
+                "probs": [float(p) for p in tab_probs],
+            },
+            "fusion": {
+                "pred_index": fused_idx,
+                "pred_label": labels[fused_idx],
+                "probs": [float(p) for p in fused_probs],
+            }
+        }
+
+        print(json.dumps(result))
+
+    except Exception as e:
+        print(json.dumps({
+            "ok": False,
+            "error": str(e),
+            "stage": "python_exception"
+        }))
+
 
 if __name__ == "__main__":
     main()
