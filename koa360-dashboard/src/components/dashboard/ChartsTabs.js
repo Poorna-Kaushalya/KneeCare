@@ -28,10 +28,9 @@ export default function ChartsTabs({ activeTab, setActiveTab, data, deviceId }) 
   const [vagTab, setVagTab] = useState("rms");
   const [severityLoading, setSeverityLoading] = useState(false);
 
-  useEffect(() => {
-    setActiveTab("vag");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceId]);
+useEffect(() => {
+  setActiveTab("severity");
+}, [deviceId]);
 
   const formatTime = (timestamp) =>
     new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

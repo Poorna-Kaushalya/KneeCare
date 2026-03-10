@@ -32,6 +32,7 @@ const vagSeverityFromFeaturesRoutes = require("./routes/vagSeverity.fromFeatures
 const xrayPredictRoutes = require("./routes/xrayPredict");
 const fusionPredictRoutes = require("./routes/fusionPredict");
 const vagSeverityLatest = require("./routes/vagSeverityLatest");
+const monthlySeverityRoutes = require("./routes/monthlySeverityRoutes");
 
 // --- Use Routes ---
 app.use("/", authRoutes);
@@ -45,6 +46,7 @@ app.use("/", vagSeverityFromFeaturesRoutes);
 app.use(xrayPredictRoutes);
 app.use(vagSeverityLatest);
 app.use("/api/fusion", fusionPredictRoutes);
+app.use(monthlySeverityRoutes);
 
 // --- Basic Route 
 app.get("/", (req, res) => {
