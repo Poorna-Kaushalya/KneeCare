@@ -438,7 +438,6 @@ function Dashboard({ logout }) {
                       selectedPatientDetails &&
                       handleEditPatient(selectedPatientDetails, "medication")
                     }
-                    //  Add this button inside PatientPanel and call this prop
                     onEditMedical={() => setShowMedicalModal(true)}
                   />
                 </aside>
@@ -501,7 +500,7 @@ function Dashboard({ logout }) {
         onClose={() => setShowClinicalModal(false)}
       />
 
-      {/* ✅ Medical update modal */}
+      {/*  Medical update modal */}
       <MedicalDataUpdateModal
         open={showMedicalModal}
         onClose={() => setShowMedicalModal(false)}

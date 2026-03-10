@@ -1,192 +1,409 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 import api from "../../api/api";
 
-const severityStyles = {
-  Normal: "bg-green-100 text-green-800 border-green-300",
-  Mild: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  Moderate: "bg-orange-100 text-orange-800 border-orange-300",
-  Severe: "bg-red-100 text-red-800 border-red-300",
+const SCORE_TO_LABEL = {
+  1: "Normal",
+  2: "Mild",
+  3: "Moderate",
+  4: "Severe",
 };
 
-const fmt = (v, digits = 3) => {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "-";
-  return n.toFixed(digits);
-};
-
-export default function KOASensorSeverity({ deviceId }) {
-  const [loading, setLoading] = useState(false);
-  const [severity, setSeverity] = useState(null);
-  const [confidence, setConfidence] = useState(null);
-  const [meta, setMeta] = useState(null);
-  const [features, setFeatures] = useState(null);
-  const [error, setError] = useState(null);
-
-  const fetchSeverity = async () => {
-    if (!deviceId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // ✅ NEW API: always latest DB record
-      const res = await api.get(`/api/vag/severity/latest/${deviceId}`);
-
-      setSeverity(res.data?.severity_level || null);
-      setConfidence(
-        typeof res.data?.confidence === "number" ? res.data.confidence : null
-      );
-
-      setMeta({
-        latestCreatedAt: res.data?.latest_createdAt || null,
-        latestRecordId: res.data?.latest_record_id || null,
-        deviceId: res.data?.device_id || deviceId,
-      });
-
-      setFeatures(res.data?.features_used || null);
-    } catch (err) {
-      console.error("KOA Severity API Error:", err);
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        "Prediction unavailable";
-      setError(msg);
-      setSeverity(null);
-      setConfidence(null);
-      setMeta(null);
-      setFeatures(null);
-    } finally {
-      setLoading(false);
-    }
+function normalizeLabel(label) {
+  const map = {
+    Normal: "Normal",
+    Mild: "Mild",
+    Moderate: "Moderate",
+    Severe: "Severe",
+    KL0: "Normal",
+    KL1: "Mild",
+    KL2: "Moderate",
+    KL3: "Severe",
+    KL4: "Severe",
   };
 
-  useEffect(() => {
-    fetchSeverity();
+  return map[label] || label || "Unknown";
+}
 
-    // Optional auto-refresh (every 60s)
-    const t = setInterval(fetchSeverity, 60000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceId]);
+function labelToScore(label, rawScore) {
+  const normalized = normalizeLabel(label);
 
-  const createdText = meta?.latestCreatedAt
-    ? new Date(meta.latestCreatedAt).toLocaleString()
-    : "-";
+  if (normalized === "Normal") return 1;
+  if (normalized === "Mild") return 2;
+  if (normalized === "Moderate") return 3;
+  if (normalized === "Severe") return 4;
+
+  const n = Number(rawScore);
+  if ([1, 2, 3, 4].includes(n)) return n;
+
+  return 1;
+}
+
+function formatShortMonth(year, month) {
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString([], {
+    month: "short",
+    year: "2-digit",
+  });
+}
+
+function getSeverityColor(score) {
+  const s = Number(score ?? 1);
+
+  if (s === 1) return "#22c55e"; // green
+  if (s === 2) return "#eab308"; // yellow
+  if (s === 3) return "#f97316"; // orange
+  if (s === 4) return "#ef4444"; // red
+
+  return "#94a3b8";
+}
+
+function trendText(rows) {
+  if (!rows || rows.length < 2) return "Not enough months to detect trend";
+
+  const prev = rows[rows.length - 2]?.severityScore ?? 1;
+  const curr = rows[rows.length - 1]?.severityScore ?? 1;
+
+  if (curr > prev) return "Severity increased from previous month";
+  if (curr < prev) return "Severity reduced from previous month";
+  return "Severity stayed stable from previous month";
+}
+
+function SeverityDot(props) {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null || !payload) return null;
+
+  const color = getSeverityColor(payload.severityScore);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-lg font-extrabold text-slate-800">
-          KOA Sensor Severity (Latest)
-        </h3>
-
-        <button
-          type="button"
-          onClick={fetchSeverity}
-          className="px-3 py-1.5 rounded-xl border border-sky-100 bg-white hover:bg-sky-50 text-slate-700 text-xs font-extrabold"
-          disabled={loading || !deviceId}
-          title="Refresh latest prediction"
-        >
-          Refresh
-        </button>
-      </div>
-
-      {!deviceId && (
-        <p className="text-sm text-slate-500 mt-2">
-          Select a patient to view prediction.
-        </p>
-      )}
-
-      {deviceId && loading && (
-        <p className="text-sm text-slate-500 mt-2">
-          Fetching latest sensor record…
-        </p>
-      )}
-
-      {deviceId && error && (
-        <p className="text-sm text-red-600 font-semibold mt-2">{error}</p>
-      )}
-
-      {!loading && !error && severity && (
-        <>
-          <div
-            className={`inline-flex items-center px-4 py-2 rounded-xl border font-extrabold text-lg mt-3 ${
-              severityStyles[severity] ||
-              "bg-slate-100 text-slate-800 border-slate-200"
-            }`}
-          >
-            {severity}
-          </div>
-
-          {confidence !== null && (
-            <p className="text-xs text-slate-600 mt-2">
-              Confidence: <b>{(Number(confidence) * 100).toFixed(1)}%</b>
-            </p>
-          )}
-
-          <div className="mt-3 text-[11px] text-slate-500">
-            Latest record time: <b className="text-slate-700">{createdText}</b>
-          </div>
-
-          {/* ✅ Compact cards with sentence lines */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-            <FeatureCard
-              title="RMS"
-              value={fmt(features?.rms_amplitude, 4)}
-              sentence1="Overall vibration strength."
-              sentence2="Higher → more joint friction."
-            />
-
-            <FeatureCard
-              title="Entropy"
-              value={fmt(features?.spectral_entropy, 2)}
-              sentence1="Movement irregularity level."
-              sentence2="Higher → uneven joint motion."
-            />
-
-            <FeatureCard
-              title="ZCR"
-              value={fmt(features?.zero_crossing_rate, 4)}
-              sentence1="Rapid vibration changes."
-              sentence2="Higher → sharper micro-motions."
-            />
-
-            <FeatureCard
-              title="Mean Freq"
-              value={fmt(features?.mean_frequency, 2)}
-              suffix=" Hz"
-              sentence1="Main vibration frequency."
-              sentence2="Shift → altered mechanics."
-            />
-
-            <FeatureCard
-              title="Knee Temp"
-              value={fmt(features?.knee_tempurarture, 2)}
-              suffix=" °C"
-              sentence1="Surface knee temperature."
-              sentence2="Higher → possible inflammation."
-            />
-          </div>
-        </>
-      )}
-    </div>
+    <circle
+      cx={cx}
+      cy={cy}
+      r={6}
+      fill={color}
+      stroke="#ffffff"
+      strokeWidth={2}
+    />
   );
 }
 
-function FeatureCard({ title, value, suffix = "", sentence1, sentence2 }) {
-  return (
-    <div className="rounded-xl border border-sky-100 bg-sky-50 p-3 min-h-[95px] flex flex-col justify-between">
-      <div className="text-[11px] font-semibold text-slate-600">{title}</div>
+function ActiveSeverityDot(props) {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null || !payload) return null;
 
-      <div className="text-base font-extrabold text-slate-900">
-        {value}
-        {value !== "-" ? suffix : ""}
+  const color = getSeverityColor(payload.severityScore);
+
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={10} fill={color} opacity={0.18} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={7}
+        fill={color}
+        stroke="#ffffff"
+        strokeWidth={3}
+      />
+    </g>
+  );
+}
+
+function GradientStops({ rows = [] }) {
+  if (!rows.length) return null;
+
+  if (rows.length === 1) {
+    const color = getSeverityColor(rows[0].severityScore);
+    return (
+      <>
+        <stop offset="0%" stopColor={color} />
+        <stop offset="100%" stopColor={color} />
+      </>
+    );
+  }
+
+  return rows.map((row, index) => {
+    const offset = `${(index / (rows.length - 1)) * 100}%`;
+    return (
+      <stop
+        key={`${row.monthLabel}-${index}`}
+        offset={offset}
+        stopColor={getSeverityColor(row.severityScore)}
+      />
+    );
+  });
+}
+
+export default function KOASensorSeverity({ deviceId }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadMonthlySeverity() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await api.get(`/api/vag/severity/monthly/${deviceId}`);
+        const predictions = res?.data?.predictions || [];
+
+        if (!mounted) return;
+
+        const formatted = predictions
+          .map((item) => {
+            const severityLevel = normalizeLabel(item.severity_level);
+            const severityScore = labelToScore(
+              item.severity_level,
+              item.severity_score
+            );
+
+            return {
+              ...item,
+              monthLabel:
+                item.month_label ||
+                `${item.year}-${String(item.month).padStart(2, "0")}`,
+              shortMonthLabel: formatShortMonth(item.year, item.month),
+              severityLevel,
+              severityScore,
+              confidencePct:
+                item.confidence !== null && item.confidence !== undefined
+                  ? Number(item.confidence) * 100
+                  : null,
+            };
+          })
+          .sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.month - b.month;
+          });
+
+        setRows(formatted);
+      } catch (e) {
+        if (!mounted) return;
+        setError(
+          e?.response?.data?.error ||
+            e?.message ||
+            "Failed to load monthly severity"
+        );
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          window.dispatchEvent(new Event("koa_severity_ready"));
+        }
+      }
+    }
+
+    if (deviceId) {
+      loadMonthlySeverity();
+    } else {
+      setRows([]);
+      setLoading(false);
+      window.dispatchEvent(new Event("koa_severity_ready"));
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [deviceId]);
+
+  const latest = useMemo(() => {
+    if (!rows.length) return null;
+    return rows[rows.length - 1];
+  }, [rows]);
+
+  const insight = useMemo(() => trendText(rows), [rows]);
+
+  const chartData = useMemo(() => {
+    return rows.map((row) => ({
+      ...row,
+      shortMonthLabel: row.shortMonthLabel,
+      monthLabel: row.monthLabel,
+      severityScore: row.severityScore,
+      severityLevel: row.severityLevel,
+      confidencePct: row.confidencePct,
+    }));
+  }, [rows]);
+
+  if (loading) return null;
+
+  if (error) {
+    return (
+      <div className="h-full rounded-3xl border border-rose-100 bg-rose-50 px-5 py-4">
+        <div className="text-sm font-bold text-rose-700">Monthly severity error</div>
+        <div className="mt-1 text-sm text-rose-600">{error}</div>
+      </div>
+    );
+  }
+
+  if (!rows.length) {
+    return (
+      <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <div className="text-sm font-bold text-slate-700">
+          No monthly predictions found
+        </div>
+        <div className="mt-1 text-sm text-slate-500">
+          Save AvgSensorData for this device first, then monthly prediction will appear here.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col gap-3 relative -top-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+          <div className="text-xs font-semibold text-emerald-700">Latest Month</div>
+          <div className="mt-0 text-lg font-extrabold text-slate-900">
+            {latest?.monthLabel}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-sky-100 bg-sky-50 p-3">
+          <div className="text-xs font-semibold text-sky-700">Predicted Severity</div>
+          <div className="mt-0 text-lg font-extrabold text-slate-900">
+            {latest?.severityLevel || "—"}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
+          <div className="text-xs font-semibold text-violet-700">Model Confidence</div>
+          <div className="mt-0 text-lg font-extrabold text-slate-900">
+            {latest?.confidencePct != null
+              ? `${latest.confidencePct.toFixed(1)}%`
+              : "—"}
+          </div>
+        </div>
       </div>
 
-      <div className="text-[10px] text-slate-500 leading-tight mt-1 space-y-0.5">
-        <div>{sentence1}</div>
-        <div>{sentence2}</div>
+      <div className="rounded-2xl  bg-white px-4">
+        <div className="text-sm font-bold text-slate-800">Monthly Progress</div>
+
+        <div className="mt-4 h-[180px]">
+          <ResponsiveContainer width="100%" height="130%">
+            <LineChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="miniSeverityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <GradientStops rows={chartData} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+              <XAxis dataKey="shortMonthLabel" tick={{ fontSize: 12 }} />
+              <YAxis
+                domain={[1, 4]}
+                ticks={[1, 2, 3, 4]}
+                tick={{ fontSize: 12 }}
+                tickFormatter={(v) => SCORE_TO_LABEL[v] || v}
+              />
+              <Tooltip
+                formatter={(value, name, props) => {
+                  if (name === "severityScore") {
+                    return [props?.payload?.severityLevel, "Severity"];
+                  }
+                  return [value, name];
+                }}
+                labelFormatter={(label, payload) => {
+                  const full = payload?.[0]?.payload?.monthLabel;
+                  return `Month: ${full || label}`;
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="severityScore"
+                stroke="url(#miniSeverityGradient)"
+                strokeWidth={3}
+                dot={(props) => <SeverityDot {...props} />}
+                activeDot={(props) => <ActiveSeverityDot {...props} />}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-[220px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={chartData}
+            margin={{ top: 10, right: 18, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="mainSeverityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <GradientStops rows={chartData} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.25} />
+            <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} />
+            <YAxis
+              domain={[1, 4]}
+              ticks={[1, 2, 3, 4]}
+              tick={{ fontSize: 12 }}
+              tickFormatter={(v) => SCORE_TO_LABEL[v] || v}
+            />
+            <Tooltip
+              formatter={(value, name, props) => {
+                if (name === "severityScore") {
+                  return [props?.payload?.severityLevel, "Severity"];
+                }
+                return [value, name];
+              }}
+              labelFormatter={(label) => `Month: ${label}`}
+            />
+            <Line
+              type="monotone"
+              dataKey="severityScore"
+              stroke="url(#mainSeverityGradient)"
+              strokeWidth={4}
+              dot={(props) => <SeverityDot {...props} />}
+              activeDot={(props) => <ActiveSeverityDot {...props} />}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {rows.map((row) => (
+          <div
+            key={`${row.device_id}-${row.year}-${row.month}`}
+            className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-bold text-slate-800">{row.monthLabel}</div>
+              <div className="text-xs font-semibold text-slate-500">
+                {row.records_used} records
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <span
+                className="inline-block w-3 h-3 rounded-full"
+                style={{ backgroundColor: getSeverityColor(row.severityScore) }}
+              />
+              <div className="text-base font-extrabold text-slate-900">
+                {row.severityLevel}
+              </div>
+            </div>
+
+            <div className="mt-1 text-sm text-slate-600">
+              Confidence:{" "}
+              {row.confidencePct != null ? `${row.confidencePct.toFixed(1)}%` : "—"}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
