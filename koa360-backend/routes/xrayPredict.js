@@ -23,22 +23,25 @@ const upload = multer({
   fileFilter: (_, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.mimetype)) {
-      return cb(new Error("Invalid image type (Only JPG/PNG/WEBP allowed)"), false);
+      return cb(new Error("Invalid image type. Only JPG, PNG, and WEBP are allowed."), false);
     }
     cb(null, true);
   },
 });
 
-//  Always use python from venv
+// Always use python from venv
 const PYTHON_EXE =
   process.platform === "win32"
     ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
     : "python3";
 
-// Model path 
-const MODEL_PATH = path.join(__dirname, "..", "models", "best.pt");
+// Gate model path
+const GATE_MODEL_PATH = path.join(__dirname, "..", "models", "gate.pt");
 
-// Python script
+// Prediction model path (Normal / Osteoarthritis)
+const PRED_MODEL_PATH = path.join(__dirname, "..", "models", "best.pt");
+
+// Python script path
 const PY_SCRIPT = path.join(__dirname, "..", "python", "predict_xray.py");
 
 router.post("/api/predict/xray", upload.single("image"), (req, res) => {
@@ -50,23 +53,41 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
       });
     }
 
-    // Ensure model exists
-    if (!fs.existsSync(MODEL_PATH)) {
+    if (!fs.existsSync(GATE_MODEL_PATH)) {
       try { fs.unlinkSync(req.file.path); } catch (_) {}
       return res.status(500).json({
         ok: false,
-        error: "Model file not found",
-        modelPath: MODEL_PATH,
+        error: "Gate model file not found",
+        gateModelPath: GATE_MODEL_PATH,
+      });
+    }
+
+    if (!fs.existsSync(PRED_MODEL_PATH)) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(500).json({
+        ok: false,
+        error: "Prediction model file not found",
+        predictionModelPath: PRED_MODEL_PATH,
+      });
+    }
+
+    if (!fs.existsSync(PY_SCRIPT)) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(500).json({
+        ok: false,
+        error: "Python script not found",
+        scriptPath: PY_SCRIPT,
       });
     }
 
     const imgPath = path.resolve(req.file.path);
-    const modelPathAbs = path.resolve(MODEL_PATH);
+    const gateModelAbs = path.resolve(GATE_MODEL_PATH);
+    const predModelAbs = path.resolve(PRED_MODEL_PATH);
     const scriptAbs = path.resolve(PY_SCRIPT);
 
     const cwd = path.join(__dirname, "..");
 
-    const py = spawn(PYTHON_EXE, [scriptAbs, modelPathAbs, imgPath], {
+    const py = spawn(PYTHON_EXE, [scriptAbs, gateModelAbs, predModelAbs, imgPath], {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -74,8 +95,13 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
     let stdout = "";
     let stderr = "";
 
-    py.stdout.on("data", (d) => (stdout += d.toString()));
-    py.stderr.on("data", (d) => (stderr += d.toString()));
+    py.stdout.on("data", (d) => {
+      stdout += d.toString();
+    });
+
+    py.stderr.on("data", (d) => {
+      stderr += d.toString();
+    });
 
     py.on("error", (spawnErr) => {
       try { fs.unlinkSync(imgPath); } catch (_) {}
@@ -89,7 +115,6 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
     });
 
     py.on("close", (code) => {
-      // cleanup uploaded file
       try { fs.unlinkSync(imgPath); } catch (_) {}
 
       if (code !== 0) {
@@ -101,14 +126,40 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
           stdout: stdout || null,
           pythonExe: PYTHON_EXE,
           scriptPath: scriptAbs,
-          modelPath: modelPathAbs,
+          gateModelPath: gateModelAbs,
+          predictionModelPath: predModelAbs,
         });
       }
 
-      // parse JSON safely
       try {
-        const data = JSON.parse((stdout || "").trim());
-        return res.status(data.ok === false ? 500 : 200).json(data);
+        const raw = (stdout || "").trim();
+        const data = JSON.parse(raw);
+
+        // Wrong image inserted
+        if (data.validImage === false) {
+          return res.status(400).json({
+            ok: false,
+            validImage: false,
+            error: data.error || "Wrong image inserted. Please upload a correct knee X-ray image.",
+            gate: data.gate || null,
+          });
+        }
+
+        // Any python-side error
+        if (data.ok === false) {
+          return res.status(500).json(data);
+        }
+
+        // Success
+        return res.status(200).json({
+          ok: true,
+          validImage: true,
+          message: data.message || "Prediction successful",
+          type: data.type,
+          label: data.label,
+          confidence: data.confidence,
+          classId: data.classId ?? null,
+        });
       } catch (e) {
         return res.status(500).json({
           ok: false,
@@ -119,7 +170,10 @@ router.post("/api/predict/xray", upload.single("image"), (req, res) => {
       }
     });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e.message });
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
   }
 });
 

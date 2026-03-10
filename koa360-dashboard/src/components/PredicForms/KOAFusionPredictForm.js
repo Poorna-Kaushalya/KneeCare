@@ -142,17 +142,15 @@ function buildLifestyleMessages({
     const loss5 = weightKg * 0.05;
     const loss10 = weightKg * 0.1;
 
-    messages.push(
-    `BMI is ${bmi.toFixed(1)}, which is above the healthy range.`
-  );
+    messages.push(`BMI is ${bmi.toFixed(1)}, which is above the healthy range.`);
 
     messages.push(
-    `Healthy weight for this height is about ${targetWeight.toFixed(1)} kg.`
-  );
+      `Healthy weight for this height is about ${targetWeight.toFixed(1)} kg.`
+    );
 
     messages.push(
-    `Try to reduce about ${loss5.toFixed(1)}–${loss10.toFixed(1)} kg initially.`
-  );
+      `Try to reduce about ${loss5.toFixed(1)}–${loss10.toFixed(1)} kg initially.`
+    );
   }
 
   if (obesity === 1 && bmi === null) {
@@ -238,22 +236,22 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
 
   if (severity >= 2 && pain >= 7) {
     plan = upgrade(plan, "Conservative_Clinical");
-    notes.push("High pain score increased treatment intensity.");
+    notes.push("High pain increased treatment level.");
   }
 
   if (severity >= 2 && difficulty >= 3) {
     plan = upgrade(plan, "Conservative_Clinical");
-    notes.push("Multiple functional limitations were identified.");
+    notes.push("Activity difficulty increased treatment level.");
   }
 
   if (severity >= 2 && stiffness >= 2) {
     plan = upgrade(plan, "Conservative_Clinical");
-    notes.push("Frequent stiffness supports stronger management.");
+    notes.push("Frequent stiffness supported stronger treatment.");
   }
 
   if (swelling === 1 && severity >= 2) {
     plan = upgrade(plan, "Conservative_Clinical");
-    notes.push("Swelling suggests inflammatory symptom burden.");
+    notes.push("Swelling increased treatment. ");
   }
 
   if (bmi !== null && bmi >= 30) {
@@ -265,25 +263,17 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
     notes.push("Previous knee injury reported.");
   }
 
+
   if (flags.high_fbs) {
     notes.push("FBS is high; diabetic control should be optimized.");
   }
 
   if (flags.high_cholesterol) {
-    notes.push("High cholesterol detected; metabolic risk management is advised.");
+    notes.push("High cholesterol detected.");
   } else if (flags.borderline_cholesterol) {
-    notes.push("Borderline high cholesterol detected.");
+    notes.push("Borderline cholesterol detected.");
   }
-
-  if (flags.high_esr || flags.high_crp) {
-    plan = upgrade(plan, "Conservative_Clinical");
-    notes.push("Inflammatory biomarkers are elevated.");
-  }
-
-  if (flags.positive_rf) {
-    notes.push("RF positive — inflammatory arthritis review is recommended.");
-  }
-
+/* end*/
   if (severity === 4) {
     plan = "Surgical_Consult_Referral";
     notes.push("Severe grade indicates specialist or surgical evaluation.");
