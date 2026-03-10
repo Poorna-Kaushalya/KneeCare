@@ -25,7 +25,6 @@ def safe_float(v, default=0.0):
 
 payload = json.loads(sys.stdin.read() or "{}")
 
-# Expect flat payload keys
 features_all = {c: safe_float(payload.get(c, 0.0)) for c in feature_cols}
 
 X = pd.DataFrame([[features_all[c] for c in feature_cols]], columns=feature_cols)

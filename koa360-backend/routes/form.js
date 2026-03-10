@@ -80,13 +80,13 @@ function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
     };
   }
 
-  // --- Time-domain ---
+  // Time-domain 
   const mean = sig.reduce((s, v) => s + v, 0) / n;
   const centered = sig.map((v) => v - mean);
   const rms = Math.sqrt(centered.reduce((s, v) => s + v * v, 0) / n);
   const zcr = zeroCrossingsPerSecond(centered, sampleRate);
 
-  // --- Window + FFT  ---
+  //  Window + FFT 
   const x = centerAndWindow(sig);
   let pow2 = 1;
   while (pow2 * 2 <= x.length) pow2 *= 2;
@@ -114,7 +114,6 @@ function featuresFromSignal(sig, sampleRate, entropyMode = "normalized") {
   const mags = util.fftMag(phasors);
   const half = Math.floor(mags.length / 2);
 
-  // Single-sided power spectrum
   const power = new Array(half);
   let powerSum = 0;
   for (let k = 0; k < half; k++) {
@@ -215,12 +214,11 @@ router.get("/api/features", async (req, res) => {
       });
     }
 
-    // Choose signal series based on requested type
+    // Choose signal
     let series;
     if (signal === "knee") {
       series = rows.map((r) => Number(r.knee_angle || 0));
     } else if (signal === "microphone") {
-      // Use microphone RMS amplitude time series
       series = rows.map((r) => Number(r.microphone?.rms || 0));
     } else {
       const g2ms2 = g2ms2Raw ? Number(g2ms2Raw) : 1;
@@ -265,7 +263,7 @@ router.get("/api/features", async (req, res) => {
         avgTemperature !== null ? Number(avgTemperature.toFixed(2)) : null,
     };
 
-    //  dataset-aligned features (golden rule)
+    //  dataset-aligned features
     const datasetAligned =
       align === "dataset" ? toDatasetFormat(featsWithTemp, sampleRate) : null;
 

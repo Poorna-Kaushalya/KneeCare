@@ -34,7 +34,6 @@ const AvgSensorDataSchema = new mongoose.Schema(
       object: Number,
     },
 
-    // keep legacy avg mic
     avg_microphone: {
       rms: Number,
       peak: Number,

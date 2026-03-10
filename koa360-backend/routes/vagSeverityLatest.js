@@ -3,7 +3,7 @@ const router = express.Router();
 
 const MonthlySeverityPrediction = require("../models/MonthlySeverityPrediction");
 
-/*  GET SAVED MONTHLY SEVERITY  */
+//  GET SAVED MONTHLY SEVERITY  
 router.get("/api/vag/severity/monthly/:deviceId", async (req, res) => {
   try {
     const { deviceId } = req.params;

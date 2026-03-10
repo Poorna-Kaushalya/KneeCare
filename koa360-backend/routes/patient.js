@@ -1,17 +1,14 @@
-// routes/patients.routes.js
-
 const express = require("express");
 const Patient = require("../models/Patient");
 const router = express.Router();
 
-// Helper: remove password before sending
+// remove password before sending
 const stripPassword = (p) => {
   const obj = p.toObject ? p.toObject() : { ...p };
   delete obj.password;
   return obj;
 };
 
-// ✅ Utility: allow only specific keys in update
 const pick = (obj, keys) => {
   const out = {};
   keys.forEach((k) => {
@@ -20,7 +17,7 @@ const pick = (obj, keys) => {
   return out;
 };
 
-// ======================= GET ALL PATIENTS =======================
+// GET ALL PATIENTS
 router.get("/api/patients", async (req, res) => {
   try {
     const patients = await Patient.find({});
@@ -31,7 +28,7 @@ router.get("/api/patients", async (req, res) => {
   }
 });
 
-// ======================= GET ONE PATIENT =======================
+// GET PATIENT
 router.get("/api/patients/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne({ id: req.params.id });
@@ -43,7 +40,7 @@ router.get("/api/patients/:id", async (req, res) => {
   }
 });
 
-// ======================= CREATE PATIENT (NO MEDICAL DATA) =======================
+// CREATE PATIENT
 router.post("/api/patients", async (req, res) => {
   try {
     const {
@@ -94,7 +91,6 @@ router.post("/api/patients", async (req, res) => {
       }
     }
 
-    // ✅ IMPORTANT: we do NOT set medical fields here
     const newPatient = new Patient({
       id,
       name,
@@ -125,14 +121,12 @@ router.post("/api/patients", async (req, res) => {
   }
 });
 
-// ======================= UPDATE PATIENT (MEDICAL DATA + OTHER SAFE FIELDS) =======================
+//  UPDATE PATIENT
 router.put("/api/patients/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Allowed update fields
     const allowed = [
-      // basic profile
       "name",
       "age",
       "gender",
@@ -145,7 +139,7 @@ router.put("/api/patients/:id", async (req, res) => {
       "contact",
       "medicationList",
 
-      // ✅ medical fields (from your MedicalDataUpdateModal)
+      //  medical fields 
       "heightCm",
       "weightKg",
       "previousKneeInjury",
@@ -158,28 +152,26 @@ router.put("/api/patients/:id", async (req, res) => {
       "fbs",
       "sugar",
       "fbcValue",
-
-      // optional
       "username",
       "password",
     ];
 
     const updateData = pick(req.body || {}, allowed);
 
-    // ❌ prevent id changes
+    //  prevent id changes
     if (req.body?.id && req.body.id !== id) {
       return res.status(400).json({
         error: "Cannot change patient ID via update.",
       });
     }
 
-    // ✅ Convert null -> undefined (so mongoose stores empty correctly)
+    // Convert null -> undefined 
     Object.keys(updateData).forEach((k) => {
       if (updateData[k] === null) updateData[k] = undefined;
       if (updateData[k] === "") updateData[k] = undefined;
     });
 
-    // ✅ password must be hashed via .save()
+    // password must be hashed via .save()
     if (updateData.password) {
       const patientToUpdate = await Patient.findOne({ id });
       if (!patientToUpdate) return res.status(404).json({ error: "Patient not found" });
@@ -233,7 +225,7 @@ router.put("/api/patients/:id", async (req, res) => {
   }
 });
 
-// ======================= DELETE PATIENT =======================
+// DELETE PATIENT
 router.delete("/api/patients/:id", async (req, res) => {
   try {
     const patient = await Patient.findOneAndDelete({ id: req.params.id });

@@ -4,7 +4,7 @@ const AvgSensorData = require("../models/AvgSensorData");
 
 const router = express.Router();
 
-/* ================= SAVE RAW SENSOR DATA ================= */
+// SAVE RAW SENSOR DATA 
 router.post("/api/sensor-data", async (req, res) => {
   try {
     const body = req.body || {};
@@ -17,7 +17,7 @@ router.post("/api/sensor-data", async (req, res) => {
   }
 });
 
-/* ================= DEVICE STATUS ================= */
+// DEVICE STATUS
 router.get("/api/device-status", async (req, res) => {
   try {
     const recentData = await RawSensorData.findOne({}, {}, { sort: { createdAt: -1 } });
@@ -29,7 +29,7 @@ router.get("/api/device-status", async (req, res) => {
   }
 });
 
-/* ================= GET LAST 10 AVG RECORDS ================= */
+// GET LAST 10 AVG RECORDS
 router.get("/api/sensor-data", async (req, res) => {
   try {
     const data = await AvgSensorData.find().sort({ createdAt: -1 }).limit(10);
@@ -40,7 +40,7 @@ router.get("/api/sensor-data", async (req, res) => {
   }
 });
 
-/* ================= 5-MIN AVERAGING JOB ================= */
+// 5-MIN AVERAGING 
 setInterval(async () => {
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -61,11 +61,11 @@ setInterval(async () => {
     let sum_knee_temp = 0;
     let kneeTempCount = 0;
 
-    // legacy mic
+    // mic
     let sum_mic = { rms: 0, peak: 0, energy: 0 };
     let micCount = 0;
 
-    // new mic features (raw + aligned)
+    // new mic features 
     const zeroMicFeat = () => ({
       rms_amplitude: 0,
       peak_frequency: 0,
@@ -184,13 +184,13 @@ setInterval(async () => {
       _id: { $in: rawData.map((d) => d._id) },
     });
 
-    console.log(`✅ 5-min AVG saved (${count} samples)`);
+    console.log(`5-min AVG saved (${count} samples)`);
   } catch (err) {
     console.error("5-min average error:", err.message);
   }
 }, 5 * 60 * 1000);
 
-/* ================= FILTERED AVG DATA ================= */
+// FILTERED AVG DATA
 router.get("/api/sensor-datas", async (req, res) => {
   try {
     const { deviceId, range } = req.query;

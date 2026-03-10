@@ -4,9 +4,9 @@ const MonthlySeverityPredictionSchema = new mongoose.Schema(
   {
     device_id: { type: String, required: true, index: true },
     year: { type: Number, required: true },
-    month: { type: Number, required: true }, // 1-12
+    month: { type: Number, required: true },
 
-    month_label: { type: String, required: true }, // e.g. "2026-02"
+    month_label: { type: String, required: true },
 
     from_date: { type: Date, required: true },
     to_date: { type: Date, required: true },

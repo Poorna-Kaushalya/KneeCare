@@ -146,7 +146,7 @@ router.get("/api/koa-severity", async (req, res) => {
       "predict_vag_severity.py"
     );
 
-    // Optional: helpful for debugging / relative paths inside python
+    // python process to run prediction
     const cwd = path.join(__dirname, "..");
 
     const py = spawn(pythonExe, [scriptPath], { cwd });

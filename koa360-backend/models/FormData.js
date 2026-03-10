@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-// Helper function to parse date strings like "dd/mm/yyyy, hh:mm:ss"
+// Parse date strings 
 function parseDateString(dateStr) {
   if (!dateStr) return null;
   const [datePart, timePart] = dateStr.split(",").map((s) => s.trim());
@@ -10,7 +10,6 @@ function parseDateString(dateStr) {
   return new Date(year, month - 1, day, hours, minutes, seconds);
 }
 
-// Feature sub-schema
 const FeatureSchema = new mongoose.Schema(
   {
     window_start: {
@@ -35,7 +34,6 @@ const FeatureSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Microphone sub-schema
 const MicrophoneSchema = new mongoose.Schema(
   {
     amplitude: { type: Number, required: false },
@@ -46,7 +44,6 @@ const MicrophoneSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Main FormData schema
 const FormDataSchema = new mongoose.Schema(
   {
     device_id: { type: String, required: true, index: true },
