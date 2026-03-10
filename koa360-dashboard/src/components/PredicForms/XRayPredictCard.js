@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import api from "../../api/api";
 
 export default function XRayPredictCard({ open, onClose, patientId, deviceId }) {
+  const [mode, setMode] = useState("xray"); // xray | mri
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -11,6 +12,7 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
 
   useEffect(() => {
     if (!open) return;
+    setMode("xray");
     setFile(null);
     setPreviewUrl("");
     setLoading(false);
@@ -37,18 +39,36 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
       return;
     }
 
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+
     setFile(f);
     setPreviewUrl(URL.createObjectURL(f));
   };
 
+  const changeMode = (nextMode) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setMode(nextMode);
+    setFile(null);
+    setPreviewUrl("");
+    setResult(null);
+    setError("");
+  };
+
   const badgeClass = (label) => {
     const t = String(label || "").toLowerCase();
-    if (t.includes("severe") || t.includes("critical"))
+
+    if (t.includes("osteoarthritis") || t.includes("abnormal") || t.includes("oa")) {
       return "bg-rose-50 border-rose-200 text-rose-800";
-    if (t.includes("moderate"))
-      return "bg-amber-50 border-amber-200 text-amber-800";
-    if (t.includes("mild"))
+    }
+
+    if (t.includes("normal")) {
       return "bg-emerald-50 border-emerald-200 text-emerald-800";
+    }
+
+    if (t.includes("invalid") || t.includes("wrong")) {
+      return "bg-amber-50 border-amber-200 text-amber-800";
+    }
+
     return "bg-slate-50 border-slate-200 text-slate-800";
   };
 
@@ -65,17 +85,19 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
       setResult(null);
 
       if (!file) {
-        setError("Please select an X-ray image first.");
+        setError(`Please select a ${mode === "xray" ? "knee X-ray" : "knee MRI"} image first.`);
         return;
       }
 
       const fd = new FormData();
-      fd.append("image", file); //  MUST match upload.single("image")
+      fd.append("image", file);
       fd.append("patientId", patientId || "");
       fd.append("deviceId", deviceId || "");
+      fd.append("modality", mode);
 
-      //  IMPORTANT: force multipart for this request
-      const res = await api.post("/api/predict/xray", fd, {
+      const endpoint = mode === "xray" ? "/api/predict/xray" : "/api/predict/mri";
+
+      const res = await api.post(endpoint, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -106,32 +128,27 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-      {/* backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
         onClick={!loading ? onClose : undefined}
         aria-hidden="true"
       />
 
-      {/* card */}
       <div
-        className="relative w-full max-w-3xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-4xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* header */}
         <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg md:text-xl font-extrabold text-slate-900">
-              X-ray Prediction
+              Medical Image Prediction
             </h3>
             <p className="text-xs text-slate-600 mt-1">
-              Upload knee X-ray and get KOA severity prediction.
+              Upload a knee X-ray or knee MRI image and get prediction.
             </p>
             <div className="mt-2 text-[11px] text-slate-500">
-              Patient:{" "}
-              <span className="font-extrabold">{patientId || "N/A"}</span>
-              {"  "}• Device:{" "}
-              <span className="font-extrabold">{deviceId || "N/A"}</span>
+              Patient: <span className="font-extrabold">{patientId || "N/A"}</span>
+              {"  "}• Device: <span className="font-extrabold">{deviceId || "N/A"}</span>
             </div>
           </div>
 
@@ -144,7 +161,6 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
           </button>
         </div>
 
-        {/* body */}
         <div className="p-5 space-y-5">
           {error && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 text-sm font-bold">
@@ -152,16 +168,43 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
             </div>
           )}
 
+          {/* Modality Switch */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2 inline-flex gap-2">
+            <button
+              type="button"
+              onClick={() => changeMode("xray")}
+              disabled={loading}
+              className={`px-4 py-2 rounded-xl text-sm font-extrabold border transition ${
+                mode === "xray"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              X-ray
+            </button>
+
+            <button
+              type="button"
+              onClick={() => changeMode("mri")}
+              disabled={loading}
+              className={`px-4 py-2 rounded-xl text-sm font-extrabold border transition ${
+                mode === "mri"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              MRI
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Upload */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-extrabold text-slate-900">
-                  Upload X-ray
+                  Upload {mode === "xray" ? "Knee X-ray" : "Knee MRI"}
                 </div>
-                <div className="text-xs text-slate-500 font-bold">
-                  JPG/PNG/WEBP
-                </div>
+                <div className="text-xs text-slate-500 font-bold">JPG/PNG/WEBP</div>
               </div>
 
               <input
@@ -177,11 +220,15 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
                 disabled={!canSubmit}
                 className="mt-4 w-full px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold disabled:opacity-60"
               >
-                {loading ? "Predicting..." : "Submit & Predict"}
+                {loading
+                  ? "Predicting..."
+                  : `Submit & Predict ${mode === "xray" ? "X-ray" : "MRI"}`}
               </button>
 
               <p className="mt-2 text-xs text-slate-500">
-                Tip: Use clear knee X-ray images for better accuracy.
+                {mode === "xray"
+                  ? "Tip: Upload a clear knee X-ray image."
+                  : "Tip: Upload a clear knee MRI image."}
               </p>
             </div>
 
@@ -193,7 +240,7 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
                 {previewUrl ? (
                   <img
                     src={previewUrl}
-                    alt="X-ray preview"
+                    alt="Medical preview"
                     className="h-full w-full object-contain"
                   />
                 ) : (
@@ -208,6 +255,10 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
 
                 {result ? (
                   <div className="mt-2 space-y-2">
+                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wide">
+                      Modality: {result.modality || mode}
+                    </div>
+
                     <div
                       className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-extrabold ${badgeClass(
                         result.label
@@ -222,6 +273,10 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
                         <b className="text-slate-800">{fmtPct(result.confidence)}</b>
                       </div>
                     )}
+
+                    {result.message && (
+                      <div className="text-xs text-slate-600">{result.message}</div>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-2 text-sm text-slate-500">
@@ -233,7 +288,6 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
           </div>
         </div>
 
-        {/* footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
           <button
             onClick={onClose}
