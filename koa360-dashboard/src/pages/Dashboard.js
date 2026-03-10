@@ -257,7 +257,8 @@ function Dashboard({ logout }) {
                 (d.avg_lower?.gz || 0) ** 2
             );
 
-          const totalAccelGyroMag = upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
+          const totalAccelGyroMag =
+            upperAccelMag + lowerAccelMag + 0.5 * gyroMag;
 
           return { ...d, upperAccelMag, lowerAccelMag, totalAccelGyroMag };
         });
@@ -277,7 +278,9 @@ function Dashboard({ logout }) {
       setSelectedPatientDetails(updatedPatient);
 
       setPatients((prev) =>
-        prev.map((p) => (p.id === updatedPatient.id ? { ...p, ...updatedPatient } : p))
+        prev.map((p) =>
+          p.id === updatedPatient.id ? { ...p, ...updatedPatient } : p
+        )
       );
 
       await fetchPatients();
@@ -408,6 +411,9 @@ function Dashboard({ logout }) {
                 <section className="xl:col-span-8 space-y-4">
                   <PredictionButtons
                     patientId={selectedPatientId}
+                    patientName={
+                      selectedPatientDetails?.name || selectedPatient?.name || ""
+                    }
                     deviceId={selectedPatientDetails?.device_id}
                     disabled={!selectedPatientId}
                     onXrayClick={() => setShowXrayModal(true)}
@@ -447,7 +453,6 @@ function Dashboard({ logout }) {
         </div>
       </div>
 
-      {/* Modals */}
       <AddPatientModal
         show={showAddPatientModal}
         onClose={() => setShowAddPatientModal(false)}
@@ -498,9 +503,11 @@ function Dashboard({ logout }) {
       <KOAClinicalPredictCard
         open={showClinicalModal}
         onClose={() => setShowClinicalModal(false)}
+        patientId={selectedPatientId}
+        patientName={selectedPatientDetails?.name || selectedPatient?.name || ""}
+        deviceId={selectedPatientDetails?.device_id}
       />
 
-      {/*  Medical update modal */}
       <MedicalDataUpdateModal
         open={showMedicalModal}
         onClose={() => setShowMedicalModal(false)}

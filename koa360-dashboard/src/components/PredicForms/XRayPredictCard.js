@@ -6,7 +6,7 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
   const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [result, setResult] = useState(null); // { ok,type,label,confidence,... }
+  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -70,11 +70,11 @@ export default function XRayPredictCard({ open, onClose, patientId, deviceId }) 
       }
 
       const fd = new FormData();
-      fd.append("image", file); // ✅ MUST match upload.single("image")
+      fd.append("image", file); //  MUST match upload.single("image")
       fd.append("patientId", patientId || "");
       fd.append("deviceId", deviceId || "");
 
-      // ✅ IMPORTANT: force multipart for this request
+      //  IMPORTANT: force multipart for this request
       const res = await api.post("/api/predict/xray", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
