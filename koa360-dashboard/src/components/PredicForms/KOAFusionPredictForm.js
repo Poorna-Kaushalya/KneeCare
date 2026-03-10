@@ -143,49 +143,49 @@ function buildLifestyleMessages({
     const loss10 = weightKg * 0.1;
 
     messages.push(
-      `Current BMI is ${bmi.toFixed(1)}. Gradual weight reduction may reduce knee joint loading.`
-    );
+    `BMI is ${bmi.toFixed(1)}, which is above the healthy range.`
+  );
+
     messages.push(
-      `A healthy target weight for this height is around ${targetWeight.toFixed(1)} kg.`
-    );
+    `Healthy weight for this height is about ${targetWeight.toFixed(1)} kg.`
+  );
+
     messages.push(
-      `An initial target is to reduce about ${loss5.toFixed(1)}–${loss10.toFixed(
-        1
-      )} kg.`
-    );
+    `Try to reduce about ${loss5.toFixed(1)}–${loss10.toFixed(1)} kg initially.`
+  );
   }
 
   if (obesity === 1 && bmi === null) {
-    messages.push("Obesity risk is present, so weight management is recommended.");
+    messages.push("Obesity risk detected. Weight management advised.");
   }
 
   if (pain >= 6) {
     messages.push(
-      "Use low-impact activities such as walking on flat surfaces, cycling, and supervised strengthening exercises."
+      "Use low-impact exercises (walking,light strengthening exercises)"
     );
   }
 
   if (difficulty >= 2) {
     messages.push(
-      "Reduce activities that overload the knee and begin gradual physiotherapy-based functional training."
+      "Reduce knee-straining activities and begin physiotherapy."
     );
   }
 
   if (String(physicalActivity ?? "").toLowerCase() === "low") {
     messages.push(
-      "Low physical activity was reported. Begin light daily movement and strengthening gradually."
+      "Increase daily activity with light exercises."
     );
   }
 
   if (diabetes === 1) {
     messages.push(
-      "Maintain good blood sugar control with balanced meals and regular monitoring."
+      "Maintain good blood sugar with balanced meals."
     );
   }
 
   if (hypertension === 1) {
     messages.push(
-      "Follow a low-salt heart-healthy diet and monitor blood pressure regularly."
+      "Follow a low-salt diet and monitor blood pressure regularly."
     );
   }
 
@@ -193,25 +193,14 @@ function buildLifestyleMessages({
   if (chol !== null) {
     if (chol >= 240) {
       messages.push(
-        "Cholesterol is high. Reduce oily and high-fat foods and increase vegetables, fruits, and fiber-rich foods."
+        "High cholesterol. Reduce fatty foods and eat more vegetables, fruits, and fiber-rich foods."
       );
     } else if (chol >= 200) {
       messages.push(
-        "Cholesterol is borderline high. Dietary improvement and monitoring are advised."
+        "Borderline cholesterol.Improve diet and monitor."
       );
     }
   }
-
-  messages.push(
-    "Avoid prolonged squatting, repeated stair climbing, and long standing when pain is high."
-  );
-  messages.push(
-    "Use supportive footwear and continue quadriceps-strengthening exercises."
-  );
-  messages.push(
-    "Seek medical review if pain, swelling, or walking difficulty worsens."
-  );
-
   return messages;
 }
 
