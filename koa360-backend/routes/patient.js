@@ -2,7 +2,6 @@ const express = require("express");
 const Patient = require("../models/Patient");
 const router = express.Router();
 
-// remove password before sending
 const stripPassword = (p) => {
   const obj = p.toObject ? p.toObject() : { ...p };
   delete obj.password;
@@ -17,7 +16,6 @@ const pick = (obj, keys) => {
   return out;
 };
 
-// GET ALL PATIENTS
 router.get("/api/patients", async (req, res) => {
   try {
     const patients = await Patient.find({});
@@ -28,7 +26,6 @@ router.get("/api/patients", async (req, res) => {
   }
 });
 
-// GET PATIENT
 router.get("/api/patients/:id", async (req, res) => {
   try {
     const patient = await Patient.findOne({ id: req.params.id });
@@ -40,7 +37,6 @@ router.get("/api/patients/:id", async (req, res) => {
   }
 });
 
-// CREATE PATIENT
 router.post("/api/patients", async (req, res) => {
   try {
     const {
@@ -60,14 +56,12 @@ router.post("/api/patients", async (req, res) => {
       medicationList,
     } = req.body;
 
-    // Basic validation
     if (!id || !name || !username || !password) {
       return res.status(400).json({
         error: "Patient ID, Name, Username, and Password are required.",
       });
     }
 
-    // Uniqueness checks
     const existingPatientId = await Patient.findOne({ id });
     if (existingPatientId) {
       return res.status(400).json({
@@ -121,7 +115,6 @@ router.post("/api/patients", async (req, res) => {
   }
 });
 
-//  UPDATE PATIENT
 router.put("/api/patients/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -139,7 +132,6 @@ router.put("/api/patients/:id", async (req, res) => {
       "contact",
       "medicationList",
 
-      //  medical fields 
       "heightCm",
       "weightKg",
       "previousKneeInjury",
@@ -152,26 +144,38 @@ router.put("/api/patients/:id", async (req, res) => {
       "fbs",
       "sugar",
       "fbcValue",
+      "cs",
+
+      "occupation",
+      "physical_activity_level",
+      "pain_score",
+      "stiffness",
+      "do_you_currently_experience_knee_pain",
+      "do_you_experience_swelling_in_your_knees",
+      "do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)",
+      "does_the_patient_has_obesity",
+      "does_the_patient_has_diabetes",
+      "does_the_patient_has_hypertension",
+      "does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis",
+      "what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition",
+
       "username",
       "password",
     ];
 
     const updateData = pick(req.body || {}, allowed);
 
-    //  prevent id changes
     if (req.body?.id && req.body.id !== id) {
       return res.status(400).json({
         error: "Cannot change patient ID via update.",
       });
     }
 
-    // Convert null -> undefined 
     Object.keys(updateData).forEach((k) => {
       if (updateData[k] === null) updateData[k] = undefined;
       if (updateData[k] === "") updateData[k] = undefined;
     });
 
-    // password must be hashed via .save()
     if (updateData.password) {
       const patientToUpdate = await Patient.findOne({ id });
       if (!patientToUpdate) return res.status(404).json({ error: "Patient not found" });
@@ -181,7 +185,6 @@ router.put("/api/patients/:id", async (req, res) => {
       delete updateData.password;
     }
 
-    // duplicate username check
     if (updateData.username) {
       const existingPatientWithUsername = await Patient.findOne({
         username: updateData.username,
@@ -193,7 +196,6 @@ router.put("/api/patients/:id", async (req, res) => {
       }
     }
 
-    // duplicate device check
     if (updateData.device_id) {
       const existingPatientWithDevice = await Patient.findOne({
         device_id: updateData.device_id,
@@ -225,7 +227,6 @@ router.put("/api/patients/:id", async (req, res) => {
   }
 });
 
-// DELETE PATIENT
 router.delete("/api/patients/:id", async (req, res) => {
   try {
     const patient = await Patient.findOneAndDelete({ id: req.params.id });

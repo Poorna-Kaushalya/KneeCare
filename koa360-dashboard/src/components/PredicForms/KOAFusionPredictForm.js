@@ -37,6 +37,18 @@ const PLAN_LABELS = {
   Surgical_Consult_Referral: "Surgical / Specialist Referral",
 };
 
+const PREV_INJURY_KEY =
+  "have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)";
+
+const DIFFICULTY_KEY =
+  "do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)";
+
+const OTHER_RISK_KEY =
+  "does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis";
+
+const TREATMENT_KEY =
+  "what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition";
+
 function calcBMI(heightCm, weightKg) {
   const h = parseFloat(String(heightCm ?? "").trim());
   const w = parseFloat(String(weightKg ?? "").trim());
@@ -138,16 +150,14 @@ function buildLifestyleMessages({
   const messages = [];
 
   if (bmi !== null && bmi >= 25) {
-    const targetWeight = 24.9 * (heightM ** 2);
+    const targetWeight = 24.9 * heightM ** 2;
     const loss5 = weightKg * 0.05;
     const loss10 = weightKg * 0.1;
 
     messages.push(`BMI is ${bmi.toFixed(1)}, which is above the healthy range.`);
-
     messages.push(
       `Healthy weight for this height is about ${targetWeight.toFixed(1)} kg.`
     );
-
     messages.push(
       `Try to reduce about ${loss5.toFixed(1)}–${loss10.toFixed(1)} kg initially.`
     );
@@ -159,32 +169,24 @@ function buildLifestyleMessages({
 
   if (pain >= 6) {
     messages.push(
-      "Use low-impact exercises (walking,light strengthening exercises)"
+      "Use low-impact exercises (walking, light strengthening exercises)."
     );
   }
 
   if (difficulty >= 2) {
-    messages.push(
-      "Reduce knee-straining activities and begin physiotherapy."
-    );
+    messages.push("Reduce knee-straining activities and begin physiotherapy.");
   }
 
   if (String(physicalActivity ?? "").toLowerCase() === "low") {
-    messages.push(
-      "Increase daily activity with light exercises."
-    );
+    messages.push("Increase daily activity with light exercises.");
   }
 
   if (diabetes === 1) {
-    messages.push(
-      "Maintain good blood sugar with balanced meals."
-    );
+    messages.push("Maintain good blood sugar with balanced meals.");
   }
 
   if (hypertension === 1) {
-    messages.push(
-      "Follow a low-salt diet and monitor blood pressure regularly."
-    );
+    messages.push("Follow a low-salt diet and monitor blood pressure regularly.");
   }
 
   const chol = toFloatSafe(cholesterol);
@@ -194,12 +196,38 @@ function buildLifestyleMessages({
         "High cholesterol. Reduce fatty foods and eat more vegetables, fruits, and fiber-rich foods."
       );
     } else if (chol >= 200) {
-      messages.push(
-        "Borderline cholesterol.Improve diet and monitor."
-      );
+      messages.push("Borderline cholesterol. Improve diet and monitor.");
     }
   }
+
   return messages;
+}
+
+function toYesNo(value) {
+  if (
+    value === true ||
+    value === 1 ||
+    String(value ?? "").trim().toLowerCase() === "yes"
+  ) {
+    return "Yes";
+  }
+
+  if (
+    value === false ||
+    value === 0 ||
+    String(value ?? "").trim().toLowerCase() === "no"
+  ) {
+    return "No";
+  }
+
+  return "";
+}
+
+function normalizeYesNoForSelect(value) {
+  const s = String(value ?? "").trim().toLowerCase();
+  if (s === "yes" || s === "1" || s === "true") return "Yes";
+  if (s === "no" || s === "0" || s === "false") return "No";
+  return "";
 }
 
 function getFrontendTreatmentRecommendation(form, predLabel) {
@@ -213,12 +241,8 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
   const pain = Math.max(0, Math.min(10, toFloatSafe(form.pain_score) ?? 0));
   const stiffness = encodeStiffness(form.stiffness);
   const swelling = encodeYesNo(form.do_you_experience_swelling_in_your_knees);
-  const prevInjury = encodeYesNo(
-    form["have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)"]
-  );
-  const difficulty = difficultyCount(
-    form["do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)"]
-  );
+  const prevInjury = encodeYesNo(form[PREV_INJURY_KEY]);
+  const difficulty = difficultyCount(form[DIFFICULTY_KEY]);
   const diabetes = encodeYesNo(form.does_the_patient_has_diabetes);
   const hypertension = encodeYesNo(form.does_the_patient_has_hypertension);
   const obesity = encodeYesNo(form.does_the_patient_has_obesity);
@@ -251,7 +275,7 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
 
   if (swelling === 1 && severity >= 2) {
     plan = upgrade(plan, "Conservative_Clinical");
-    notes.push("Swelling increased treatment. ");
+    notes.push("Swelling increased treatment.");
   }
 
   if (bmi !== null && bmi >= 30) {
@@ -263,7 +287,6 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
     notes.push("Previous knee injury reported.");
   }
 
-
   if (flags.high_fbs) {
     notes.push("FBS is high; diabetic control should be optimized.");
   }
@@ -273,7 +296,7 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
   } else if (flags.borderline_cholesterol) {
     notes.push("Borderline cholesterol detected.");
   }
-/* end*/
+
   if (severity === 4) {
     plan = "Surgical_Consult_Referral";
     notes.push("Severe grade indicates specialist or surgical evaluation.");
@@ -283,22 +306,12 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
     notes.push("Older age with advanced severity supports closer monitoring.");
   }
 
-  const otherRisk = String(
-    form[
-      "does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis"
-    ] ?? ""
-  ).trim();
-
+  const otherRisk = String(form[OTHER_RISK_KEY] ?? "").trim();
   if (otherRisk) {
     notes.push(`Other reported risk factors: ${otherRisk}`);
   }
 
-  const ongoing = String(
-    form[
-      "what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition"
-    ] ?? ""
-  ).trim();
-
+  const ongoing = String(form[TREATMENT_KEY] ?? "").trim();
   if (ongoing) {
     notes.push(`Current or ongoing treatments: ${ongoing}`);
   }
@@ -328,11 +341,12 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
   };
 }
 
-export default function KOAFusionPredictForm() {
+export default function KOAFusionPredictForm({ patientId, deviceId }) {
   const [activeTab, setActiveTab] = useState("xray");
   const [xray, setXray] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [prefillLoading, setPrefillLoading] = useState(false);
 
   const [form, setForm] = useState({
     age: "",
@@ -355,18 +369,21 @@ export default function KOAFusionPredictForm() {
 
     do_you_currently_experience_knee_pain: "",
     do_you_experience_swelling_in_your_knees: "",
-    "have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)": "",
-    "do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)": "",
+    [PREV_INJURY_KEY]: "",
+    [DIFFICULTY_KEY]: "",
 
     does_the_patient_has_obesity: "",
     does_the_patient_has_diabetes: "",
     does_the_patient_has_hypertension: "",
 
-    "does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis":
-      "",
-    "what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition":
-      "",
+    [OTHER_RISK_KEY]: "",
+    [TREATMENT_KEY]: "",
   });
+
+  useEffect(() => {
+    console.log("KOAFusionPredictForm patientId:", patientId);
+    console.log("KOAFusionPredictForm deviceId:", deviceId);
+  }, [patientId, deviceId]);
 
   useEffect(() => {
     const bmi = calcBMI(form.height, form.weight);
@@ -375,6 +392,74 @@ export default function KOAFusionPredictForm() {
       return { ...p, bmi };
     });
   }, [form.height, form.weight]);
+
+  useEffect(() => {
+    if (!patientId) return;
+
+    const fetchPatientFormData = async () => {
+      try {
+        setPrefillLoading(true);
+
+        const res = await api.get(`/api/patients/${patientId}`);
+        console.log("Fetched patient data:", res.data);
+
+        const p = res.data || {};
+
+        const nextForm = {
+          age: p.age ?? "",
+          gender: p.gender ?? "",
+          height: p.heightCm ?? "",
+          weight: p.weightKg ?? "",
+          bmi: calcBMI(p.heightCm ?? "", p.weightKg ?? ""),
+
+          occupation: normalizeYesNoForSelect(p.occupation),
+          physical_activity_level: p.physical_activity_level ?? "",
+          pain_score: p.pain_score ?? "",
+          stiffness: p.stiffness ?? "",
+
+          fbs: p.fbs ?? "",
+          wbc: p.wbc ?? "",
+          platelets: p.platelets ?? "",
+          cs: p.cs ?? p.sugar ?? "",
+          cholesterol: p.cholesterol ?? "",
+          crp: p.crp ?? "",
+          esr: p.esr ?? "",
+          rf: p.rf ?? "",
+
+          do_you_currently_experience_knee_pain: normalizeYesNoForSelect(
+            p.do_you_currently_experience_knee_pain
+          ),
+          do_you_experience_swelling_in_your_knees: normalizeYesNoForSelect(
+            p.do_you_experience_swelling_in_your_knees
+          ),
+          [PREV_INJURY_KEY]: normalizeYesNoForSelect(p.previousKneeInjury),
+          [DIFFICULTY_KEY]: p[DIFFICULTY_KEY] ?? "",
+
+          does_the_patient_has_obesity: normalizeYesNoForSelect(
+            p.does_the_patient_has_obesity
+          ),
+          does_the_patient_has_diabetes: normalizeYesNoForSelect(
+            p.does_the_patient_has_diabetes
+          ),
+          does_the_patient_has_hypertension: normalizeYesNoForSelect(
+            p.does_the_patient_has_hypertension
+          ),
+
+          [OTHER_RISK_KEY]: p[OTHER_RISK_KEY] ?? "",
+          [TREATMENT_KEY]: p[TREATMENT_KEY] ?? "",
+        };
+
+        console.log("Mapped form data:", nextForm);
+        setForm(nextForm);
+      } catch (err) {
+        console.error("Failed to fetch patient form data:", err);
+      } finally {
+        setPrefillLoading(false);
+      }
+    };
+
+    fetchPatientFormData();
+  }, [patientId]);
 
   const previewUrl = useMemo(() => {
     if (!xray) return "";
@@ -395,8 +480,7 @@ export default function KOAFusionPredictForm() {
   const setDifficulty = (newValue) => {
     setForm((p) => ({
       ...p,
-      "do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)":
-        newValue,
+      [DIFFICULTY_KEY]: newValue,
     }));
   };
 
@@ -423,17 +507,19 @@ export default function KOAFusionPredictForm() {
       "occupation",
       "physical_activity_level",
     ];
+
     const sympKeys = [
       "do_you_currently_experience_knee_pain",
       "do_you_experience_swelling_in_your_knees",
-      "have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)",
-      "do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)",
+      PREV_INJURY_KEY,
+      DIFFICULTY_KEY,
       "pain_score",
       "stiffness",
       "does_the_patient_has_obesity",
       "does_the_patient_has_diabetes",
       "does_the_patient_has_hypertension",
     ];
+
     const bioKeys = [
       "fbs",
       "wbc",
@@ -443,8 +529,8 @@ export default function KOAFusionPredictForm() {
       "crp",
       "esr",
       "rf",
-      "does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis",
-      "what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition",
+      OTHER_RISK_KEY,
+      TREATMENT_KEY,
     ];
 
     return {
@@ -469,6 +555,8 @@ export default function KOAFusionPredictForm() {
 
       const fd = new FormData();
       fd.append("xray", xray);
+      fd.append("patientId", patientId || "");
+      fd.append("deviceId", deviceId || "");
 
       Object.entries(form).forEach(([k, v]) => {
         fd.append(k, v ?? "");
@@ -480,9 +568,7 @@ export default function KOAFusionPredictForm() {
 
       const serverData = resp.data || {};
       const predLabel =
-        serverData?.fusion?.pred_label ||
-        serverData?.pred_label ||
-        "";
+        serverData?.fusion?.pred_label || serverData?.pred_label || "";
 
       const frontendTreatment = getFrontendTreatmentRecommendation(form, predLabel);
 
@@ -524,7 +610,7 @@ export default function KOAFusionPredictForm() {
   const severityText = getSeverityName(predLabel);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="rounded-xl bg-white">
         <div className="px-5 pt-4">
           <div className="flex flex-wrap gap-4">
@@ -533,7 +619,7 @@ export default function KOAFusionPredictForm() {
                 key={t.key}
                 type="button"
                 onClick={() => setActiveTab(t.key)}
-                className={`px-4 py-2 rounded-full text-sm font-bold border transition ${
+                className={`px-6 py-3 rounded-full text-sm font-bold border transition ${
                   activeTab === t.key
                     ? "bg-slate-900 text-white border-slate-900"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -570,6 +656,12 @@ export default function KOAFusionPredictForm() {
               </button>
             ))}
           </div>
+
+          {prefillLoading && (
+            <div className="mt-3 text-sm text-slate-500">
+              Loading patient medical data...
+            </div>
+          )}
         </div>
 
         <form onSubmit={submit}>
@@ -665,17 +757,17 @@ export default function KOAFusionPredictForm() {
 
                 <Select
                   label="Previous Knee Injury?"
-                  name="have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)"
-                  value={form["have_you_had_any_previous_knee_injuries_(acl_tear,_meniscus_tear,_fracture,_etc.)"]}
+                  name={PREV_INJURY_KEY}
+                  value={form[PREV_INJURY_KEY]}
                   onChange={onChange}
                   options={OPTIONS.yesNo}
                 />
 
                 <DifficultyCheckboxGroup
                   label="Difficulty in performing activities (check all that apply)"
-                  name="do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)"
+                  name={DIFFICULTY_KEY}
                   options={DIFFICULTY_ACTIVITIES}
-                  value={form["do_you_find_difficulty_in_performing_these_activities_(check_all_that_apply)"]}
+                  value={form[DIFFICULTY_KEY]}
                   onChange={setDifficulty}
                 />
 
@@ -686,6 +778,7 @@ export default function KOAFusionPredictForm() {
                   onChange={onChange}
                   options={OPTIONS.yesNo}
                 />
+
                 <Select
                   label="Diabetes"
                   name="does_the_patient_has_diabetes"
@@ -693,6 +786,7 @@ export default function KOAFusionPredictForm() {
                   onChange={onChange}
                   options={OPTIONS.yesNo}
                 />
+
                 <Select
                   label="Hypertension"
                   name="does_the_patient_has_hypertension"
@@ -716,17 +810,15 @@ export default function KOAFusionPredictForm() {
 
                 <Input
                   label="Other Risk Factors"
-                  name="does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis"
-                  value={
-                    form["does_the_patient_have_any_other_health_conditions_or_risk_factors_that_may_contribute_to_knee_osteoarthritis"]
-                  }
+                  name={OTHER_RISK_KEY}
+                  value={form[OTHER_RISK_KEY]}
                   onChange={onChange}
                 />
 
                 <Input
                   label="Treatments"
-                  name="what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition"
-                  value={form["what_are_the_suggested_or_ongoing_treatments_for_the_patients_current_condition"]}
+                  name={TREATMENT_KEY}
+                  value={form[TREATMENT_KEY]}
                   onChange={onChange}
                 />
               </div>
@@ -764,7 +856,10 @@ export default function KOAFusionPredictForm() {
           </div>
         </form>
 
-        <h1 className="text-2xl font-bold text-slate-800 mb-3">Treatment Suggestion Plan </h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-3 px-5">
+          Treatment Suggestion Plan
+        </h1>
+
         {result && (
           <div className="p-5 border-t bg-slate-50 rounded-b-xl">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -912,12 +1007,17 @@ function Select({ label, name, value, onChange, options }) {
 }
 
 function DifficultyCheckboxGroup({ label, name, options, value, onChange }) {
-  const selected = value ? value.split(",").map((v) => v.trim()).filter(Boolean) : [];
+  const selected = value
+    ? value.split(",").map((v) => v.trim()).filter(Boolean)
+    : [];
 
   const toggle = (opt) => {
     let next;
-    if (selected.includes(opt)) next = selected.filter((v) => v !== opt);
-    else next = [...selected, opt];
+    if (selected.includes(opt)) {
+      next = selected.filter((v) => v !== opt);
+    } else {
+      next = [...selected, opt];
+    }
     onChange(next.join(", "));
   };
 
