@@ -51,6 +51,7 @@ router.post("/api/predict/mri", upload.single("image"), (req, res) => {
       return res.status(500).json({
         ok: false,
         error: "MRI model file not found",
+        modelPath: MRI_MODEL_PATH,
       });
     }
 
@@ -59,6 +60,7 @@ router.post("/api/predict/mri", upload.single("image"), (req, res) => {
       return res.status(500).json({
         ok: false,
         error: "MRI python script not found",
+        scriptPath: PY_SCRIPT,
       });
     }
 
@@ -77,27 +79,17 @@ router.post("/api/predict/mri", upload.single("image"), (req, res) => {
     py.stdout.on("data", (d) => (stdout += d.toString()));
     py.stderr.on("data", (d) => (stderr += d.toString()));
 
-    py.on("error", (spawnErr) => {
+    py.on("error", (err) => {
       try { fs.unlinkSync(imgPath); } catch (_) {}
       return res.status(500).json({
         ok: false,
-        error: "Failed to start Python process",
-        details: spawnErr.message,
+        error: "Failed to start MRI python process",
+        details: err.message,
       });
     });
 
-    py.on("close", (code) => {
+    py.on("close", () => {
       try { fs.unlinkSync(imgPath); } catch (_) {}
-
-      if (code !== 0) {
-        return res.status(500).json({
-          ok: false,
-          error: "Python process failed",
-          exitCode: code,
-          stderr: stderr || null,
-          stdout: stdout || null,
-        });
-      }
 
       try {
         const raw = (stdout || "").trim();
@@ -106,21 +98,27 @@ router.post("/api/predict/mri", upload.single("image"), (req, res) => {
         const data = JSON.parse(jsonLine);
 
         if (data.ok === false) {
-          return res.status(500).json(data);
+          return res.status(500).json({
+            ok: false,
+            error: data.error || "MRI prediction failed",
+            details: data.details || null,
+          });
         }
 
         return res.status(200).json(data);
       } catch (e) {
         return res.status(500).json({
           ok: false,
-          error: "Non-JSON output from python script",
-          raw: stdout,
-          stderr,
+          error: "MRI prediction failed",
+          details: stderr || stdout || e.message,
         });
       }
     });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e.message });
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
   }
 });
 
