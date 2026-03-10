@@ -1,4 +1,3 @@
-# KOA360 Backend Setup Script
 $pythonVersion = "3.12"
 
 Write-Host "================================="
@@ -19,7 +18,7 @@ if (!$?) {
     exit 1
 }
 
-# Create virtual environment using specific version
+# Create virtual environment
 py -$pythonVersion -m venv pyenv
 
 # Temporarily allow script execution

@@ -25,13 +25,12 @@ def main():
 
         model = YOLO(model_path)
 
-        # verbose=False stops Ultralytics printing those lines
         results = model.predict(source=image_path, verbose=False)
         r0 = results[0]
 
         names = getattr(r0, "names", None) or getattr(model, "names", {})
 
-        # ---- YOLO Classification ----
+        # YOLO Classification 
         if getattr(r0, "probs", None) is not None and r0.probs is not None:
             top_idx = int(r0.probs.top1)
             top_conf = float(r0.probs.top1conf)
@@ -46,7 +45,7 @@ def main():
             }))
             return
 
-        # ---- YOLO Detection ----
+        #  YOLO Detection 
         if getattr(r0, "boxes", None) is not None and r0.boxes is not None and len(r0.boxes) > 0:
             confs = r0.boxes.conf.tolist()
             best_i = int(max(range(len(confs)), key=lambda i: confs[i]))

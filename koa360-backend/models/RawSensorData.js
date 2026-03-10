@@ -32,7 +32,6 @@ const RawSensorSchema = new mongoose.Schema(
       object: Number,
     },
 
-    // keep legacy mic
     microphone: {
       rms: Number,
       peak: Number,

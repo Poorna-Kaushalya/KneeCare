@@ -29,13 +29,13 @@ const upload = multer({
   },
 });
 
-// ✅ Always use python from venv
+//  Always use python from venv
 const PYTHON_EXE =
   process.platform === "win32"
     ? path.join(__dirname, "..", "pyenv", "Scripts", "python.exe")
     : "python3";
 
-// ✅ Make model path portable (put model in koa360-backend/models/)
+// Model path 
 const MODEL_PATH = path.join(__dirname, "..", "models", "best.pt");
 
 // Python script

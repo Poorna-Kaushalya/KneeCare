@@ -33,7 +33,6 @@ payload = json.loads(sys.stdin.read() or "{}")
 
 aligned = payload.get("avg_microphone_features_aligned") or {}
 
-# support both direct flat input and nested aligned input
 features_all = {
     "rms_amplitude": safe_float(
         payload.get("rms_amplitude", aligned.get("rms_amplitude")), 0.0
@@ -47,7 +46,7 @@ features_all = {
     "mean_frequency": safe_float(
         payload.get("mean_frequency", aligned.get("mean_frequency")), 0.0
     ),
-    # keep same spelling as trained model
+
     "knee_tempurarture": safe_float(
         payload.get("knee_tempurarture", payload.get("avg_knee_tempurarture")), 0.0
     ),
