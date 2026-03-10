@@ -10,15 +10,11 @@ import tensorflow as tf
 from tensorflow.keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
 from ultralytics import YOLO
 
-# PATH
+# PATHS
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "..", "models")
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
-# Gate model 
+# Gate model (YOLO classifier)
 GATE_MODEL_PATH = os.path.join(MODEL_DIR, "gate.pt")
 
 # X-ray severity model
@@ -30,10 +26,7 @@ TABULAR_PIPELINE_PATH = os.path.join(MODEL_DIR, "koa_grade_xgb_newly.pkl")
 IMG_SIZE = (224, 224)
 CLASS_LABELS = ["KL0", "KL1", "KL2", "KL3", "KL4"]
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
+# Acceptable X-ray class names from gate model
 XRAY_LABEL_ALIASES = {
     "xray",
     "x-ray",
@@ -46,10 +39,6 @@ XRAY_LABEL_ALIASES = {
     "knee_x_ray"
 }
 
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 # RAW columns 
 RAW_COLS = [
     "age",
@@ -85,11 +74,7 @@ NUMERIC_COLS = [
     "cs", "cholesterol", "crp", "esr", "rf", "bmi"
 ]
 
-
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
+# HELPERS
 def safe_float(x, default=np.nan):
     try:
         if x is None:
@@ -119,10 +104,6 @@ def preprocess_image(image_path: str) -> np.ndarray:
     img = img.resize(IMG_SIZE)
     arr = np.array(img).astype(np.float32)
     arr = np.expand_dims(arr, axis=0)
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
     arr = efficientnet_preprocess(arr)
     return arr
 
@@ -134,7 +115,6 @@ def build_raw_df(tabular: dict) -> pd.DataFrame:
             row[c] = safe_float(tabular.get(c, ""), np.nan)
         else:
             row[c] = safe_str(tabular.get(c, ""))
-
     return pd.DataFrame([row], columns=RAW_COLS)
 
 
@@ -143,10 +123,7 @@ def run_gate_check(gate_model, image_path: str):
     Return structured gate prediction.
     Works for YOLOv8 classification model.
     """
-    results = gate_model.predict(
-        source=image_path,
-        verbose=False
-    )
+    results = gate_model.predict(source=image_path, verbose=False)
 
     if not results:
         return {
@@ -165,6 +142,7 @@ def run_gate_check(gate_model, image_path: str):
     probs = result.probs.data.cpu().numpy().astype(np.float32)
     top1_idx = int(result.probs.top1)
     top1_conf = float(result.probs.top1conf.item())
+
     names = result.names if hasattr(result, "names") else gate_model.names
     pred_label = names[top1_idx] if isinstance(names, dict) else str(top1_idx)
     pred_label_norm = normalize_label(pred_label)
@@ -232,10 +210,6 @@ def main():
         xray_model = tf.keras.models.load_model(XRAY_MODEL_PATH, compile=False)
         tab_pipeline = joblib.load(TABULAR_PIPELINE_PATH)
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
         # GATE CHECK
         gate_result = run_gate_check(gate_model, image_path)
 
@@ -270,16 +244,11 @@ def main():
             tab_probs = np.zeros(len(CLASS_LABELS), dtype=np.float32)
             tab_probs[pred_class] = 1.0
 
-
         n = min(len(xray_probs), len(tab_probs), len(CLASS_LABELS))
         xray_probs = xray_probs[:n]
         tab_probs = tab_probs[:n]
         labels = CLASS_LABELS[:n]
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
         # FUSION
         fused_probs = (xray_probs + tab_probs) / 2.0
         fused_idx = int(np.argmax(fused_probs))
