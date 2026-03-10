@@ -14,6 +14,10 @@ from ultralytics import YOLO
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "..", "models")
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 # Gate model 
 GATE_MODEL_PATH = os.path.join(MODEL_DIR, "gate.pt")
 
@@ -26,6 +30,10 @@ TABULAR_PIPELINE_PATH = os.path.join(MODEL_DIR, "koa_grade_xgb_newly.pkl")
 IMG_SIZE = (224, 224)
 CLASS_LABELS = ["KL0", "KL1", "KL2", "KL3", "KL4"]
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 XRAY_LABEL_ALIASES = {
     "xray",
     "x-ray",
@@ -38,7 +46,10 @@ XRAY_LABEL_ALIASES = {
     "knee_x_ray"
 }
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 # RAW columns 
 RAW_COLS = [
     "age",
@@ -75,7 +86,10 @@ NUMERIC_COLS = [
 ]
 
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 def safe_float(x, default=np.nan):
     try:
         if x is None:
@@ -105,6 +119,10 @@ def preprocess_image(image_path: str) -> np.ndarray:
     img = img.resize(IMG_SIZE)
     arr = np.array(img).astype(np.float32)
     arr = np.expand_dims(arr, axis=0)
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
     arr = efficientnet_preprocess(arr)
     return arr
 
@@ -214,6 +232,10 @@ def main():
         xray_model = tf.keras.models.load_model(XRAY_MODEL_PATH, compile=False)
         tab_pipeline = joblib.load(TABULAR_PIPELINE_PATH)
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
         # GATE CHECK
         gate_result = run_gate_check(gate_model, image_path)
 
@@ -254,6 +276,10 @@ def main():
         tab_probs = tab_probs[:n]
         labels = CLASS_LABELS[:n]
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
         # FUSION
         fused_probs = (xray_probs + tab_probs) / 2.0
         fused_idx = int(np.argmax(fused_probs))
