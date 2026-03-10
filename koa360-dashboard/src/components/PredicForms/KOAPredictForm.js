@@ -1,4 +1,5 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import api from "../../api/api";
 
 /** Required fields per tab */
 const REQUIRED_BY_TAB = {
@@ -28,26 +29,23 @@ const REQUIRED_BY_TAB = {
   2: ["fbs", "wbc", "platelets", "cs", "cholesterol", "crp", "esr", "rf", "fbc"],
 };
 
-/** ✅ Display label mapping (Normal / Osteoarthritis) */
+/** Display label mapping (Normal / Osteoarthritis) */
 function displayDiagnosis(pred) {
   const v = String(pred ?? "").trim().toUpperCase();
 
-  // If backend returns 0/1
   if (v === "0") return "Normal";
   if (v === "1") return "Osteoarthritis";
 
-  // If backend returns KL grade
   if (v === "KL0") return "Normal";
   if (["KL1", "KL2", "KL3", "KL4"].includes(v)) return "Osteoarthritis";
 
-  // If backend returns 0..4
   if (["2", "3", "4"].includes(v)) return "Osteoarthritis";
   if (v === "1") return "Osteoarthritis";
 
   return String(pred ?? "");
 }
 
-/** Optional severity name if you ever want it */
+/** Optional severity name */
 function displaySeverity(pred) {
   const v = String(pred ?? "").trim().toUpperCase();
   const map = {
@@ -65,7 +63,12 @@ function displaySeverity(pred) {
   return map[v] || String(pred ?? "");
 }
 
-export default function KOAPredictForm() {
+export default function KOAPredictForm({
+  patientId = "",
+  patientName = "",
+  deviceId = "",
+  onSaved,
+}) {
   const API_URL = "http://localhost:5000/api/predict";
   const [activeTab, setActiveTab] = useState(0);
 
@@ -106,8 +109,77 @@ export default function KOAPredictForm() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [fetchingPatient, setFetchingPatient] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+
+  /** =========================
+   * Fetch patient data from DB
+   * ========================= */
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      if (!patientId) return;
+
+      setFetchingPatient(true);
+      try {
+        const res = await api.get(`/api/patients/${patientId}`);
+        const p = res.data;
+
+        setFormData((prev) => ({
+          ...prev,
+
+          // tab 0
+          age: p?.age ?? "",
+          gender: p?.gender || "Male",
+          height_cm: p?.heightCm ?? "",
+          weight: p?.weightKg ?? "",
+
+          // keep defaults if not in DB
+          occupation: prev.occupation || "Yes",
+          physical_activity_level: prev.physical_activity_level || "Moderate",
+          living_environment: prev.living_environment || "Urban",
+
+          // tab 1
+          knee_injuries:
+            p?.previousKneeInjury === true
+              ? "Yes"
+              : p?.previousKneeInjury === false
+              ? "No"
+              : prev.knee_injuries,
+
+          // not available in schema, keep current/defaults
+          knee_pain: prev.knee_pain,
+          knee_pain_in_past_week: prev.knee_pain_in_past_week,
+          stifness_after_resting: prev.stifness_after_resting,
+          difficulty_in_performing: prev.difficulty_in_performing,
+          swelling: prev.swelling,
+          family_history: prev.family_history,
+          obesity: prev.obesity,
+          diabetes: prev.diabetes,
+          hypertension: prev.hypertension,
+          vitaminD_deficiency: prev.vitaminD_deficiency,
+          rheumatoid_arthritis: prev.rheumatoid_arthritis,
+
+          // tab 2
+          fbs: p?.fbs ?? "",
+          wbc: p?.wbc ?? "",
+          platelets: p?.platelets ?? "",
+          cs: p?.sugar ?? "", // form cs -> db sugar
+          cholesterol: p?.cholesterol ?? "",
+          crp: p?.crp ?? "",
+          esr: p?.esr ?? "",
+          rf: p?.rf ?? "",
+          fbc: p?.fbcValue ?? "",
+        }));
+      } catch (err) {
+        console.error("Error fetching patient form data:", err);
+      } finally {
+        setFetchingPatient(false);
+      }
+    };
+
+    fetchPatientData();
+  }, [patientId]);
 
   // ===== Derived values =====
   const height_m = useMemo(() => {
@@ -130,32 +202,29 @@ export default function KOAPredictForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ===== Encoders (same as training) =====
-  const mapGender = (v) => (v === "Male" ? 1 : 0); // Female=0, Male=1
-  const mapYesNo = (v) => (v === "Yes" ? 1 : 0); // No=0, Yes=1
-  const mapLiving = (v) => (v === "Urban" ? 1 : 0); // Rural=0, Urban=1
+  // ===== Encoders =====
+  const mapGender = (v) => (v === "Male" ? 1 : 0);
+  const mapYesNo = (v) => (v === "Yes" ? 1 : 0);
+  const mapLiving = (v) => (v === "Urban" ? 1 : 0);
 
-  // always=0, frequently=1, never=2, occasionally=3
   const mapStiffness = (v) => {
     const val = String(v).toLowerCase();
     const map = { always: 0, frequently: 1, never: 2, occasionally: 3 };
     return map[val] ?? 2;
   };
 
-  // mild=0, moderate=1, none=2, severe=3
   const mapDifficulty = (v) => {
     const val = String(v).toLowerCase();
     const map = { mild: 0, moderate: 1, none: 2, severe: 3 };
     return map[val] ?? 2;
   };
 
-  // get_dummies(drop_first=True) => keep Low & Moderate
   const makeActivityDummies = (level) => ({
     physical_activity_level_Low: level === "Low" ? 1 : 0,
     physical_activity_level_Moderate: level === "Moderate" ? 1 : 0,
   });
 
-  // ===== Must fill all tabs before prediction =====
+  // ===== Validation =====
   const isFilled = useCallback(
     (name) => {
       const v = formData[name];
@@ -167,7 +236,6 @@ export default function KOAPredictForm() {
   );
 
   const getFirstMissingTab = useCallback(() => {
-    // derived checks
     if (!isFilled("age")) return 0;
     if (!isFilled("height_cm") || height_m === "") return 0;
     if (!isFilled("weight") || computedBMI === "") return 0;
@@ -184,6 +252,44 @@ export default function KOAPredictForm() {
     () => getFirstMissingTab() === null,
     [getFirstMissingTab]
   );
+
+  /** =========================
+   * Save updated patient values
+   * ========================= */
+  const updatePatientData = async (predictionResult) => {
+    if (!patientId) return null;
+
+    const severityToSave =
+      predictionResult?.severity ||
+      predictionResult?.diagnosis ||
+      "";
+
+    const payload = {
+      age: formData.age !== "" ? Number(formData.age) : undefined,
+      gender: formData.gender,
+      device_id: deviceId || undefined,
+
+      // medical/basic fields mapped to schema
+      heightCm: formData.height_cm !== "" ? Number(formData.height_cm) : undefined,
+      weightKg: formData.weight !== "" ? Number(formData.weight) : undefined,
+      previousKneeInjury: formData.knee_injuries === "Yes",
+      crp: formData.crp !== "" ? Number(formData.crp) : undefined,
+      esr: formData.esr !== "" ? Number(formData.esr) : undefined,
+      rf: formData.rf !== "" ? Number(formData.rf) : undefined,
+      cholesterol:
+        formData.cholesterol !== "" ? Number(formData.cholesterol) : undefined,
+      wbc: formData.wbc !== "" ? Number(formData.wbc) : undefined,
+      platelets:
+        formData.platelets !== "" ? Number(formData.platelets) : undefined,
+      fbs: formData.fbs !== "" ? Number(formData.fbs) : undefined,
+      sugar: formData.cs !== "" ? Number(formData.cs) : undefined, // cs -> sugar
+      fbcValue: formData.fbc !== "" ? Number(formData.fbc) : undefined,
+      severityLevel: severityToSave || undefined,
+    };
+
+    const res = await api.put(`/api/patients/${patientId}`, payload);
+    return res.data;
+  };
 
   // ===== Submit =====
   const handleSubmit = async (e) => {
@@ -241,33 +347,44 @@ export default function KOAPredictForm() {
         BMI: Number(computedBMI),
       };
 
-      // numeric sanity
       for (const [k, v] of Object.entries(features)) {
         if (!Number.isFinite(v)) {
           throw new Error(`Invalid value for ${k}. Please check your inputs.`);
         }
       }
 
+      // 1) prediction
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ features }),
+        body: JSON.stringify({ patientId, patientName, deviceId, features }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Prediction failed");
 
-      // ✅ normalize prediction key
-      // backend might return: {prediction: 1} OR {pred: 1} OR {result: 1}
       const rawPred =
-        data?.prediction ?? data?.pred ?? data?.result ?? data?.class ?? data?.label;
+        data?.prediction ??
+        data?.pred ??
+        data?.result ??
+        data?.class ??
+        data?.label;
 
-      setResult({
+      const finalResult = {
         ...data,
         _rawPred: rawPred,
         diagnosis: displayDiagnosis(rawPred),
         severity: displaySeverity(rawPred),
-      });
+      };
+
+      setResult(finalResult);
+
+      // 2) auto save latest form values to patient
+      const updatedPatient = await updatePatientData(finalResult);
+
+      if (typeof onSaved === "function") {
+        onSaved(updatedPatient || finalResult);
+      }
     } catch (err) {
       setError(err?.message || "Something went wrong");
     } finally {
@@ -295,14 +412,31 @@ export default function KOAPredictForm() {
     <div className="py-0">
       <div className="max-w-4xl mx-auto">
         <div className="overflow-hidden">
+          {/* Patient info */}
+          <div className="px-4 pt-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <InfoBox label="Patient ID" value={patientId || "-"} />
+                <InfoBox label="Patient Name" value={patientName || "-"} />
+                <InfoBox label="Device ID" value={deviceId || "-"} />
+              </div>
+            </div>
+          </div>
+
           {/* Tabs */}
-          <div className="flex sticky top-0 bg-white">
+          <div className="flex sticky top-0 bg-white mt-3">
             <TabButton index={0} label="Personal & Lifestyle" />
             <TabButton index={1} label="Symptoms & History" />
             <TabButton index={2} label="Clinical Markers" />
           </div>
 
           <form onSubmit={handleSubmit} className="p-4">
+            {fetchingPatient && (
+              <div className="mb-4 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-700 font-medium">
+                Loading patient data...
+              </div>
+            )}
+
             {/* TAB 0 */}
             {activeTab === 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
@@ -425,24 +559,24 @@ export default function KOAPredictForm() {
               <button
                 type="submit"
                 disabled={loading || !allTabsComplete}
-                className="w-full md:w-48 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl shadow-lg transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-56 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl shadow-lg transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={!allTabsComplete ? "Complete all tabs to enable prediction" : ""}
               >
-                {loading ? "Analyzing Data..." : "Generate Prediction"}
+                {loading ? "Analyzing + Saving..." : "Generate Prediction"}
               </button>
 
               {activeTab < 2 && (
                 <button
                   type="button"
                   onClick={goNext}
-                  className="mt-0 text-blue-600 text-sm font-medium hover:underline"
+                  className="mt-1 text-blue-600 text-sm font-medium hover:underline"
                 >
                   Next Section →
                 </button>
               )}
 
               {!allTabsComplete && (
-                <div className="mt-0 text-xs text-slate-500 text-center">
+                <div className="mt-1 text-xs text-slate-500 text-center">
                   Fill all required fields in <b>all tabs</b> to enable prediction.
                 </div>
               )}
@@ -461,22 +595,28 @@ export default function KOAPredictForm() {
                   <div>
                     <h3 className="text-blue-900 text-xl font-bold">Analysis Complete</h3>
 
-                    {/* ✅ show Normal / Osteoarthritis */}
-                    <p className="text-blue-700">
+                    <p className="text-slate-700 mt-1">
+                      Patient Name:{" "}
+                      <span className="font-extrabold">{patientName || "-"}</span>
+                    </p>
+                    <p className="text-slate-700">
+                      Patient ID:{" "}
+                      <span className="font-extrabold">{patientId || "-"}</span>
+                    </p>
+
+                    <p className="text-blue-700 mt-2">
                       Diagnosis:{" "}
                       <span className="font-extrabold">{result.diagnosis}</span>
                     </p>
 
-                    {/* (optional) show severity mapping too */}
-                    {/* <p className="text-blue-700">
+                    <p className="text-blue-700">
                       Severity:{" "}
                       <span className="font-extrabold">{result.severity}</span>
-                    </p> */}
+                    </p>
 
-                    {/* Debug: raw predicted label */}
-                    {/* <p className="text-xs text-blue-500 mt-1">
-                      Raw prediction: {String(result._rawPred)}
-                    </p> */}
+                    <p className="text-emerald-700 text-sm font-semibold mt-2">
+                      Patient record updated successfully.
+                    </p>
                   </div>
                 </div>
               )}
@@ -489,6 +629,17 @@ export default function KOAPredictForm() {
 }
 
 /* ===== Subcomponents ===== */
+
+function InfoBox({ label, value }) {
+  return (
+    <div className="rounded-xl bg-white border border-slate-200 px-4 py-3">
+      <p className="text-[11px] uppercase tracking-wide text-slate-500 font-bold">
+        {label}
+      </p>
+      <p className="text-sm font-extrabold text-slate-800 mt-1">{value}</p>
+    </div>
+  );
+}
 
 function Input({ label, name, type = "number", value, onChange }) {
   return (

@@ -1,18 +1,23 @@
 import React from "react";
 import KOAPredictForm from "../PredicForms/KOAPredictForm";
 
-export default function KOAClinicalPredictCard({ open, onClose }) {
+export default function KOAClinicalPredictCard({
+  open,
+  onClose,
+  patientId,
+  patientName,
+  deviceId,
+  onSaved,
+}) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[80]">
-      {/* backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
 
-      {/* modal */}
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div
           className="
@@ -20,9 +25,8 @@ export default function KOAClinicalPredictCard({ open, onClose }) {
             rounded-2xl bg-white shadow-2xl
             border border-slate-200
           "
-          style={{ borderTop: "4px solid #2563eb" }} // ✅ only top blue border line
+          style={{ borderTop: "4px solid #2563eb" }}
         >
-          {/* header */}
           <div className="sticky top-0 z-10 flex items-start justify-between gap-4 p-4 border-b bg-slate-50">
             <div>
               <div className="text-lg font-extrabold text-slate-900">
@@ -42,9 +46,13 @@ export default function KOAClinicalPredictCard({ open, onClose }) {
             </button>
           </div>
 
-          {/* body (no extra padding so no empty space) */}
           <div className="p-0">
-            <KOAPredictForm />
+            <KOAPredictForm
+              patientId={patientId}
+              patientName={patientName}
+              deviceId={deviceId}
+              onSaved={onSaved}
+            />
           </div>
         </div>
       </div>

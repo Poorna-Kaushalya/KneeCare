@@ -5,13 +5,12 @@ import pandas as pd
 import numpy as np
 import os
 
-# Safe path
+# Path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "best_model.pkl")
 
 model = joblib.load(MODEL_PATH)
 
-# Read JSON from Node
 input_data = json.loads(sys.stdin.read())
 features = input_data["features"]
 
@@ -33,7 +32,6 @@ confidence = None
 if hasattr(model, "predict_proba"):
     confidence = float(np.max(model.predict_proba(X)[0]))
 
-# Return JSON to Node
 print(json.dumps({
     "model": "GB (Best Model)",
     "prediction": str(prediction),
