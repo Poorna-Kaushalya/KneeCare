@@ -44,11 +44,6 @@ router.post("/predict", upload.single("xray"), async (req, res) => {
     }
 
     const imagePath = req.file.path;
-<<<<<<< Updated upstream
-=======
-
-    // keep tabular 
->>>>>>> Stashed changes
     const tabular = { ...req.body };
 
     const payload = {
