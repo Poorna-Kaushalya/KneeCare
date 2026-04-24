@@ -7,12 +7,12 @@ import os
 app = Flask(__name__)
 
 SCRIPT_MAP = {
-    "general": "python/predict.py",
-    "fusion": "python/predict_fusion.py",
-    "mri": "python/predict_mri.py",
-    "vag-features": "python/predict_vag_from_features.py",
-    "vag-severity": "python/predict_vag_severity.py",
-    "xray": "python/predict_xray.py"
+    "general": "predict.py",
+    "fusion": "predict_fusion.py",
+    "mri": "predict_mri.py",
+    "vag-features": "predict_vag_from_features.py",
+    "vag-severity": "predict_vag_severity.py",
+    "xray": "predict_xray.py"
 }
 
 @app.route("/")
