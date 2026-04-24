@@ -85,16 +85,6 @@ function getSeverityColor(score) {
   return "#94a3b8";
 }
 
-function trendText(rows) {
-  if (!rows || rows.length < 2) return "Not enough months to detect trend";
-
-  const prev = rows[rows.length - 2]?.severityScore ?? 1;
-  const curr = rows[rows.length - 1]?.severityScore ?? 1;
-
-  if (curr > prev) return "Severity increased from previous month";
-  if (curr < prev) return "Severity reduced from previous month";
-  return "Severity stayed stable from previous month";
-}
 
 function SeverityDot(props) {
   const { cx, cy, payload } = props;
