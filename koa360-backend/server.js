@@ -9,9 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  "mongodb+srv://admin:admin123@cluster0.9wqyyos.mongodb.net/koa360";
+const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI)
