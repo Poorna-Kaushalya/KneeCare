@@ -4,12 +4,12 @@ const FormData = require("form-data");
 
 const router = express.Router();
 
+const ML_API_URL = process.env.ML_API_URL;
+
+// General tabular model
 router.post("/api/ml/general", async (req, res) => {
   try {
-    const response = await axios.post(
-      `${process.env.ML_API_URL}/predict/general`,
-      req.body
-    );
+    const response = await axios.post(`${ML_API_URL}/predict/general`, req.body);
     res.json(response.data);
   } catch (error) {
     res.status(500).json({
@@ -19,36 +19,83 @@ router.post("/api/ml/general", async (req, res) => {
   }
 });
 
+// VAG features model
 router.post("/api/ml/vag-features", async (req, res) => {
   try {
-    const response = await axios.post(
-      `${process.env.ML_API_URL}/predict/vag-features`,
-      req.body
-    );
+    const response = await axios.post(`${ML_API_URL}/predict/vag-features`, req.body);
     res.json(response.data);
   } catch (error) {
     res.status(500).json({
-      error: "VAG features API failed",
+      error: "VAG features ML API failed",
       details: error.response?.data || error.message,
     });
   }
 });
 
-router.post("/api/ml/fusion", async (req, res) => {
+// VAG severity model
+router.post("/api/ml/vag-severity", async (req, res) => {
+  try {
+    const response = await axios.post(`${ML_API_URL}/predict/vag-severity`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({
+      error: "VAG severity ML API failed",
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
+// X-ray image model
+router.post("/api/ml/xray", async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "No image uploaded" });
+      return res.status(400).json({ error: "No image uploaded. Use key: image" });
     }
 
     const form = new FormData();
-    form.append("image", req.file.buffer, req.file.originalname);
-    form.append("tabular", JSON.stringify(req.body));
+    form.append("image", req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+    });
 
-    const response = await axios.post(
-      `${process.env.ML_API_URL}/predict/fusion-upload`,
-      form,
-      { headers: form.getHeaders() }
-    );
+    const response = await axios.post(`${ML_API_URL}/predict/xray`, form, {
+      headers: form.getHeaders(),
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({
+      error: "X-ray ML API failed",
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
+// Fusion model: X-ray image + clinical/tabular data
+router.post("/api/ml/fusion", async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image uploaded. Use key: image" });
+    }
+
+    const form = new FormData();
+
+    form.append("image", req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+    });
+
+    // If frontend sends tabular as JSON string
+    if (req.body.tabular) {
+      form.append("tabular", req.body.tabular);
+    } else {
+      // If frontend sends fields one by one
+      form.append("tabular", JSON.stringify(req.body));
+    }
+
+    const response = await axios.post(`${ML_API_URL}/predict/fusion-upload`, form, {
+      headers: form.getHeaders(),
+    });
 
     res.json(response.data);
   } catch (error) {
