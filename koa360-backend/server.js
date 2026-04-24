@@ -2,6 +2,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const multer = require("multer");
+
 dotenv.config();
 
 const app = express();
@@ -9,9 +11,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  "mongodb+srv://admin:admin123@cluster0.9wqyyos.mongodb.net/koa360";
+const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI)
@@ -34,6 +34,7 @@ const fusionPredictRoutes = require("./routes/fusionPredict");
 const monthlySeverityRoutes = require("./routes/monthlySeverityRoutes");
 const vagSeverityLatest = require("./routes/vagSeverityLatest");
 const mriRoutes = require("./routes/mriRoutes");
+const mlApiRoutes = require("./routes/mlApiRoutes");
 
 // Use Routes
 app.use("/", authRoutes);
@@ -50,9 +51,17 @@ app.use(xrayPredictRoutes);
 app.use("/api/fusion", fusionPredictRoutes);
 app.use(mriRoutes);
 
+// Hugging Face ML API routes
+const upload = multer({ storage: multer.memoryStorage() });
+app.use(upload.single("image"));
+app.use(mlApiRoutes);
+
 app.get("/", (req, res) => {
   res.send("Knee Monitor API is running");
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
