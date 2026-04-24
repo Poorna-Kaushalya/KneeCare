@@ -7,7 +7,6 @@ import {
   faPills,
   faWeightScale,
   faHeartPulse,
-  faVial,
   faDroplet,
   faTriangleExclamation,
 } from "@fortawesome/free-solid-svg-icons";

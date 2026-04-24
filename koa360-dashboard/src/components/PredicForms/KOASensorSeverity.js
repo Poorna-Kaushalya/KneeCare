@@ -325,12 +325,9 @@ export default function KOASensorSeverity({ deviceId }) {
     };
   }, [deviceId]);
 
-  const latestMonth = useMemo(() => {
-    if (!rows.length) return null;
-    return rows[rows.length - 1];
-  }, [rows]);
+ // const latestMonth = useMemo(() => { if (!rows.length) return null; return rows[rows.length - 1]; }, [rows]);
 
-  const insight = useMemo(() => trendText(rows), [rows]);
+ // const insight = useMemo(() => trendText(rows), [rows]);
 
   const chartData = useMemo(() => {
     return rows.map((row) => ({

@@ -203,25 +203,6 @@ function buildLifestyleMessages({
   return messages;
 }
 
-function toYesNo(value) {
-  if (
-    value === true ||
-    value === 1 ||
-    String(value ?? "").trim().toLowerCase() === "yes"
-  ) {
-    return "Yes";
-  }
-
-  if (
-    value === false ||
-    value === 0 ||
-    String(value ?? "").trim().toLowerCase() === "no"
-  ) {
-    return "No";
-  }
-
-  return "";
-}
 
 function normalizeYesNoForSelect(value) {
   const s = String(value ?? "").trim().toLowerCase();
