@@ -1,0 +1,9 @@
+[providers]
+node = true
+python = false
+
+[build]
+cmd = "npm install"
+
+[deploy]
+cmd = "npm start"
