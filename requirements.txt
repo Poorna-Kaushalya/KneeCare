@@ -1,0 +1,10 @@
+﻿flask
+gunicorn
+numpy
+pandas
+scikit-learn
+xgboost
+joblib
+pillow
+requests
+opencv-python-headless
