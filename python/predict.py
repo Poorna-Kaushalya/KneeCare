@@ -3,7 +3,7 @@ import json
 import joblib
 import pandas as pd
 import numpy as np
-import oss
+import os
 
 # Path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
