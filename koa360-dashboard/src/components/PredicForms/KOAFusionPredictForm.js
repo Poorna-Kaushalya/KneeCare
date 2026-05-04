@@ -543,9 +543,9 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
         fd.append(k, v ?? "");
       });
 
-      const resp = await api.post("/api/fusion/predict", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const resp = await api.post("/api/ml/fusion", fd, {
+  headers: { "Content-Type": "multipart/form-data" },
+});
 
       const serverData = resp.data || {};
       const predLabel =
