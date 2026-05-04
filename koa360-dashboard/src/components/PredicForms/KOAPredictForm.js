@@ -69,7 +69,6 @@ export default function KOAPredictForm({
   deviceId = "",
   onSaved,
 }) {
-  const API_URL = "http://localhost:5000/api/predict";
   const [activeTab, setActiveTab] = useState(0);
 
   const [formData, setFormData] = useState({
@@ -144,8 +143,8 @@ export default function KOAPredictForm({
             p?.previousKneeInjury === true
               ? "Yes"
               : p?.previousKneeInjury === false
-              ? "No"
-              : prev.knee_injuries,
+                ? "No"
+                : prev.knee_injuries,
 
           // not available in schema, keep current/defaults
           knee_pain: prev.knee_pain,
@@ -293,104 +292,100 @@ export default function KOAPredictForm({
 
   // ===== Submit =====
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setResult(null);
+  e.preventDefault();
+  setError("");
+  setResult(null);
 
-    const missingTab = getFirstMissingTab();
-    if (missingTab !== null) {
-      setActiveTab(missingTab);
-      setError(
-        "Please complete all required fields in all tabs before generating prediction."
-      );
-      return;
+  const missingTab = getFirstMissingTab();
+  if (missingTab !== null) {
+    setActiveTab(missingTab);
+    setError("Please complete all required fields in all tabs before generating prediction.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const activity = makeActivityDummies(formData.physical_activity_level);
+
+    const features = {
+      age: Number(formData.age),
+      gender: mapGender(formData.gender),
+      height: Number(height_m),
+      weight: Number(formData.weight),
+      occupation: mapYesNo(formData.occupation),
+      living_environment: mapLiving(formData.living_environment),
+
+      knee_pain: mapYesNo(formData.knee_pain),
+      knee_pain_in_past_week: Number(formData.knee_pain_in_past_week),
+      stifness_after_resting: mapStiffness(formData.stifness_after_resting),
+      knee_injuries: mapYesNo(formData.knee_injuries),
+      swelling: mapYesNo(formData.swelling),
+      difficulty_in_performing: mapDifficulty(formData.difficulty_in_performing),
+
+      family_history: mapYesNo(formData.family_history),
+      obesity: mapYesNo(formData.obesity),
+      diabetes: mapYesNo(formData.diabetes),
+      hypertension: mapYesNo(formData.hypertension),
+      vitaminD_deficiency: mapYesNo(formData.vitaminD_deficiency),
+      rheumatoid_arthritis: mapYesNo(formData.rheumatoid_arthritis),
+
+      fbs: Number(formData.fbs),
+      wbc: Number(formData.wbc),
+      platelets: Number(formData.platelets),
+      cs: Number(formData.cs),
+      cholesterol: Number(formData.cholesterol),
+      crp: Number(formData.crp),
+      esr: Number(formData.esr),
+      rf: Number(formData.rf),
+      fbc: Number(formData.fbc),
+
+      ...activity,
+      BMI: Number(computedBMI),
+    };
+
+    for (const [k, v] of Object.entries(features)) {
+      if (!Number.isFinite(v)) {
+        throw new Error(`Invalid value for ${k}. Please check your inputs.`);
+      }
     }
 
-    setLoading(true);
+    const res = await api.post("/api/ml/general", {
+      patientId,
+      patientName,
+      deviceId,
+      features,
+    });
 
-    try {
-      const activity = makeActivityDummies(formData.physical_activity_level);
+    const data = res.data;
 
-      const features = {
-        age: Number(formData.age),
-        gender: mapGender(formData.gender),
-        height: Number(height_m),
-        weight: Number(formData.weight),
-        occupation: mapYesNo(formData.occupation),
-        living_environment: mapLiving(formData.living_environment),
+    const rawPred =
+      data?.prediction ??
+      data?.pred ??
+      data?.result ??
+      data?.class ??
+      data?.label;
 
-        knee_pain: mapYesNo(formData.knee_pain),
-        knee_pain_in_past_week: Number(formData.knee_pain_in_past_week),
-        stifness_after_resting: mapStiffness(formData.stifness_after_resting),
-        knee_injuries: mapYesNo(formData.knee_injuries),
-        swelling: mapYesNo(formData.swelling),
-        difficulty_in_performing: mapDifficulty(formData.difficulty_in_performing),
+    const finalResult = {
+      ...data,
+      _rawPred: rawPred,
+      diagnosis: displayDiagnosis(rawPred),
+      severity: displaySeverity(rawPred),
+    };
 
-        family_history: mapYesNo(formData.family_history),
-        obesity: mapYesNo(formData.obesity),
-        diabetes: mapYesNo(formData.diabetes),
-        hypertension: mapYesNo(formData.hypertension),
-        vitaminD_deficiency: mapYesNo(formData.vitaminD_deficiency),
-        rheumatoid_arthritis: mapYesNo(formData.rheumatoid_arthritis),
+    setResult(finalResult);
 
-        fbs: Number(formData.fbs),
-        wbc: Number(formData.wbc),
-        platelets: Number(formData.platelets),
-        cs: Number(formData.cs),
-        cholesterol: Number(formData.cholesterol),
-        crp: Number(formData.crp),
-        esr: Number(formData.esr),
-        rf: Number(formData.rf),
-        fbc: Number(formData.fbc),
+    const updatedPatient = await updatePatientData(finalResult);
 
-        ...activity,
-        BMI: Number(computedBMI),
-      };
-
-      for (const [k, v] of Object.entries(features)) {
-        if (!Number.isFinite(v)) {
-          throw new Error(`Invalid value for ${k}. Please check your inputs.`);
-        }
-      }
-
-      // 1) prediction
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientId, patientName, deviceId, features }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Prediction failed");
-
-      const rawPred =
-        data?.prediction ??
-        data?.pred ??
-        data?.result ??
-        data?.class ??
-        data?.label;
-
-      const finalResult = {
-        ...data,
-        _rawPred: rawPred,
-        diagnosis: displayDiagnosis(rawPred),
-        severity: displaySeverity(rawPred),
-      };
-
-      setResult(finalResult);
-
-      // 2) auto save latest form values to patient
-      const updatedPatient = await updatePatientData(finalResult);
-
-      if (typeof onSaved === "function") {
-        onSaved(updatedPatient || finalResult);
-      }
-    } catch (err) {
-      setError(err?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+    if (typeof onSaved === "function") {
+      onSaved(updatedPatient || finalResult);
     }
-  };
+  } catch (err) {
+    setError(err?.response?.data?.error || err?.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const goNext = () => setActiveTab((t) => Math.min(2, t + 1));
 
@@ -398,11 +393,10 @@ export default function KOAPredictForm({
     <button
       type="button"
       onClick={() => setActiveTab(index)}
-      className={`px-6 py-3 font-medium transition-all duration-200 border-b-2 ${
-        activeTab === index
-          ? "border-blue-600 text-blue-600"
-          : "border-transparent text-gray-400 hover:text-gray-600"
-      }`}
+      className={`px-6 py-3 font-medium transition-all duration-200 border-b-2 ${activeTab === index
+        ? "border-blue-600 text-blue-600"
+        : "border-transparent text-gray-400 hover:text-gray-600"
+        }`}
     >
       {label}
     </button>
@@ -689,11 +683,10 @@ function CheckboxSelect({ label, name, value, onChange }) {
           target: { name, value: value === "Yes" ? "No" : "Yes" },
         })
       }
-      className={`px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${
-        value === "Yes"
-          ? "bg-blue-100 border-blue-600 text-blue-700"
-          : "bg-white border-gray-200 text-gray-400"
-      }`}
+      className={`px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${value === "Yes"
+        ? "bg-blue-100 border-blue-600 text-blue-700"
+        : "bg-white border-gray-200 text-gray-400"
+        }`}
     >
       {label}
     </button>
