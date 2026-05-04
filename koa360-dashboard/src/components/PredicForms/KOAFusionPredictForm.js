@@ -538,41 +538,20 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
 
       fd.append("xray", xray);
 
-      fd.append("patientId", patientId || "");
-      fd.append("deviceId", deviceId || "");
+      const tabularPayload = { ...form };
 
-      Object.entries(form).forEach(([k, v]) => {
-        fd.append(k, v ?? "");
-      });
+      fd.append("tabular", JSON.stringify(tabularPayload));
 
       const resp = await api.post("/api/ml/fusion", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const serverData = resp.data || {};
-
-      const predLabel =
-        serverData?.fusion?.pred_label || serverData?.pred_label || "";
-
-      const frontendTreatment = getFrontendTreatmentRecommendation(form, predLabel);
-
-      setResult({
-        ...serverData,
-        fusion: {
-          ...(serverData.fusion || {}),
-          pred_label: predLabel,
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-        treatment: frontendTreatment,
       });
-    } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.details ||
-        err?.message ||
-        "Request failed";
 
-      console.error("Fusion predict error:", err);
-      alert(msg);
+      setResult(resp.data);
+    } catch (err) {
+      console.log("FULL ERROR:", err?.response?.data || err.message);
+      alert(err?.response?.data?.error || "Request failed");
     } finally {
       setLoading(false);
     }
@@ -605,8 +584,8 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
                 type="button"
                 onClick={() => setActiveTab(t.key)}
                 className={`px-6 py-3 rounded-full text-sm font-bold border transition ${activeTab === t.key
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                   }`}
               >
                 {t.label}
@@ -851,14 +830,14 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
 
                 <div
                   className={`mt-3 inline-flex px-4 py-2 rounded-full font-extrabold text-sm shadow border text-white ${predLabel === "KL0"
-                      ? "bg-green-500 border-green-600"
-                      : predLabel === "KL1"
-                        ? "bg-yellow-400 border-yellow-500"
-                        : predLabel === "KL2"
-                          ? "bg-orange-400 border-orange-500"
-                          : predLabel === "KL3"
-                            ? "bg-orange-600 border-orange-700"
-                            : "bg-red-600 border-red-700"
+                    ? "bg-green-500 border-green-600"
+                    : predLabel === "KL1"
+                      ? "bg-yellow-400 border-yellow-500"
+                      : predLabel === "KL2"
+                        ? "bg-orange-400 border-orange-500"
+                        : predLabel === "KL3"
+                          ? "bg-orange-600 border-orange-700"
+                          : "bg-red-600 border-red-700"
                     }`}
                 >
                   {severityText} {predLabel ? `(${predLabel})` : ""}
