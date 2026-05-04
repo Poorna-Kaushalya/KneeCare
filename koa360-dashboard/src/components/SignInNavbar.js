@@ -15,6 +15,7 @@ function SignInNavbar({ logout }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [dateTime, setDateTime] = useState(new Date());
   const [connected, setConnected] = useState(false);
+  const API = process.env.REACT_APP_API_URL;
 
   const dropdownRef = useRef(null);
 
@@ -25,22 +26,21 @@ function SignInNavbar({ logout }) {
   }, []);
 
   /* ---------------- Device Status ---------------- */
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/device-status/KOA360-001`
-        );
-        const data = await res.json();
-        setConnected(data.connected);
-      } catch {
-        setConnected(false);
-      }
-    };
-    checkConnection();
-    const id = setInterval(checkConnection, 5000);
-    return () => clearInterval(id);
-  }, []);
+ useEffect(() => {
+  const checkConnection = async () => {
+    try {
+      const res = await fetch(`${API}/api/device-status/KOA360-001`);
+      const data = await res.json();
+      setConnected(data.connected);
+    } catch {
+      setConnected(false);
+    }
+  };
+
+  checkConnection();
+  const id = setInterval(checkConnection, 5000);
+  return () => clearInterval(id);
+}, [API]);
 
   /* -------- Close dropdowns on outside click ------ */
   useEffect(() => {
