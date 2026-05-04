@@ -98,8 +98,7 @@ export default function XRayPredictCard({
 
       if (!file) {
         setError(
-          `Please select a ${
-            mode === "xray" ? "knee X-ray" : "knee MRI"
+          `Please select a ${mode === "xray" ? "knee X-ray" : "knee MRI"
           } image first.`
         );
         return;
@@ -112,9 +111,10 @@ export default function XRayPredictCard({
       fd.append("modality", mode);
 
       const endpoint =
-        mode === "xray" ? "/api/predict/xray" : "/api/predict/mri";
+        mode === "xray"
+          ? "/api/ml/xray"
+          : "/api/ml/mri";
 
-      // ❌ DO NOT set Content-Type manually
       const res = await api.post(endpoint, fd);
 
       if (!res?.data) {
@@ -193,22 +193,20 @@ export default function XRayPredictCard({
           <div className="flex gap-2">
             <button
               onClick={() => changeMode("xray")}
-              className={`px-4 py-2 rounded-xl border font-bold ${
-                mode === "xray"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-slate-700"
-              }`}
+              className={`px-4 py-2 rounded-xl border font-bold ${mode === "xray"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-700"
+                }`}
             >
               X-ray
             </button>
 
             <button
               onClick={() => changeMode("mri")}
-              className={`px-4 py-2 rounded-xl border font-bold ${
-                mode === "mri"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-slate-700"
-              }`}
+              className={`px-4 py-2 rounded-xl border font-bold ${mode === "mri"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-slate-700"
+                }`}
             >
               MRI
             </button>

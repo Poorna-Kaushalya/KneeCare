@@ -1,9 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL ||
-    "https://kneecare-production.up.railway.app",
+  baseURL: "https://kneecare-production.up.railway.app",
 });
 
 // Attach token automatically
