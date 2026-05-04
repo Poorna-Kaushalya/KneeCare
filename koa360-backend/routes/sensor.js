@@ -18,11 +18,31 @@ router.post("/api/sensor-data", async (req, res) => {
 });
 
 // DEVICE STATUS
-router.get("/api/device-status", async (req, res) => {
+router.get("/api/device-status/:deviceId", async (req, res) => {
   try {
-    const recentData = await RawSensorData.findOne({}, {}, { sort: { createdAt: -1 } });
-    const connected = recentData && new Date() - recentData.createdAt < 10000;
-    res.json({ connected });
+    const { deviceId } = req.params;
+
+    const recentData = await RawSensorData.findOne(
+      { device_id: deviceId },
+      {},
+      { sort: { createdAt: -1 } }
+    );
+
+    if (!recentData) {
+      return res.json({ deviceId, connected: false });
+    }
+
+    const diff = Date.now() - new Date(recentData.createdAt).getTime();
+
+    const connected = diff < 15000; 
+
+    res.json({
+      deviceId,
+      connected,
+      lastSeen: recentData.createdAt,
+      latency_ms: diff,
+    });
+
   } catch (err) {
     console.error("device-status error:", err.message);
     res.json({ connected: false });

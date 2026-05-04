@@ -1,24 +1,5 @@
-/************************************************************
-  KOA360 ESP32 — MPU6050(upper+lower) + MLX90614 + INMP441(I2S)
-  Sends RAW + mic features + aligned mic features to Node server
-
-  FIXES INCLUDED:
-  ✅ Correct INMP441 24-bit sign extension (prevents RMS=0)
-  ✅ Prints RMS with more precision
-  ✅ Sends microphone + microphone_features + microphone_features_aligned
-  ✅ Keeps your existing JSON structure (compatible with your backend)
-
-  Wiring (INMP441):
-  VDD -> 3.3V
-  GND -> GND
-  SCK/BCLK -> GPIO 14
-  WS/LRCL -> GPIO 15
-  SD -> GPIO 32
-  L/R -> GND (LEFT)
-
-************************************************************/
-
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <MPU6050_light.h>
@@ -30,7 +11,7 @@
 /* ================= WiFi ================= */
 const char* ssid     = "Dialog 4G 287";
 const char* password = "181969F7";
-String serverUrl = "http://192.168.8.102:5000/api/sensor-data";
+String serverUrl = "https://kneecare-production.up.railway.app/api/sensor-data";
 
 /* ================= Sensors ================= */
 MPU6050 mpuUpper(Wire);
@@ -86,11 +67,11 @@ void connectWiFi() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n✅ WiFi Connected");
+    Serial.println("\n WiFi Connected");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\n❌ WiFi Failed");
+    Serial.println("\n WiFi Failed");
   }
 }
 
@@ -154,7 +135,7 @@ void computeMicFeatures(
   if (n <= 0) {
     raw_rms_norm = 0; raw_peak_freq = 0; raw_entropy_norm = 0; raw_zcr = 0; raw_mean_freq = 0;
 
-    // aligned defaults (still within your dataset ranges)
+    // aligned defaults 
     ds_rms_amplitude = 1.003640393;
     ds_peak_frequency = 20;
     ds_spectral_entropy = -2412;
@@ -163,7 +144,7 @@ void computeMicFeatures(
     return;
   }
 
-  // High-pass filter (DC removal)
+  // High-pass filter 
   static double hp_y = 0, hp_x_prev = 0;
   const double hp_alpha = 0.995;
 
@@ -174,11 +155,10 @@ void computeMicFeatures(
     double x = 0.0;
 
     if (i < n) {
-      // ✅ FIX: INMP441 24-bit sign extend inside 32-bit
       int32_t s32 = i2sBuf[i];
-      int32_t s24 = s32 >> 8;                 // keep 24 MSBs
-      if (s24 & 0x00800000) s24 |= 0xFF000000; // sign extend 24-bit
-      x = (double)s24 / 8388608.0;            // 2^23 -> [-1..1]
+      int32_t s24 = s32 >> 8;                 
+      if (s24 & 0x00800000) s24 |= 0xFF000000; 
+      x = (double)s24 / 8388608.0;            
     }
 
     double y = hp_alpha * (hp_y + x - hp_x_prev);
@@ -260,8 +240,7 @@ void computeMicFeatures(
     raw_entropy_norm = 0;
   }
 
-  // ========= Dataset alignment (your ranges) =========
-  // ✅ You asked where to add scaling: RIGHT HERE
+  // ========= Dataset alignment  =========
   double scaled = raw_rms_norm * 10.0; // try 5.0 / 10.0 / 20.0
   ds_rms_amplitude = clampd(1.0 + scaled, 1.003640393, 1.264898647);
 
@@ -285,19 +264,19 @@ void setup() {
   Wire.begin();
   connectWiFi();
 
-  if (!mlx.begin()) Serial.println("❌ MLX90614 not found");
+  if (!mlx.begin()) Serial.println(" MLX90614 not found");
 
   mpuUpper.begin();
   mpuLower.begin();
 
-  Serial.println("🧭 Calibrating MPU6050s...");
+  Serial.println(" Calibrating MPU6050s...");
   mpuUpper.calcOffsets(true, true);
   mpuLower.calcOffsets(true, true);
 
   for (int i = 0; i < N_SAMPLES/2; i++) noiseMag[i] = 0;
 
   initI2SMic();
-  Serial.println("✅ KOA360 READY");
+  Serial.println(" KOA360 READY");
 }
 
 /* ================= Loop ================= */
@@ -325,11 +304,10 @@ void loop() {
     ds_rms_amp, ds_peak_f, ds_spec_ent, ds_zcr, ds_mean_f
   );
 
-  // ✅ debug RMS (more precision)
+  //  debug RMS
   Serial.print("raw_rms_norm=");
   Serial.println(raw_rms_norm, 9);
 
-  // Legacy mic fields (keep for DB compatibility)
   double mic_rms = raw_rms_norm;
   double mic_energy = raw_rms_norm * raw_rms_norm;
   double mic_peak = raw_peak_freq;  // Hz
@@ -365,17 +343,14 @@ void loop() {
   json += "\"object\":" + String(objT,2);
   json += "},";
 
-  // keep your spelling (DB compatible)
   json += "\"knee_tempurarture\":" + String(objT,2) + ",";
 
-  // ✅ legacy mic (so Avg job can average it)
   json += "\"microphone\":{";
   json += "\"rms\":" + String(mic_rms, 9) + ",";
   json += "\"peak\":" + String(mic_peak, 3) + ",";
   json += "\"energy\":" + String(mic_energy, 9);
   json += "},";
 
-  // ✅ raw features (not aligned)
   json += "\"microphone_features\":{";
   json += "\"rms_amplitude\":" + String(raw_rms_norm, 9) + ",";
   json += "\"peak_frequency\":" + String(raw_peak_freq, 3) + ",";
@@ -384,7 +359,6 @@ void loop() {
   json += "\"mean_frequency\":" + String(raw_mean_freq, 3);
   json += "},";
 
-  // ✅ aligned features (dataset ranges)
   json += "\"microphone_features_aligned\":{";
   json += "\"rms_amplitude\":" + String(ds_rms_amp, 6) + ",";
   json += "\"peak_frequency\":" + String(ds_peak_f, 3) + ",";
@@ -398,14 +372,22 @@ void loop() {
   Serial.println(json);
 
   // ========= Send =========
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.setTimeout(3000);
-    http.addHeader("Content-Type", "application/json");
-    int code = http.POST(json);
-    Serial.print("HTTP: ");
-    Serial.println(code);
-    http.end();
-  }
+if (WiFi.status() == WL_CONNECTED) {
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.setReuse(false);
+  http.useHTTP10(true);
+  http.setTimeout(5000);
+  http.begin(client, serverUrl);
+  http.addHeader("Content-Type", "application/json");
+  int code = http.POST(json);
+  Serial.print("HTTP: ");
+  Serial.println(code);
+  String payload = http.getString();
+  Serial.println(payload);
+
+  http.end();
+}
 }
