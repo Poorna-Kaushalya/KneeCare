@@ -53,8 +53,9 @@ app.use(mriRoutes);
 
 // Hugging Face ML API routes
 const upload = multer({ storage: multer.memoryStorage() });
-app.use(mlApiRoutes);
 
+app.use(mlApiRoutes);
+app.use(upload.single("image"));
 app.get("/", (req, res) => {
   res.send("Knee Monitor API is running");
 });
