@@ -48,8 +48,8 @@ app.use("/", vagSeverityFromFeaturesRoutes);
 app.use("/", monthlySeverityRoutes);
 app.use("/", vagSeverityLatest);
 app.use(xrayPredictRoutes);
-app.use("/api/ml", fusionPredictRoutes);
-app.use(mriRoutes);
+app.use("/", fusionPredictRoutes);
+app.use("/", mriRoutes);
 
 // Hugging Face ML API routes
 const upload = multer({ storage: multer.memoryStorage() });

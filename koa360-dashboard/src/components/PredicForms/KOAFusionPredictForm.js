@@ -535,7 +535,7 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
       setLoading(true);
 
       const fd = new FormData();
-      fd.append("xray", xray);
+      fd.append("xray", file);
       fd.append("patientId", patientId || "");
       fd.append("deviceId", deviceId || "");
 
