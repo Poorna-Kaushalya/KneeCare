@@ -9,14 +9,7 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://kneecare-production.up.railway.app"
-  ],
-  credentials: true
-}));
+app.use(cors());
 
 const MONGO_URI = process.env.MONGO_URI;
 
