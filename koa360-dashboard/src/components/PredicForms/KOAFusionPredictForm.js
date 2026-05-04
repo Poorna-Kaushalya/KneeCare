@@ -535,18 +535,10 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
       setLoading(true);
 
       const fd = new FormData();
-
       fd.append("xray", xray);
+      fd.append("tabular", JSON.stringify(form));
 
-      const tabularPayload = { ...form };
-
-      fd.append("tabular", JSON.stringify(tabularPayload));
-
-      const resp = await api.post("/api/ml/fusion", fd, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const resp = await api.post("/api/ml/fusion", fd);
 
       setResult(resp.data);
     } catch (err) {
