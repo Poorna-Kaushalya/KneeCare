@@ -867,7 +867,7 @@ export default function KOAFusionPredictForm({ patientId, deviceId }) {
                       Recommended Plan
                     </div>
                     <div className="mt-2 text-sm font-semibold text-slate-800">
-                      {baseplan(predLabel)}
+                      {treatment.plan_label}
                     </div>
                   </>
                 )}
