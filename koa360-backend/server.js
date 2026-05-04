@@ -8,18 +8,9 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://knee-care-lilac.vercel.app"
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
-
 app.use(express.json());
+app.use(cors());
 
-// MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
@@ -28,8 +19,6 @@ mongoose
   .catch((err) => {
     console.error("MongoDB Connection Error:", err.message);
   });
-
-// ================= ROUTES =================
 
 // Import Routes
 const authRoutes = require("./routes/auth");
@@ -47,32 +36,30 @@ const vagSeverityLatest = require("./routes/vagSeverityLatest");
 const mriRoutes = require("./routes/mriRoutes");
 const mlApiRoutes = require("./routes/mlApiRoutes");
 
-
-app.use("/api/auth", authRoutes);
-app.use("/api/sensor", sensorRoutes);
-app.use("/api/form", formRoutes);
-app.use("/api/patient", patientRoutes);
-app.use("/api/predict", predictRoutes);
-app.use("/api/vag", vagSeverityRoutes);
-app.use("/api/koa", koaSeverityRoutes);
-app.use("/api/vag-features", vagSeverityFromFeaturesRoutes);
-app.use("/api/monthly", monthlySeverityRoutes);
-app.use("/api/vag-latest", vagSeverityLatest);
-app.use("/api/xray", xrayPredictRoutes);
+// Use Routes
+app.use("/", authRoutes);
+app.use("/", sensorRoutes);
+app.use("/", formRoutes);
+app.use("/", patientRoutes);
+app.use("/", predictRoutes);
+app.use("/", vagSeverityRoutes);
+app.use("/", koaSeverityRoutes);
+app.use("/", vagSeverityFromFeaturesRoutes);
+app.use("/", monthlySeverityRoutes);
+app.use("/", vagSeverityLatest);
+app.use(xrayPredictRoutes);
 app.use("/api/fusion", fusionPredictRoutes);
-app.use("/api/mri", mriRoutes);
+app.use(mriRoutes);
 
 // Hugging Face ML API routes
 const upload = multer({ storage: multer.memoryStorage() });
 app.use(upload.single("image"));
-app.use("/api/ml", mlApiRoutes);
+app.use(mlApiRoutes);
 
-// Test route
 app.get("/", (req, res) => {
   res.send("Knee Monitor API is running");
 });
 
-// Server start
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
