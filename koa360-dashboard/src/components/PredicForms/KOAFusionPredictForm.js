@@ -259,7 +259,7 @@ function getFrontendTreatmentRecommendation(form, predLabel) {
     notes.push("Swelling increased treatment.");
   }
 
-  if (bmi !== null && bmi >= 30) {
+  if (bmi !== null && bmi >= 30 && severity >= 2) {
     plan = upgrade(plan, "Conservative_Clinical");
     notes.push("High BMI increases knee joint loading.");
   }
