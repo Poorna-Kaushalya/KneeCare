@@ -28,7 +28,9 @@ function SignInNavbar({ logout }) {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const res = await fetch("http://192.168.8.102:5000/api/device-status");
+        const res = await fetch(
+          `${process.env.REACT_APP_API_URL}/api/device-status/KOA360-001`
+        );
         const data = await res.json();
         setConnected(data.connected);
       } catch {
@@ -69,9 +71,8 @@ function SignInNavbar({ logout }) {
       <div className="w-full bg-blue-600 text-white text-sm px-6 py-1 flex justify-end items-center gap-6 shadow-md">
         <div className="flex items-center gap-2">
           <span
-            className={`w-3 h-3 rounded-full ${
-              connected ? "bg-green-400" : "bg-red-500"
-            }`}
+            className={`w-3 h-3 rounded-full ${connected ? "bg-green-400" : "bg-red-500"
+              }`}
           />
           <span className="font-semibold">
             {connected ? (
@@ -79,7 +80,7 @@ function SignInNavbar({ logout }) {
                 Device Connected <FiWifi className="inline ml-1" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|
               </>
             ) : (
-              "Device Disconnected" 
+              "Device Disconnected"
             )}
           </span>
         </div>
@@ -97,10 +98,10 @@ function SignInNavbar({ logout }) {
 
           {/* Links */}
           <div className="max-w-[1500px] mx-auto px-6 py-1 flex items-center justify-center">
-          <h1 className="text-lg font-extrabold text-sky-700 tracking-wide">
-            Smart Orthopedic Analytics Platform
-          </h1>
-        </div>
+            <h1 className="text-lg font-extrabold text-sky-700 tracking-wide">
+              Smart Orthopedic Analytics Platform
+            </h1>
+          </div>
 
           {/* Right Icons */}
           <div
